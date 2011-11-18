@@ -1,0 +1,13 @@
+ <!DOCTYPE RCC><RCC version="1.0">
+ <qresource>
+     <file>offline.png</file>
+     <file>online.png</file>
+     <file>folder.png</file>
+     <file>file.png</file>
+     <file>host.png</file>
+     <file>pending.png</file>
+     <file>error.png</file>
+     <file>schneeflocke.png</file>
+     <file>schneeflocke_offline.png</file>
+ </qresource>
+ </RCC>

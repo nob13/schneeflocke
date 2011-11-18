@@ -1,0 +1,24 @@
+0.5.4
+- If BOSH XMPP users go offline, they are not marked as being offline
+- Schneeflocke should reply to regular clients, #165
+- decreasing UDT buffer size in order to increase reactivity #173
+- increased timeouts for getting large directories transferred #172
+0.5.3
+- only showing schneeflocke hosts in contactlist now
+- Fixed #156 Multiple connections exist if two clients connect each other
+- Fixed forgot to fclose files in windows.
+- Added TrayIcon, Autostart (Win32 only), and AutoConnect #134
+0.5.2
+- added canceling function on transfer window
+- added open file and open directory button to transfer window, fixing #155
+- Added #80: XMPP: BOSH Support
+- improved async op handling under the hood
+0.5.1
+- fix some of #153: ubuntu does not like deb packages 
+- fix #148 multiple resource login
+0.5.0
+- small user management improvements
+- fix #150 connection loss do not display as offline
+- fix #151 in ShareFileDialog
+0.5pre
+- initial public version for alpha test

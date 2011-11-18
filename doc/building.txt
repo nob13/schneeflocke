@@ -1,0 +1,56 @@
+Building instructions
+
+What you need:
+- Cmake >= 2.8
+- Boost >= 1.40
+  CMake will try to find Boost automatically. On Ubuntu you need the package libboost-all-dev.
+  If you have installed your own copy of boost (with static libraries!) you can also pass 
+  the boost directory to CMake (see below).
+  
+  Cmake finds the boost installed on windows machines with the BoostPro windows installer
+  (http://www.boostpro.com/download/)
+
+- OpenSSL >= 0.9.8 (?) (on Linux usually already installed, for Windows there is a version shipped with this library)
+- Doxygen, for automatic code documentation generation
+- If you enable DNS-SD (on Linux only), used for SLXMPP , you will also need the Avahi Compatiblity Libs, they 
+  are called libavahi-compat-libdnssd-dev on Ubuntu.
+  If you want to disable DNS-SD, just pass -DENABLE_DNS_SD=FALSE to CMake
+- sfserialization https://github.com/nob13/sfserialization
+  Please append the sfserialization path using -DSFSerialization_ROOT=[path where you installed it] when 
+  the cmake script doesn't find it by itself. Note: In Windows you have to compile sfserialization for 
+  debug mode if you want to build Schneeflocke in Debug mode.
+  
+  
+How to build (Windows)
+- Let the CMake GUI create Visual Studio Project files for you.
+- Compile using Visual Studio.
+- If you have doxygen installed, you can create the source code generation with the apidoc target.
+- Only Visual Studio 2008 in Windows 7 was tested but chances are high that it will also work in Windows XP.
+
+How to build (Linux, Makefile based)
+- Create a binary directory, go there (e.g. a subdirectory build)
+- Execute: cmake $PATH_TO_SOURCE_DIRECTORY (e.g. cmake ../)
+- Build it with: make
+- Build the api documentation (if doxygen installed) with: make apidoc. You will find it in libschnee/apidoc/html.
+- You can also pass some options to cmake
+  * -DCMAKE_BUILD_TYPE=MINSIZEREL 
+     Build in minimum size release mode
+     
+  * -DENABLE_DNS_SD=FALSE 
+     Disable the use of DNS-SD
+  
+  * -DBOOST_ROOT=/the/path/to/boost
+     Use a already/alternative installed version of boost. The Boost root should contain a lib/ directory with 
+     static libraries and a include/ directory with header files.
+     
+  * -DCMAKE_CXX_COMPILER={path-to-c++-compiler} -DCMAKE_C_COMPILER={path-to-c-compiler} 
+     Builds with another (e.g. older) C/C++ Compiler. Good for making builds for old servers.
+
+  * -G "Eclipse CDT4 - Unix Makefiles" - Creates Eclipse CDT Project Files. There are a lot of 
+     other generators. Kdevelop4 has direct support for CMake project files.
+     
+- You can launch testcases via 
+  make test
+- After building, you will find demonstration application(s) in apps/ and testcases in testcases/
+
+  

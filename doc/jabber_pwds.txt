@@ -1,0 +1,16 @@
+****************************************************************************************************
+Note: this accounts do not exist anymore, only on localhost (create them if you want to do testing!)
+****************************************************************************************************
+
+Jabber test passwords on sflx.net. You can use it with the cmdline test program.
+
+* All accounts do know each other
+* This is for testing purposes only
+
+autotest1@sflx.net : boom74_x
+autotest2@sflx.net : gotcha13_y
+autotest3@sflx.net : evoruk14_z
+autotest4@sflx.net : habbel15_a
+
+
+

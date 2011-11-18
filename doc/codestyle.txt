@@ -1,0 +1,29 @@
+Code Style used in libschnee
+----------------------------
+
+- Dont repeat yourself (DRY) in comments
+-- no @author - this is already in Code repository
+-- no comments outside doxygen for structure (e.g. } // namespace bla)
+
+- No Headerguard; just #pragma once. This is supported on all target platforms
+- Qt-Style Function/Classnames (no "get", camelCase ())
+- Qt gives some nice function names for generic types like TCPSocket; use them if applicable 
+- Use ///@cond DEV  ...  ///@endcond DEV for documenting classes needed by Developers
+- No export of too many tools which are not necessary or useful for outside users
+  (It is not a tool-library)
+
+- Classes which are overly complex and not covered by an Interface shall use the d-pointer scheme.
+  Although this is not yet met everywhere.
+
+- No Exceptions. If a submodule generates some, catch them and return error codes, write to the Log.
+  Why: http://yosefk.com/c++fqa/exceptions.html
+  
+- No Signals. There was once boost::signals2 support 
+              but it increased compiling time by >40%, code size around 10%
+              although it is not needed. So try to keep it simple and use delegates 
+              for coupling different objects. GUIs can use signals, of course.
+- Use DelegateBase when using own delegates in Multithreaded scenarios
+- The delegates connection by itself is not threadsafe (when not used as a callback), so keep
+  care to connect all delegates BEFORE they can fire, mostly directly after construction of an
+  object.
+  

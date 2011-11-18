@@ -1,0 +1,57 @@
+Some thoughts about libschnee thread structure
+----------------------------------------------
+
+There are different ways to handle networking, asynchronous program flow 1:n connections.
+1. - One thread, multi processes with one threads. Probably the best way, but only
+  works in Linux/Unix.
+-- > Good for small servers. Horror to synchronize (but if you don't have to, its Ok).
+ 
+2. - One process, one thread, run loop, asynchronous calls: Has good
+  speed but a (at least for some protocols) horrible programability.
+  You will end up doing a lot of Executor objects and an un-understandable
+  code flow.
+--> Good for GUI applications and servers.
+
+3. - One process, multi threads, synchronous calls: The code flow for one
+  protocol is much simplyer, but you run into alot of synchronization problems.
+  And it scales somewhat bad, at least debugging 400 threads ;).
+--> Good for networking clients.
+  
+We will end up in a combination 2 and 3. Most things (the "reacting" part) should 
+be done with 2. But if there are complicated moves (like handshaking etc.), things
+which do have time (like establishing a working connection to someone, handshaking 
+protocols etc.) can also be done in threads. Also some things are not good programmable
+asynchronous (like globbing file operations). These should also be done in separated threads.
+
+Drawbacks
+- Combination of drawbacks of 2 and 3. Until there is a full separation of threads, we
+  have to "synchronize" most objects with mutexes.
+- Some networking things behave quite different if you use them synchronous or asynchronous
+  (e.g. sockets). Maybe we should cover this aspect with different objects.
+- The "object-living-callback" hell. A callback can come back if an object doesn't yet exists
+  anymore. This problem can be solved using DelegateBase and DelegateRegister, but it lacks
+  performance.
+  
+Pros:
+- Its possible to use both systems if they are applicable.
+- Its much easyier to write testcases if libschnee works in its own threads (as you can
+  act like a controller thread).
+
+Thread Safety
+-------------
+The current thread safety is done with two levels. The main problem is that delegates may
+not be called anymore if the target object is gone. This can be circumvented using the Delegate
+Register. Now this still doesn't affect services of type (2). They are secured as they always
+have to live within an object inside the DelegateObject. (E.G. TCPSocket lives inside TCPChannel).
+If TCP Channel destructs it won't accept any signals anymore. The TCPSocket uses a pending 
+signal scheme to discouple itself. So it is maybe destroyed after DelegateRegister, but before
+IOService goes away.
+
+IOBase objects: 
+- pending calls counted. May signal until full destruction (done in IOService thread).
+- destruction is fully decoupled (d-pointer scheme)
+
+DelegateBase objects
+- have a safe delegate way. Won't get called after being destructed. (SF_UNREGISTER_ME)
+
+ 

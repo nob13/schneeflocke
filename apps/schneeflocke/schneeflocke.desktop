@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Schneeflocke
+Comment=Schneeflocke P2P file sharing tool
+Exec=schneeflocke
+Icon=schneeflocke.png
+Terminal=0
+Type=Application
+Encoding=UTF-8
+Categories=Network;Application;
+

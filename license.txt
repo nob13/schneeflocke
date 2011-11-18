@@ -1,0 +1,17 @@
+This is the Schneeflocke Project, a P2P file sharing tool.
+
+Schneeflocke, libschnee, libflocke are free software and released under the terms 
+of the GNU LESSER PUBLIC LICENSE.
+
+LGPL license text: see license_lgpl.txt
+GPL license text (to which the LPGL refers): see license_gpl.xt
+
+Other libraries shipped with this project:
+- RapidXML, (c) 2006, 2007 Marcin Kalicinski (Boost License)
+- linenoise, (c) 2010, Salvatore Sanfilippo (BSD License)
+- GNUTLS precompiled for Windows (LGPL License) http://josefsson.org/gnutls4win/
+- Base64 encoder/decoder by Bob Withers (Freeware), with some Extensions from 
+  Stanley Yamane (BSD License)
+- UDT (c) 2001 - 2010, The Board of Trustees of the University of Illinois (BSD License)
+
+Also see LICENSE.txt files in the external folder for further information.

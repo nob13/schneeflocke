@@ -1,0 +1,370 @@
+#include "TLSChannel.h"
+#include <schnee/tools/Log.h>
+#include <gnutls/gnutls.h>
+#include <gcrypt.h>
+
+#ifdef WIN32
+#include "errno.h"
+#define EBADFD EBADF
+#endif
+
+
+namespace sf {
+
+#define CHECK(X) { int r = X; if (r) {\
+	Log (LogError) << LOGID << #X << " failed, err = " << gnutls_strerror_name(r) << std::endl;\
+	return error::TlsError;\
+} }
+
+struct ServerDiffieHellman : public TLSChannel::EncryptionData {
+	ServerDiffieHellman () {
+		gnutls_anon_allocate_server_credentials (&credentials);
+		gnutls_dh_params_init (&params);
+		gnutls_dh_params_generate2 (params, 1024);
+		gnutls_anon_set_server_dh_params (credentials, params);
+
+	}
+	~ServerDiffieHellman () {
+		gnutls_anon_free_server_credentials (credentials);
+		gnutls_dh_params_deinit (params);
+	}
+	virtual int apply (Session s) {
+		return gnutls_credentials_set (s, GNUTLS_CRD_ANON, credentials);
+	}
+
+	gnutls_dh_params_t params;
+	gnutls_anon_server_credentials_t credentials;
+};
+
+struct ClientDiffieHellman : public TLSChannel::EncryptionData {
+	ClientDiffieHellman() {
+		gnutls_anon_allocate_client_credentials (&credentials);
+	}
+	~ClientDiffieHellman() {
+		gnutls_anon_free_client_credentials (credentials);
+	}
+	virtual int apply (Session s) {
+		return gnutls_credentials_set (s, GNUTLS_CRD_ANON, credentials);
+	}
+
+	gnutls_anon_client_credentials_t credentials;
+};
+
+struct X509EncryptionData : public TLSChannel::EncryptionData {
+	X509EncryptionData() {
+		gnutls_certificate_allocate_credentials (&credentials);
+	}
+	~X509EncryptionData(){
+		gnutls_certificate_free_credentials (credentials);
+	}
+	virtual int apply (Session s) {
+		return gnutls_credentials_set (s, GNUTLS_CRD_CERTIFICATE, credentials);
+	}
+
+	void setKey (const x509::CertificatePtr& cert, const x509::PrivateKeyPtr& key){
+		this->cert = cert;
+		this->key  = key;
+		gnutls_certificate_set_x509_key (credentials, &cert->data, 1, key->data);
+	}
+
+	x509::CertificatePtr cert;
+	x509::PrivateKeyPtr  key;
+	gnutls_certificate_credentials_t credentials;
+};
+
+TLSChannel::TLSChannel (ChannelPtr next) {
+	SF_REGISTER_ME;
+	mNext            = next;
+	mNext->changed() = dMemFun (this, &TLSChannel::onChanged);
+	mHandshaking     = false;
+	mSecured         = false;
+	mServer          = false;
+	mHandshakeError  = NoError;
+
+	mSession = 0;
+}
+
+TLSChannel::~TLSChannel () {
+	SF_UNREGISTER_ME;
+	mNext.reset();
+	LockGuard guard (mMutex);
+	freeTlsData_locked();
+}
+
+void TLSChannel::setKey  (const x509::CertificatePtr & cert, const x509::PrivateKeyPtr& key) {
+	LockGuard guard (mMutex);
+	mCert = cert;
+	mKey  = key;
+}
+
+Error TLSChannel::clientHandshake (Mode mode, const ResultCallback & callback) {
+	LockGuard guard (mMutex);
+	if (mSecured) return error::WrongState;
+	const char * prios = 0;
+	switch (mode) {
+		case DH:
+			mEncryptionData = EncryptionDataPtr (new ClientDiffieHellman());
+			prios = "PERFORMANCE:+ANON-DH";
+			break;
+		case X509:{
+			X509EncryptionData * data = new X509EncryptionData;
+			if (mKey && mCert) data->setKey (mCert,mKey);
+			mEncryptionData = EncryptionDataPtr (data);
+			prios = "PERFORMANCE";
+			break;
+		}
+		default:
+			assert (!"Shall not come here");
+		break;
+	}
+	return startHandshake_locked (mode, callback, false, prios);
+}
+
+Error TLSChannel::serverHandshake (Mode mode, const ResultCallback & callback) {
+	LockGuard guard (mMutex);
+	if (mSecured) return error::WrongState;
+	const char * prios = 0;
+	switch (mode) {
+		case DH:
+			mEncryptionData = EncryptionDataPtr (new ServerDiffieHellman());
+			prios = "PERFORMANCE:+ANON-DH";
+			break;
+		case X509:{
+			if (!mKey || !mCert) {
+				Log (LogError) << LOGID << " Server X509 needs key/cert!" << std::endl;
+				return error::InvalidArgument;
+			}
+			X509EncryptionData * data = new X509EncryptionData;
+			data->setKey(mCert, mKey);
+			mEncryptionData = EncryptionDataPtr (data);
+			prios = "PERFORMANCE";
+			break;
+		}
+		default:
+			assert (!"Shall not come here");
+		break;
+	}
+	return startHandshake_locked (mode, callback, true, prios);
+}
+
+sf::Error TLSChannel::error () const {
+	LockGuard guard (mMutex);
+	if (mHandshakeError) return mHandshakeError;
+	return mNext->error();
+}
+
+sf::String TLSChannel::errorMessage () const {
+	return mNext->errorMessage();
+}
+
+Channel::State TLSChannel::state () const {
+	return mNext->state();
+}
+
+Error TLSChannel::write (const ByteArrayPtr& data, const ResultCallback & callback) {
+	LockGuard guard (mMutex);
+	if (!mSecured) {
+		return error::NotInitialized;
+	}
+	ByteArrayPtr d (data);
+	ssize_t size = 0;
+
+	/* TLS just accepts up to 16384 bytes per record.
+	 * At the same time we want a callback if all data has been sent (for flow control)
+	 * So we sent the first chunks without these callback, and put it on the last
+	 * chunk.
+	 */
+	while (d->size() > 16384) {
+		size = gnutls_record_send (mSession, data->const_c_array(), 16384);
+		if (size == 0) {
+			Log (LogWarning) << LOGID << "Bad, 0 sent" << std::endl;
+		}
+		if (size < 0) {
+			Log (LogInfo) << LOGID << "Write error " << strerror (errno) << std::endl;
+			return error::WriteError;
+		}
+		if (size > ((ssize_t) d->size())) {
+			assert (!"May not happen");
+			return error::WriteError;
+		}
+		d->l_truncate((size_t) size);
+	}
+	// Sending last chunk:
+	mCurrentWriteCallback = callback;
+	size = gnutls_record_send (mSession, d->const_c_array(), d->size());
+	mCurrentWriteCallback = ResultCallback ();
+	if (size < 1) {
+		Log (LogInfo) << LOGID << "TLS write failed: " << strerror (errno) << std::endl;
+		return error::WriteError;
+	}
+	if (size > (ssize_t) data->size()){
+		Log (LogError) << LOGID << "Something serious is wrong" << std::endl;
+		return error::WriteError;
+	}
+	if (size < (ssize_t) data->size()) {
+		Log (LogInfo) << LOGID << "Could not send it all, rest size " << d->size() << " got " << size << std::endl;
+		return error::WriteError;
+	}
+	return NoError;
+}
+
+sf::ByteArrayPtr TLSChannel::read (long maxSize) {
+	LockGuard guard (mMutex);
+	const size_t bufSize = 65536;
+	char buffer [bufSize];
+#ifdef WIN32
+	size_t len = maxSize < 0 ? bufSize : min (bufSize, (size_t)maxSize);
+#else
+	size_t len = maxSize < 0 ? bufSize : std::min (bufSize, (size_t)maxSize);
+#endif
+
+	ByteArrayPtr result = createByteArrayPtr();
+	while (len > 0) {
+		ssize_t recv = gnutls_record_recv (mSession, buffer, len);
+		// Log (LogInfo) << LOGID << "Read " << recv << " cleartext bytes of " << len << " bytes requested" << std::endl;
+		if (recv == 0) break; // Nothing more to read.
+		if (recv < 0) {
+			if (recv != GNUTLS_E_AGAIN)
+				Log (LogWarning) << LOGID << "Could not read from TLS channel due error " << gnutls_strerror_name (recv) << std::endl;
+			break;
+		}
+		len -= recv;
+		result->append(buffer, recv);
+	}
+	return result;
+}
+
+void TLSChannel::close (const ResultCallback & callback) {
+	LockGuard guard (mMutex);
+	if (mNext) mNext->close(callback);
+	else
+		notifyAsync (callback, NoError);
+}
+
+Channel::ChannelInfo TLSChannel::info () const {
+	return mNext->info();
+}
+
+sf::VoidDelegate & TLSChannel::changed () {
+	return mChanged;
+}
+
+Error TLSChannel::startHandshake_locked (Mode m, const ResultCallback & callback, bool server, const char * type) {
+	freeTlsData_locked ();
+	mHandshakeCallback = callback;
+	CHECK (gnutls_init (&mSession, server ? GNUTLS_SERVER : GNUTLS_CLIENT));
+	CHECK (gnutls_priority_set_direct (mSession, type, NULL));
+	mEncryptionData->apply(mSession);
+    setTransport_locked ();
+
+    mHandshaking = true;
+    mServer = server;
+    mMode   = m;
+    xcall (dMemFun (this, &TLSChannel::continueHandshake));
+    return NoError;
+}
+
+
+void TLSChannel::freeTlsData_locked () {
+	if (mSession) {
+		gnutls_deinit (mSession);
+		mSession = 0;
+	}
+}
+
+void TLSChannel::setTransport_locked() {
+	gnutls_transport_set_push_function (mSession, &TLSChannel::c_push);
+	// Note: new GnuTLS variants have a vec_push method
+	// But not yet available on development machine
+	// gnutls_transport_set_vec_push_function (mSession, &TLSChannel::c_vec_push);
+	gnutls_transport_set_pull_function  (mSession, &TLSChannel::c_pull);
+	gnutls_transport_set_ptr (mSession, this);
+}
+
+void TLSChannel::continueHandshake () {
+	Error result = NoError;
+	{
+		LockGuard guard (mMutex);
+		if (!mHandshaking) {
+			// Log (LogWarning) << LOGID << func_locked() << "How did I came here?" << std::endl;
+			return;
+		}
+		int r = gnutls_handshake (mSession);
+		if (!r) {
+			mSecured     = true;
+			result = NoError;
+		} else if (r == GNUTLS_E_AGAIN || r == GNUTLS_E_INTERRUPTED){
+			// Async, do something else
+			return;
+		} else {
+			// fail
+			Log (LogWarning) << LOGID << func_locked() << "Handshaking failed due " << gnutls_strerror_name (r) << std::endl;
+			result = error::TlsError;
+			mHandshakeError = result;
+		}
+		mHandshaking = false;
+	}
+	Log (LogInfo) << LOGID << "Handshaking result: " << toString (result) << std::endl;
+	if (mHandshakeCallback) mHandshakeCallback (result);
+}
+
+void TLSChannel::onChanged() {
+	{
+		LockGuard guard (mMutex);
+//		Log (LogInfo) << LOGID << "TLSChannel::onChanged (handler=" << (mChanged ? "true" : "false") << ")" << std::endl;
+//		Log (LogInfo) << LOGID << "Error: " << toString (mNext->error()) << std::endl;
+		{
+			if (mHandshaking) {
+				xcall (dMemFun (this, &TLSChannel::continueHandshake));
+			}
+		}
+	}
+	if (mChanged) mChanged ();
+}
+
+/*static*/ ssize_t TLSChannel::c_push   (gnutls_transport_ptr instance, const void * data, size_t size) {
+	TLSChannel * _this = static_cast<TLSChannel*> (instance);
+	if (!_this->mNext) {
+		gnutls_transport_set_errno (_this->mSession, EBADFD);
+		return -1;
+	}
+	Error e = _this->mNext->write(ByteArrayPtr (new ByteArray ((const char*)data, size)), _this->mCurrentWriteCallback);
+	if (e) {
+		Log (LogInfo) << LOGID << "Returning BADFD in sent" << std::endl;
+		gnutls_transport_set_errno (_this->mSession, EBADFD);
+		return -1;
+	}
+	// Log (LogInfo) << LOGID << _this->func_locked()  << " Sent " << size << std::endl;
+	return size;
+}
+
+/*static*/ ssize_t TLSChannel::c_pull   (gnutls_transport_ptr instance, void * data, size_t size) {
+	TLSChannel * _this = static_cast<TLSChannel*> (instance);
+	if (!_this->mNext){
+		gnutls_transport_set_errno (_this->mSession, EBADFD);
+		return -1;
+	}
+	ByteArrayPtr block = _this->mNext->read(size);
+	if (!block || block->size() == 0) {
+		// Check for EOF
+		if (_this->mNext->error() == error::Eof){
+			Log (LogInfo) << LOGID << "Forwarding Eof, nothing to read" << std::endl;
+			return 0;
+		}
+		// Real error
+		if (_this->mNext->error()) {
+			Log (LogInfo) << LOGID << "Forwarding error" << toString(_this->mNext->error()) << std::endl;
+			gnutls_transport_set_errno (_this->mSession, EBADFD);
+			return -1;
+		}
+		// Nothing to read...
+		// Log (LogInfo) << LOGID << "Forwarding EAGAIN" << std::endl;
+		gnutls_transport_set_errno (_this->mSession, EAGAIN); // or EWOULDBLOCk
+		return -1;
+	}
+	memcpy (data, block->const_c_array(), block->size());
+	// Log (LogInfo) << LOGID << _this->func_locked() << " Recv " << block->size() << " Req: " << size << std::endl;
+	return block->size();
+}
+
+}
