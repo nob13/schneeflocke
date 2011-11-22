@@ -144,16 +144,16 @@ private:
 
 		// remote's data
 		AsyncOpId      remoteId;   // if being reactor, the others' id.
-		NetEndpoint     remoteExternAddress;
+		NetEndpointVec  remoteExternAddresses; // extern adresses we got to know or guessed.
 		NetEndpointVec  remoteInternAddresses;
 
 		NetEndpoint     remoteWorkingAddress;
 
-		int otherEndpointCount () const { return remoteInternAddresses.size() + 1; }
+		int otherEndpointCount () const { return remoteInternAddresses.size() + remoteExternAddresses.size() ; }
 		const NetEndpoint & otherEndpoint (int i) const {
 			assert (i >= 0 && i < otherEndpointCount());
 			if ((size_t) i < remoteInternAddresses.size()) return remoteInternAddresses[i];
-			return remoteExternAddress;
+			return remoteExternAddresses[(i - remoteInternAddresses.size())];
 		}
 
 		// networking
@@ -193,6 +193,9 @@ private:
 
 	void onRpc (const HostId & sender, const RequestUDTConnect & request, const ByteArray & data);
 	void onRpc (const HostId & sender, const RequestUDTConnectReply & reply, const ByteArray & data);
+
+	// Varies the port [-1,+3] based on some access point port mapping experience
+	void guessSomeExternAddresses_locked (CreateChannelOp * op);
 
 	ChannelCreationDelegate mChannelCreated;
 	HostId mHostId;

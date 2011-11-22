@@ -321,7 +321,9 @@ void UDTChannelConnector::onRpc (const HostId & sender, const RequestUDTConnect 
 	op->connector = false;
 	op->remoteId   = request.id;
 	op->remoteInternAddresses  = request.intern;
-	op->remoteExternAddress = request.extern_;
+	if (request.extern_.valid())
+		op->remoteExternAddresses.push_back (request.extern_);
+	guessSomeExternAddresses_locked (op);
 	op->target = sender;
 	startConnecting_locked (op);
 }
@@ -332,12 +334,24 @@ void UDTChannelConnector::onRpc (const HostId & sender, const RequestUDTConnectR
 	getReadyInState_locked (reply.id, CREATE_CHANNEL, CreateChannelOp::WaitForeign, &op);
 	if (!op) return;
 	op->remoteInternAddresses  = reply.intern;
-	op->remoteExternAddress   = reply.extern_;
+	if (reply.extern_.valid())
+		op->remoteExternAddresses.push_back (reply.extern_);
+	guessSomeExternAddresses_locked (op);
 	op->remoteId              = reply.localId;
 	op->setState (CreateChannelOp::Connecting);
 	add_locked (op);
 	xcall (abind (dMemFun (this, &UDTChannelConnector::udpConnect), reply.id));
 }
 
+void UDTChannelConnector::guessSomeExternAddresses_locked (CreateChannelOp * op) {
+	if (op->remoteExternAddresses.empty()) return;
+	NetEndpoint ep = op->remoteExternAddresses[0];
+	if (!ep.valid()) return;
+	op->remoteExternAddresses.push_back(NetEndpoint (ep.address, ep.port + 1)); // works often
+	op->remoteExternAddresses.push_back(NetEndpoint (ep.address, ep.port + 2));
+	op->remoteExternAddresses.push_back(NetEndpoint (ep.address, ep.port + 3));
+	op->remoteExternAddresses.push_back(NetEndpoint (ep.address, ep.port - 1));
+	op->remoteExternAddresses.push_back(NetEndpoint (ep.address, ep.port - 2));
+}
 
 }
