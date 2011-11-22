@@ -15,7 +15,7 @@ What you need:
 - If you enable DNS-SD (on Linux only), used for SLXMPP , you will also need the Avahi Compatiblity Libs, they 
   are called libavahi-compat-libdnssd-dev on Ubuntu.
   If you want to disable DNS-SD, just pass -DENABLE_DNS_SD=FALSE to CMake
-- sfserialization https://github.com/nob13/sfserialization
+- sfserialization >= 0.2.4 https://github.com/nob13/sfserialization
   Please append the sfserialization path using -DSFSerialization_ROOT=[path where you installed it] when 
   the cmake script doesn't find it by itself. Note: In Windows you have to compile sfserialization for 
   debug mode if you want to build Schneeflocke in Debug mode.
