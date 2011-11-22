@@ -39,25 +39,7 @@ UDTSocket::~UDTSocket () {
 
 Error UDTSocket::connect (const String & host, int port) {
 	LockGuard guard (mMutex);
-	struct sockaddr_in dst;
-	memset (&dst, 0, sizeof(dst));
-	dst.sin_family = AF_INET;
-	dst.sin_addr.s_addr = inet_addr (host.c_str());
-	if (dst.sin_addr.s_addr == INADDR_NONE) { // won't broadcast here
-		return error::InvalidArgument;
-	}
-	dst.sin_port = htons (port);
-
-	mConnecting = true;
-	int result = UDT::connect(mSocket, (const struct sockaddr*) &dst, sizeof(dst));
-	mConnecting = false;
-
-	if (result) {
-		UDT::ERRORINFO & info = UDT::getlasterror();
-		Log (LogInfo) << LOGID << "Could not connect: " << info.getErrorMessage() << std::endl;
-		return error::CouldNotConnectHost;
-	}
-	return NoError;
+	return connect_locked (host, port);
 }
 
 Error UDTSocket::connectRendezvous (const String & host, int port) {
@@ -237,6 +219,28 @@ Channel::ChannelInfo UDTSocket::info () const {
 	UDT::setsockopt (s, 0, UDT_RCVBUF, &bufSize, sizeof (bufSize));
 }
 
+Error UDTSocket::connect_locked (const String & host, int port) {
+	struct sockaddr_in dst;
+	memset (&dst, 0, sizeof(dst));
+	dst.sin_family = AF_INET;
+	dst.sin_addr.s_addr = inet_addr (host.c_str());
+	if (dst.sin_addr.s_addr == INADDR_NONE) { // won't broadcast here
+		return error::InvalidArgument;
+	}
+	dst.sin_port = htons (port);
+
+	mConnecting = true;
+	int result = UDT::connect(mSocket, (const struct sockaddr*) &dst, sizeof(dst));
+	mConnecting = false;
+
+	if (result) {
+		UDT::ERRORINFO & info = UDT::getlasterror();
+		Log (LogInfo) << LOGID << "Could not connect: " << info.getErrorMessage() << std::endl;
+		return error::CouldNotConnectHost;
+	}
+	return NoError;
+}
+
 void UDTSocket::onReadable  () {
 	int receivedSum = 0;
 	bool error = false;
@@ -296,22 +300,17 @@ bool UDTSocket::isConnected_locked () const {
 
 
 void UDTSocket::connectInOtherThread (const String & address, int port, bool rendezvous, const function <void (Error)> & callback) {
-	{
-		LockGuard guard (mMutex);
-		if (rendezvous) {
-			bool yes = true;
-			UDT::setsockopt (mSocket, 0, UDT_RENDEZVOUS, &yes, sizeof(yes));
-		}
+	LockGuard guard (mMutex);
+	if (rendezvous) {
+		bool yes = true;
+		UDT::setsockopt (mSocket, 0, UDT_RENDEZVOUS, &yes, sizeof(yes));
 	}
-	Error result = connect (address, port);
-	if (callback) callback (result);
-	{
-		LockGuard guard (mMutex);
-		if (rendezvous) {
-			bool no = false;
-			UDT::setsockopt (mSocket, 0, UDT_RENDEZVOUS, &no, sizeof(no));
-		}
+	Error result = connect_locked (address, port);
+	if (rendezvous) {
+		bool no = false;
+		UDT::setsockopt (mSocket, 0, UDT_RENDEZVOUS, &no, sizeof(no));
 	}
+	notifyAsync (callback, result);
 }
 
 void UDTSocket::init (UDTSOCKET s) {

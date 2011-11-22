@@ -59,6 +59,8 @@ public:
 	// For internal use: set default UDT buffer size
 	static void setDefaultBufferSize (UDTSOCKET s);
 private:
+	Error connect_locked (const String & host, int port);
+
 	bool isConnected_locked () const;
 
 	void connectInOtherThread (const String & address, int port, bool rendezvous, const function <void (Error)> & callback);
