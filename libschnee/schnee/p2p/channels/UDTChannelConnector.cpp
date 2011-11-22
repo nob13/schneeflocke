@@ -42,7 +42,7 @@ void UDTChannelConnector::startConnecting_locked (CreateChannelOp * op) {
 	std::vector<String> localAddresses;
 	net::localIpv4Addresses(&localAddresses, true);
 	for (std::vector<String>::const_iterator i = localAddresses.begin(); i != localAddresses.end(); i++){
-		op->externAddresses.push_back (NetEndpoint (*i, op->udpSocket.port()));
+		op->internAddresses.push_back (NetEndpoint (*i, op->udpSocket.port()));
 	}
 
 	Log (LogInfo) << LOGID << "Building channel from " << mHostId << " to " << op->target << " lasting time is " << op->lastingTimeMs() << "ms" << std::endl;
@@ -72,15 +72,15 @@ void UDTChannelConnector::onEchoClientResult (Error result, AsyncOpId id) {
 		Log (LogWarning) << LOGID << "Could not find out remote address: " << toString (result) << std::endl;
 		// still continuing; maybe it works without...
 	} else {
-		op->internAddress.address = op->echoClient.address();
-		op->internAddress.port    = op->echoClient.port();
+		op->externAddress.address = op->echoClient.address();
+		op->externAddress.port    = op->echoClient.port();
 	}
 
 	if (op->connector) {
 		RequestUDTConnect request;
 		request.id     = id;
-		request.local  = op->externAddresses;
-		request.remote = op->internAddress;
+		request.intern  = op->internAddresses;
+		request.extern_ = op->externAddress;
 		request.echoResult = result;
 
 		mCommunicationDelegate->send(op->target, Datagram::fromCmd(request));
@@ -90,8 +90,8 @@ void UDTChannelConnector::onEchoClientResult (Error result, AsyncOpId id) {
 		RequestUDTConnectReply reply;
 		reply.id      = op->remoteId;
 		reply.localId = op->id();	// reversed, as reply.id has to fit the id of the RequestUDTConnect command.
-		reply.local  = op->externAddresses;
-		reply.remote = op->internAddress;
+		reply.intern  = op->internAddresses;
+		reply.extern_ = op->externAddress;
 		reply.echoResult = result;
 
 		mCommunicationDelegate->send (op->target, Datagram::fromCmd(reply));
@@ -320,8 +320,8 @@ void UDTChannelConnector::onRpc (const HostId & sender, const RequestUDTConnect 
 	op->setId (genFreeId_locked());
 	op->connector = false;
 	op->remoteId   = request.id;
-	op->remoteInternAddresses  = request.local;
-	op->remoteExternAddress = request.remote;
+	op->remoteInternAddresses  = request.intern;
+	op->remoteExternAddress = request.extern_;
 	op->target = sender;
 	startConnecting_locked (op);
 }
@@ -331,8 +331,8 @@ void UDTChannelConnector::onRpc (const HostId & sender, const RequestUDTConnectR
 	CreateChannelOp * op;
 	getReadyInState_locked (reply.id, CREATE_CHANNEL, CreateChannelOp::WaitForeign, &op);
 	if (!op) return;
-	op->remoteInternAddresses  = reply.local;
-	op->remoteExternAddress   = reply.remote;
+	op->remoteInternAddresses  = reply.intern;
+	op->remoteExternAddress   = reply.extern_;
 	op->remoteId              = reply.localId;
 	op->setState (CreateChannelOp::Connecting);
 	add_locked (op);

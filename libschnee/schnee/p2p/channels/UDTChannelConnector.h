@@ -44,8 +44,8 @@ public:
 
 	/// Base class for all connect details operations
 	struct UDTConnectDetails {
-		NetEndpointVec local;
-		NetEndpoint    remote;
+		NetEndpointVec intern;
+		NetEndpoint    extern_;
 		Error echoResult;	///< Result of echoing
 		SF_AUTOREFLECT_SD;
 	};
@@ -139,8 +139,8 @@ private:
 
 		HostId         target;
 		// local data
-		NetEndpoint     internAddress;
-		NetEndpointVec  externAddresses;
+		NetEndpoint     externAddress;
+		NetEndpointVec  internAddresses;
 
 		// remote's data
 		AsyncOpId      remoteId;   // if being reactor, the others' id.
