@@ -47,6 +47,11 @@ struct DataPromise {
 		return read (ds::Range (0, size()), dst);
 	}
 	
+	/// Writes in some data (e.g. on pushing)
+	virtual sf::Error write (const ds::Range & range, const ByteArrayPtr & data) {
+		return error::NotSupported;
+	}
+
 	/// Size of the promise (-1 is UNKNOWN)
 	/// Asynchronous operations must return a size of -1 as long the size is not known
 	virtual int64_t size () const = 0;

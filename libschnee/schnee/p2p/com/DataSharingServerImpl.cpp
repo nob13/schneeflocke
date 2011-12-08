@@ -473,19 +473,22 @@ void DataSharingServerImpl::continueTransmission (Error lastError, AsyncOpId id)
 	}
 	r.id = t->requestId;
 
-	size_t start = r.range.from + t->chunkSize * t->nextChunk;
+	int64_t start = t->range.from + t->info.transferred;
+	Range desiredRange;
 	if (t->range.to == -1){
-		// unknown size
-		r.range = Range (start, start + t->chunkSize);
+		desiredRange = Range (
+				start,
+				start + t->chunkSize);
+
 	} else {
-		r.range = Range (start, std::min (t->range.to, (int64_t) (start + t->chunkSize)));
+		desiredRange = Range (start, std::min (t->range.to, start + t->chunkSize));
 	}
 
 	data = sf::createByteArrayPtr();
-	Error readError = t->promise->read (r.range, *data);
+	Error readError = t->promise->read (desiredRange, *data);
+	r.range = Range (desiredRange.from, desiredRange.from + (int64_t) data->size());
 	if (readError == error::Eof){
 		r.mark = RequestReply::TransmissionFinish;
-		r.range = Range (r.range.from, r.range.from + (int64_t) data->size());
 		finished = true;
 	} else if (readError) {
 		Log (LogWarning) << LOGID << "Had read error, will cancel transmission" << std::endl;
