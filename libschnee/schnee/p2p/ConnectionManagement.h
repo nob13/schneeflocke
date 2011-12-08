@@ -37,10 +37,10 @@ public:
 	virtual int channelLevel (const HostId & receiver) = 0;
 
 	/// Lift the connection to the best possible value (asynchronous with callback)
-	virtual Error liftConnection (const HostId & hostId, const ResultCallback & callback = ResultCallback(), int timeOutMs = 30000) = 0;
+	virtual Error liftConnection (const HostId & hostId, const ResultCallback & callback = ResultCallback(), int timeOutMs = 60000) = 0;
 	
 	/// Tries to lift the connection to someone to a given min level and returns CouldNotConnectHost if that level could not reached.
-	virtual Error liftToAtLeast (int level, const HostId & hostId, const ResultCallback & callback = ResultCallback(), int timeOutMs = 30000) = 0;
+	virtual Error liftToAtLeast (int level, const HostId & hostId, const ResultCallback & callback = ResultCallback(), int timeOutMs = 60000) = 0;
 
 	/// Close a channel to someone
 	virtual Error closeChannel (const HostId & host, int level) = 0;

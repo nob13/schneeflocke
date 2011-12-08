@@ -15,8 +15,6 @@ struct BasicDataSharingPeer : public test::DataSharingScenario::DataSharingPeer,
 	
 	BasicDataSharingPeer (InterplexBeacon * beacon) : DataSharingPeer (beacon) {
 		SF_REGISTER_ME;
-		acceptPush = false;
-		server->pushed() = dMemFun (this, &BasicDataSharingPeer::onPush);
 	}
 	virtual ~BasicDataSharingPeer() {
 		SF_UNREGISTER_ME;
@@ -114,14 +112,6 @@ struct BasicDataSharingPeer : public test::DataSharingScenario::DataSharingPeer,
 		return lastSubscribeReply.err;
 	}
 	
-	Error pushSync (const Uri & uri, const ByteArrayPtr & data) {
-		counter.mark();
-		Error e = client->push(uri.host(), ds::Push (uri.path()), data, dMemFun (this, &BasicDataSharingPeer::onPushReply));
-		if (e) return e;
-		counter.wait();
-		return lastPushReply.err;
-	}
-	
 	Error cancelSubscription (const Uri & uri) {
 		return client->cancelSubscription(uri);
 	}
@@ -172,35 +162,19 @@ struct BasicDataSharingPeer : public test::DataSharingScenario::DataSharingPeer,
 		counter.finish ();
 	}
 	
-	void onPushReply (const HostId & sender, const ds::PushReply & reply){
-		lastPushReply = reply;
-		counter.finish();
-	}
-	
-	ds::PushReply onPush (const HostId & sender, const ds::Push & push, const ByteArray & data) {
-		if (!acceptPush) return ds::PushReply ();   // it is important that default value is notSupported
-													// so it will be also used if delegate is not set. 
-		pushedData = sf::createByteArrayPtr(data);
-		return ds::PushReply (NoError);
-	}
-	
-	
 	ByteArray sharedData;
 	OutstandingDataPromisePtr outstandingDataPromise;
 	SubDataPromisePtr subDataPromise;
 	ByteArrayPtr receivedData;
-	ByteArrayPtr pushedData;
 	
 	ds::RequestReply lastRequestReply;
 	ds::SubscribeReply lastSubscribeReply;
-	ds::PushReply lastPushReply;
 	Error transmissionError;
 	TransmissionState transmissionState;
 	
 	ds::Notify lastNotify;
 	
 	SyncCounter counter;
-	bool acceptPush;
 };
 
 

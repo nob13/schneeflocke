@@ -217,39 +217,6 @@ int testSubData () {
 	return 0;
 }
 
-
-// Pushing to someone who do not accept pushing
-int testPushNotSupported () {
-	DataSharingBasicsScenario scenario;
-	scenario.initConnectAndLift(2,false,true);
-		
-	scenario.peer(0)->generateShareData();
-	ByteArrayPtr data = sf::createByteArrayPtr(scenario.peer(0)->sharedData);
-	
-	Uri uri (scenario.peer(1)->hostId(), "data");
-	Error e = scenario.peer(0)->pushSync (uri, data);
-	tcheck1 (e == error::NotSupported);
-	return 0;
-}
-
-// Pushing dat to someone who accept pushing
-int testPush () {
-	DataSharingBasicsScenario scenario;
-	scenario.initConnectAndLift(2,false,true);
-		
-	scenario.peer(0)->generateShareData();
-	ByteArrayPtr data = sf::createByteArrayPtr(scenario.peer(0)->sharedData);
-	
-	Uri uri (scenario.peer(1)->hostId(), "data");
-	
-	scenario.peer(1)->acceptPush = true;
-	
-	Error e = scenario.peer(0)->pushSync (uri, data);
-	tcheck1 (e == error::NoError);
-	tcheck1 (*scenario.peer(1)->pushedData == scenario.peer(0)->sharedData);
-	return 0;
-}
-
 // Test denying in request situations
 int testDeny () {
 	DataSharingBasicsScenario scenario;
@@ -278,8 +245,6 @@ int main (int argc, char * argv[]){
 	testcase (testTransmissionCancellation());
 	testcase (testAsyncTransmission());
 	testcase (testSubData());
-	testcase (testPushNotSupported());
-	testcase (testPush());
 	testcase (testDeny ());
 	return ret;
 }

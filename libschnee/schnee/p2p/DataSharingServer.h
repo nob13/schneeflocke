@@ -126,13 +126,9 @@ struct DataSharingServer : public CommunicationComponent {
 	///@{
 
 	typedef sf::function<bool (const HostId & user, const Path & path)> PermissionDelegate;
-	typedef sf::function <ds::PushReply (const HostId & sender, const ds::Push &, const sf::ByteArray & data)> PushDelegate;
 
 	/// A delegate which will ask you for permissions whether a user may receive specific data
 	virtual PermissionDelegate & checkPermissions () = 0;
-
-	/// A delegate which will be called if some data / stream is successfully pushed
-	virtual PushDelegate & pushed () = 0;
 
 	///@}
 

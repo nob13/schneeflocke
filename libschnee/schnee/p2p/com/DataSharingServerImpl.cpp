@@ -408,11 +408,7 @@ void DataSharingServerImpl::onRpc (const HostId & sender, const Subscribe & subs
 
 void DataSharingServerImpl::onRpc (const HostId & sender, const Push & push, const ByteArray & data) {
 	ds::PushReply reply;
-	if (mPushDelegate) {
-		reply = mPushDelegate (sender, push, data);
-	} else {
-		reply.err = error::NotSupported;
-	}
+	reply.err = error::NotSupported;
 	reply.id = push.id;
 	if (reply.path.isDefault()) reply.path = push.path;
 	mCommunicationDelegate->send(sender, Datagram::fromCmd(reply));

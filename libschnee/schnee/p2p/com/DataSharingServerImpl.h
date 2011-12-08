@@ -33,7 +33,6 @@ public:
 	virtual SharedDataDesc  shared (const Path & path, bool * found) const;
 
 	virtual PermissionDelegate & checkPermissions () { return mCheckPermissions; }
-	virtual PushDelegate & pushed () { return mPushDelegate; }
 
 	// Overriding component
 	virtual void onChannelChange (const HostId & host);
@@ -128,8 +127,6 @@ private:
 
 	// Delegates
 	PermissionDelegate mCheckPermissions;
-
-	PushDelegate mPushDelegate;
 };
 
 // for debugging purposes
