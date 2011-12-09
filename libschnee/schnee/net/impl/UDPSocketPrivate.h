@@ -4,6 +4,7 @@
 #include "IOService.h"
 #include <schnee/tools/async/MemFun.h>
 #include <schnee/tools/Log.h>
+#include <schnee/schnee.h>
 
 #include <boost/asio.hpp>
 using boost::asio::ip::udp;
@@ -136,6 +137,7 @@ public:
 	}
 
 	void writeHandler (const error_code & ec, std::size_t bytes_transferred) {
+		SF_SCHNEE_LOCK;
 		{
 			LockGuard guard (mStateMutex);
 			Log (LogInfo) << LOGID << "Sent " << bytes_transferred << " bytes" << std::endl;
@@ -143,7 +145,7 @@ public:
 			mWriting = false;
 			if (!ec) {
 				assert (!mOutputBuffer.empty());
-				assert (bytes_transferred = mOutputBuffer.front().size());
+				assert (bytes_transferred == mOutputBuffer.front().size());
 				mOutputBuffer.pop_front();
 				mOutputBufferSize-= bytes_transferred;
 
@@ -197,6 +199,7 @@ public:
 	}
 
 	void readHandler (const error_code & ec, std::size_t bytes_transferred) {
+		SF_SCHNEE_LOCK;
 		{
 			LockGuard guard (mStateMutex);
 			Log (LogInfo) << LOGID << "Read " << bytes_transferred << " bytes" << std::endl;

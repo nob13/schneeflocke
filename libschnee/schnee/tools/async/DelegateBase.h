@@ -76,7 +76,21 @@ private:
 };
 
 /// Executes one call in the IOService thread
+/// Note: schnee lock will be set
 void xcall (const sf::function<void ()> & call);
+
+
+template <class T> static void holdIt (const shared_ptr<T> & x) {
+	// no function
+}
+
+/// Helps on disposing shared_ptr objects, e.g. if you are called by one of this
+/// Instead of just 0'ing that pointer, call safeRemofe it will rescue the possible
+/// deletion to the next cycle.
+template <class T> void safeRemove (shared_ptr<T> & x){
+	// the xcall mechanism will hold it
+	xcall (abind (&holdIt, x));
+}
 
 /// Call the callback x asynchronously, if valid (0 Parameter)
 template <class T> static void notifyAsync (const T & callback) {

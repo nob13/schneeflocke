@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <schnee/schnee.h>
 
 namespace sf {
 
@@ -111,7 +112,10 @@ void UDTMainLoop::threadEntry () {
 				mMutex.unlock();
 				{
 					sf::DelegateRegisterLock lock (receiver->delegateKey());
-					if (lock.suc()) receiver->onReadable();
+					if (lock.suc()){
+						SF_SCHNEE_LOCK;
+						receiver->onReadable();
+					}
 				}
 				mMutex.lock();
 			}
@@ -124,7 +128,10 @@ void UDTMainLoop::threadEntry () {
 				mMutex.unlock();
 				{
 					sf::DelegateRegisterLock lock (receiver->delegateKey());
-					if (lock.suc()) continueWriting = receiver->onWriteable();
+					if (lock.suc()) {
+						SF_SCHNEE_LOCK;
+						continueWriting = receiver->onWriteable();
+					}
 				}
 				mMutex.lock();
 			}

@@ -4,6 +4,7 @@
 #include "types.h"
 #include "gui/GUI.h"
 #include <schnee/net/Tools.h>
+#include <schnee/schnee.h>
 #include "autostart.h"
 #include "modeladapters/UserList.h"
 #include "modeladapters/TransferList.h"
@@ -12,6 +13,7 @@
 #include "modeladapters/ShareList.h"
 
 Controller::Controller (){
+	SF_SCHNEE_LOCK;
 	SF_REGISTER_ME;
 	mModel = new Model ();
 	mUserList = new UserList (this);
@@ -25,6 +27,7 @@ Controller::Controller (){
 }
 
 Controller::~Controller () {
+	SF_SCHNEE_LOCK;
 	SF_UNREGISTER_ME;
 	delete mGUI;
 	delete mUserList;
@@ -32,6 +35,11 @@ Controller::~Controller () {
 	delete mConnectionList;
 	delete mShareList;
 	delete mModel;
+}
+
+const Model * Controller::umodel () const {
+	assert (sf::schnee::mutex().try_lock() == false);
+	return mModel;
 }
 
 void Controller::init () {
@@ -53,43 +61,46 @@ void Controller::init () {
 	s.useBosh               = settings.value("useBosh", false).toBool();
 	s.autoConnect           = settings.value("autoConnect", false).toBool();
 	settings.endGroup ();
-	mModel->setSettings(s);
-
-
-	mModel->init ();
-	mModel->beacon()->connections().conDetailsChanged() = dMemFun (this, &Controller::onConDetailsChanged);
-	mModel->listTracker()->trackingUpdate()  = dMemFun (this, &Controller::onTrackingUpdate);
-	mModel->listTracker()->lostTracking()    = dMemFun (this, &Controller::onLostTracking);
-	mModel->fileGetting()->gotListing()      = dMemFun (this, &Controller::onUpdatedListing);
-	mModel->fileGetting()->updatedTransfer() = dMemFun (this, &Controller::onUpdatedIncomingTransfer);
-	mModel->fileSharing()->updatedTransfer() = dMemFun (this, &Controller::onUpdatedOutgoingTransfer);
-
-	sf::InterplexBeacon * beacon = mModel->beacon();
-
-	beacon->presences().peersChanged().add (sf::dMemFun (this, &Controller::onPeersChanged));
-	beacon->presences().onlineStateChanged().add (sf::dMemFun (this, &Controller::onOnlineStateChanged));
-	beacon->presences().subscribeRequest() = sf::dMemFun (this, &Controller::onUserSubscribeRequest);
-	beacon->presences().serverStreamErrorReceived().add (sf::dMemFun (this, &Controller::onServerStreamErrorReceived));
-
-	// Set own features and activating protocol filter
 	{
-		const sf::String schneeProtocol = "http://sflx.net/protocols/schnee";
-		std::vector<sf::String> ownFeatures;
-		ownFeatures.push_back (schneeProtocol);
-		sf::Error e = beacon->presences().setOwnFeature(sf::String ("schneeflocke ") + sf::schnee::version(), ownFeatures);
-		if (e) {
-			sf::Log (LogError) << LOGID << "Could not set own feature" << std::endl;
-		} else {
-			mUserList->setFeatureFilter(schneeProtocol);
-		}
-	}
+		SF_SCHNEE_LOCK;
+		mModel->setSettings(s);
 
+
+		mModel->init ();
+		mModel->beacon()->connections().conDetailsChanged() = dMemFun (this, &Controller::onConDetailsChanged);
+		mModel->listTracker()->trackingUpdate()  = dMemFun (this, &Controller::onTrackingUpdate);
+		mModel->listTracker()->lostTracking()    = dMemFun (this, &Controller::onLostTracking);
+		mModel->fileGetting()->gotListing()      = dMemFun (this, &Controller::onUpdatedListing);
+		mModel->fileGetting()->updatedTransfer() = dMemFun (this, &Controller::onUpdatedIncomingTransfer);
+		mModel->fileSharing()->updatedTransfer() = dMemFun (this, &Controller::onUpdatedOutgoingTransfer);
+
+		sf::InterplexBeacon * beacon = mModel->beacon();
+
+		beacon->presences().peersChanged().add (sf::dMemFun (this, &Controller::onPeersChanged));
+		beacon->presences().onlineStateChanged().add (sf::dMemFun (this, &Controller::onOnlineStateChanged));
+		beacon->presences().subscribeRequest() = sf::dMemFun (this, &Controller::onUserSubscribeRequest);
+		beacon->presences().serverStreamErrorReceived().add (sf::dMemFun (this, &Controller::onServerStreamErrorReceived));
+
+		// Set own features and activating protocol filter
+		{
+			const sf::String schneeProtocol = "http://sflx.net/protocols/schnee";
+			std::vector<sf::String> ownFeatures;
+			ownFeatures.push_back (schneeProtocol);
+			sf::Error e = beacon->presences().setOwnFeature(sf::String ("schneeflocke ") + sf::schnee::version(), ownFeatures);
+			if (e) {
+				sf::Log (LogError) << LOGID << "Could not set own feature" << std::endl;
+			} else {
+				mUserList->setFeatureFilter(schneeProtocol);
+			}
+		}
+
+	}
 	mGUI->init ();
 	mGUI->call (sf::bind (&UserList::rebuildList, mUserList));
-	loadShares ();
+	loadShares();
 
 	if (s.autoConnect){
-		xcall (abind (dMemFun (this, &Controller::changeConnection), DS_CONNECT));
+		xcall (abind (dMemFun (this, &Controller::changeConnection_locked), DS_CONNECT));
 	}
 }
 
@@ -99,6 +110,7 @@ void Controller::quit () {
 }
 
 void Controller::updateSettings(const Model::Settings & s) {
+	SF_SCHNEE_LOCK;
 	mModel->setSettings (s);
 	QSettings settings;
 	settings.beginGroup("im");
@@ -114,8 +126,12 @@ void Controller::updateSettings(const Model::Settings & s) {
 }
 
 void Controller::share (const QString & shareName, const QString & fileName, bool forAll, const sf::UserSet & whom){
-	sf::FileSharing * sharing = mModel->fileSharing ();
-	sf::Error e = sharing->share (sfString (shareName), sfString (fileName), forAll, whom);
+	sf::Error e;
+	{
+		SF_SCHNEE_LOCK;
+		sf::FileSharing * sharing = mModel->fileSharing ();
+		e = sharing->share (sfString (shareName), sfString (fileName), forAll, whom);
+	}
 	if (e) {
 		mGUI->onError (err::CouldNotAddShare, QObject::tr ("Could not add share"), QObject::tr ("Could not add share: %1").arg (toString (e)));
 	}
@@ -124,8 +140,12 @@ void Controller::share (const QString & shareName, const QString & fileName, boo
 }
 
 void Controller::editShare (const QString & shareName, const QString & fileName, bool forAll, const sf::UserSet & whom) {
-	sf::FileSharing * sharing = mModel->fileSharing ();
-	sf::Error e = sharing->editShare (sfString (shareName), sfString (fileName), forAll, whom);
+	sf::Error e;
+	{
+		SF_SCHNEE_LOCK;
+		sf::FileSharing * sharing = mModel->fileSharing ();
+		e = sharing->editShare (sfString (shareName), sfString (fileName), forAll, whom);
+	}
 	if (e) {
 		mGUI->onError (err::CouldNotEditShare, QObject::tr ("Could not add share"), QObject::tr ("Could not edit share %1, reason: %2")
 		.arg (shareName).arg(toString(e)));
@@ -135,8 +155,12 @@ void Controller::editShare (const QString & shareName, const QString & fileName,
 }
 
 void Controller::unshare (const QString & shareName) {
-	sf::FileSharing * sharing = mModel->fileSharing();
-	sf::Error e = sharing->unshare(sfString(shareName));
+	sf::Error e;
+	{
+		SF_SCHNEE_LOCK;
+		sf::FileSharing * sharing = mModel->fileSharing();
+		e = sharing->unshare(sfString(shareName));
+	}
 	if (e) {
 		mGUI->onError(err::CouldNotRemoveShare, QObject::tr ("Could not remove share"),
 				QObject::tr ("Could not remove share %1, reason:%2").arg(shareName).arg(toString (e)));
@@ -146,14 +170,17 @@ void Controller::unshare (const QString & shareName) {
 }
 
 void Controller::registerAccount () {
+	SF_SCHNEE_LOCK;
 	mModel->registerAccount (sf::dMemFun (this, &Controller::onRegisterAccount));
 }
 
 bool Controller::isConnectedTo (const sf::HostId & hostId) {
+	SF_SCHNEE_LOCK;
 	return mModel->beacon()->connections().channelLevel(hostId) >= 10;
 }
 
 sf::Error Controller::trackHostShared (const sf::HostId & hostId) {
+	SF_SCHNEE_LOCK;
 	if (!isConnectedTo (hostId)){
 		return mModel->beacon()->connections().liftToAtLeast (10, hostId, sf::abind (sf::dMemFun (this, &Controller::onConnectHostForTrackingResult), hostId));
 	}
@@ -163,6 +190,7 @@ sf::Error Controller::trackHostShared (const sf::HostId & hostId) {
 }
 
 void Controller::listDirectory (const sf::Uri & uri) {
+	SF_SCHNEE_LOCK;
 	sf::FileGetting * getting = mModel->fileGetting();
 	sf::Error e = getting->listDirectory(uri);
 	if (e) {
@@ -172,22 +200,27 @@ void Controller::listDirectory (const sf::Uri & uri) {
 }
 
 void Controller::cancelIncomingTransfer (sf::AsyncOpId id) {
+	SF_SCHNEE_LOCK;
 	mModel->fileGetting()->cancelTransfer(id);
 }
 
 void Controller::clearIncomingTransfers () {
+	SF_SCHNEE_LOCK;
 	mModel->fileGetting()->removeFinishedTransfers();
 }
 
 void Controller::cancelOutgoingTransfer (sf::AsyncOpId id) {
+	SF_SCHNEE_LOCK;
 	mModel->fileSharing()->cancelTransfer(id);
 }
 
 void Controller::clearOutgoingTransfers () {
+	SF_SCHNEE_LOCK;
 	mModel->fileSharing()->removeFinishedTransfers();
 }
 
 void Controller::requestFile (const sf::Uri & uri) {
+	SF_SCHNEE_LOCK;
 	sf::FileGetting * getting = mModel->fileGetting();
 	sf::Error e = getting->request(uri);
 	if (e) {
@@ -197,6 +230,7 @@ void Controller::requestFile (const sf::Uri & uri) {
 }
 
 void Controller::requestDirectory (const sf::Uri & uri) {
+	SF_SCHNEE_LOCK;
 	sf::FileGetting * getting = mModel->fileGetting();
 	sf::Error e = getting->requestDirectory(uri);
 	if (e) {
@@ -206,6 +240,7 @@ void Controller::requestDirectory (const sf::Uri & uri) {
 }
 
 void Controller::addUser (const sf::UserId & userId) {
+	SF_SCHNEE_LOCK;
 	sf::Error e = mModel->beacon()->presences().subscribeContact (userId);
 	if (e) {
 		mGUI->onError(err::CouldNotAddUser, QObject::tr ("Could not add user"), QObject::tr ("Could not add user %1, reason: %2").
@@ -214,6 +249,7 @@ void Controller::addUser (const sf::UserId & userId) {
 }
 
 void Controller::subscriptionRequestReply (const sf::UserId & userId, bool allow, bool alsoAdd) {
+	SF_SCHNEE_LOCK;
 	sf::Error e = mModel->beacon()->presences().subscriptionRequestReply(userId,allow,alsoAdd);
 	if (e) {
 		mGUI->onError(err::CouldNotSubscribeReplyUser, QObject::tr ("Subscription error"), QObject::tr("Could not allow other user %1 to subscribe, reason: %2")
@@ -222,29 +258,21 @@ void Controller::subscriptionRequestReply (const sf::UserId & userId, bool allow
 }
 
 void Controller::removeUser (const sf::UserId & userId) {
+	SF_SCHNEE_LOCK;
 	sf::Error e = mModel->beacon()->presences().removeContact (userId);
 	if (e) {
 		mGUI->onError(err::CouldNotRemoveUser, QObject::tr("User Removal"), QObject::tr ("Could not remove use %1, reason: %2").arg(qtString(userId)).arg(toString(e)));
 	}
 }
 
+Controller::State Controller::state() {
+	SF_SCHNEE_LOCK;
+	return mState;
+}
+
 void Controller::changeConnection (DesiredState state) {
-	{
-		sf::LockGuard guard (mMutex);
-		if (state == DS_CONNECT) {
-			if (mState == CONNECTED)
-				return; // already connected
-			sf::Error e = mModel->connect(dMemFun (this, &Controller::onConnect));
-			mState = CONNECTING;
-			if (e) mGUI->onError (err::CouldNotConnectService, QObject::tr ("Could not connect to Service"),
-					QObject::tr ("Could not connect to service, reason %1. Please check your connection settings.").arg(toString(e)));
-		}
-		if (state == DS_DISCONNECT) {
-			/*sf::Error err =*/ mModel->disconnect();
-			mState = OFFLINE;
-		}
-	}
-	mGUI->call (sf::bind (&GUI::onStateChange, mGUI));
+	SF_SCHNEE_LOCK;
+	changeConnection_locked (state);
 }
 
 bool Controller::autostartAvailable () const {
@@ -263,6 +291,22 @@ bool Controller::setAutostartInstall (bool v) {
 	}
 }
 
+void Controller::changeConnection_locked (DesiredState state) {
+	if (state == DS_CONNECT) {
+		if (mState == CONNECTED)
+			return; // already connected
+		sf::Error e = mModel->connect(dMemFun (this, &Controller::onConnect));
+		mState = CONNECTING;
+		if (e) mGUI->onError (err::CouldNotConnectService, QObject::tr ("Could not connect to Service"),
+				QObject::tr ("Could not connect to service, reason %1. Please check your connection settings.").arg(toString(e)));
+	}
+	if (state == DS_DISCONNECT) {
+		/*sf::Error err =*/ mModel->disconnect();
+		mState = OFFLINE;
+	}
+	mGUI->call (sf::bind (&GUI::onStateChange, mGUI));
+}
+
 void Controller::onError        (err::Code code, const QString & title, const QString & what) {
 	mGUI->call (sf::bind (&GUI::onError, mGUI, code, title, what));
 }
@@ -277,27 +321,30 @@ sf::UserSet toUserSet (const QVariant & variant) {
 }
 
 void Controller::loadShares () {
-	QSettings settings;
-	settings.beginGroup("share");
-	int count = settings.beginReadArray("shares");
-	for (int i = 0; i < count; i++) {
-		settings.setArrayIndex(i);
-		// do not read everything...
-		sf::String shareName = sfString (settings.value("shareName").toString());
-		sf::String fileName  = sfString (settings.value("fileName").toString());
-		bool forAll = settings.value("forAll").toBool();
-		sf::UserSet whom = toUserSet (settings.value("whom"));
-		sf::Error e = mModel->fileSharing()->editShare(shareName, fileName, forAll, whom);
-		if (e) {
-			onError (err::CouldNotRestoreShare,
-					QObject::tr ("Could not restore share"),
-					QObject::tr ("Could not restore share %1, reason: %2")
-					.arg (qtString(shareName)).arg (toString(e)));
+	{
+		SF_SCHNEE_LOCK;
+		QSettings settings;
+		settings.beginGroup("share");
+		int count = settings.beginReadArray("shares");
+		for (int i = 0; i < count; i++) {
+			settings.setArrayIndex(i);
+			// do not read everything...
+			sf::String shareName = sfString (settings.value("shareName").toString());
+			sf::String fileName  = sfString (settings.value("fileName").toString());
+			bool forAll = settings.value("forAll").toBool();
+			sf::UserSet whom = toUserSet (settings.value("whom"));
+			sf::Error e = mModel->fileSharing()->editShare(shareName, fileName, forAll, whom);
+			if (e) {
+				onError (err::CouldNotRestoreShare,
+						QObject::tr ("Could not restore share"),
+						QObject::tr ("Could not restore share %1, reason: %2")
+						.arg (qtString(shareName)).arg (toString(e)));
+			}
 		}
+		settings.endArray();
+		settings.endGroup();
 	}
-	settings.endArray();
-	settings.endGroup();
-	mShareList->update();
+	mGUI->call (boost::bind (&ShareList::update, mShareList));
 }
 
 QVariant toQVariant (const sf::UserSet & userlist) {
@@ -309,7 +356,11 @@ QVariant toQVariant (const sf::UserSet & userlist) {
 }
 
 void Controller::saveShares () {
-	sf::FileSharing::FileShareInfoVec shares = mModel->fileSharing()->shared();
+	sf::FileSharing::FileShareInfoVec shares;
+	{
+		SF_SCHNEE_LOCK;
+		shares = mModel->fileSharing()->shared();
+	}
 	QSettings settings;
 	settings.beginGroup("share");
 	settings.beginWriteArray("shares", shares.size());
@@ -327,7 +378,6 @@ void Controller::saveShares () {
 }
 
 void Controller::onConnect (sf::Error connectionError) {
-	sf::LockGuard guard (mMutex);
 	if (connectionError) {
 		mState = ERROR;
 		onError (err::CouldNotConnectService, QObject::tr ("Could not connect to Service"),
@@ -343,7 +393,6 @@ void Controller::onPeersChanged () {
 }
 
 void Controller::onOnlineStateChanged (sf::OnlineState os) {
-	sf::LockGuard guard (mMutex);
 	sf::Log (LogProfile) << LOGID << "Controller::onOnlineStateChanged: " << toString (os) << std::endl;
 	State before = mState;
 	switch (os){

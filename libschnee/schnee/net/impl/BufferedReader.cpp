@@ -2,6 +2,7 @@
 #include "IOService.h"
 #include <schnee/tools/Log.h>
 #include <schnee/tools/async/MemFun.h>
+#include <schnee/schnee.h>
 
 namespace sf {
 
@@ -103,6 +104,7 @@ void BufferedReader::startAsyncReading (){
 }
 
 void BufferedReader::checkAndContinueReadingHandler (){
+	SF_SCHNEE_LOCK;
 	assert (IOService::isCurrentThreadService (mService));
 	LockGuard lock (mStateMutex);
 	mPendingOperations--;
@@ -125,6 +127,7 @@ void BufferedReader::checkAndContinueReading_locked(){
 }
 
 void BufferedReader::readHandler (const boost::system::error_code & ec, std::size_t bytesRead){
+	SF_SCHNEE_LOCK;
 	bool doClose = false;
 	{
 		LockGuard lock (mStateMutex);

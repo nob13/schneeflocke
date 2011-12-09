@@ -14,15 +14,7 @@ IOBase::IOBase (boost::asio::io_service & service) :
 
 
 void IOBase::requestDelete () {
-	if (sf::IOService::isCurrentThreadService(mService)){
-		onDeleteItSelf ();
-	} else {
-		mService.post (memFun (this, &IOBase::onDeleteItSelf));
-		LockGuard lock (mStateMutex);
-		while (!mToDelete) {
-			mStateChange.wait(mStateMutex);
-		}
-	}
+	onDeleteItSelf();
 	mService.post (memFun (this, &IOBase::realDelete));
 }
 

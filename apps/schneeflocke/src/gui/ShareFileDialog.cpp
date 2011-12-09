@@ -76,8 +76,11 @@ void ShareFileDialog::onUserSelectedShare (const QModelIndex & index) {
 	QString shareName = mController->shareList()->stringList().at(index.row());
 
 	sf::FileSharing::FileShareInfo info;
-	sf::Error e = mController->model()->fileSharing()->putInfo(::sfString(shareName), &info);
-	if (e) return; // ?
+	{
+		SF_SCHNEE_LOCK;
+		sf::Error e = mController->umodel()->fileSharing()->putInfo(::sfString(shareName), &info);
+		if (e) return; // ?
+	}
 
 
 	if (isModified()) {
@@ -133,8 +136,11 @@ bool ShareFileDialog::isModified () const {
 	QString fileName  = mShareFileDialogUi.fileNameEdit->text();
 	if (shareName.isEmpty() || fileName.isEmpty()) return false;
 
-	sf::Error e = mController->model()->fileSharing()->putInfo(::sfString(shareName), &info);
-	if (e) return true; // not existant?
+	{
+		SF_SCHNEE_LOCK;
+		sf::Error e = mController->umodel()->fileSharing()->putInfo(::sfString(shareName), &info);
+		if (e) return true; // not existant?
+	}
 	if (info.fileName != sfString (fileName)) return true;
 	if (info.forAll != mShareFileDialogUi.everyoneRadioButton->isChecked()) return true;
 	if (info.whom != mController->shareToUserList()->checked()) return true;

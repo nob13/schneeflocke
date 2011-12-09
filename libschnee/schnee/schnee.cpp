@@ -124,6 +124,12 @@ const char * version () {
 	return SF_VERSION; // set by cmake script
 }
 
+Mutex & mutex () {
+	static Mutex mutex;
+	return mutex;
+}
+
+
 }
 
 }

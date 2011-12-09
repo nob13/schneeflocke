@@ -9,7 +9,11 @@ SettingsDialog::SettingsDialog (Controller * controller) {
 void SettingsDialog::init() {
 	/// Settings Window
 	connect (mSettingsWindowUi.buttonBox, SIGNAL (accepted()), this, SLOT (onSettingsAccepted()));
-	const Model::Settings & settings = mController->model()->settings();
+	Model::Settings settings;
+	{
+		SF_SCHNEE_LOCK;
+		settings = mController->umodel()->settings();
+	}
 	sf::String user, server;
 	splitUserServer (settings.userId, &user, &server);
 	mSettingsWindowUi.usernameEdit->setText (qtString (user));
@@ -40,7 +44,11 @@ void SettingsDialog::init() {
 }
 
 void SettingsDialog::onSettingsAccepted () {
-	Model::Settings settings = mController->model()->settings();
+	Model::Settings settings;
+	{
+		SF_SCHNEE_LOCK;
+		settings = mController->umodel()->settings();
+	}
 	sf::String server = sfString (mSettingsWindowUi.serverEdit->currentText());
 	settings.userId = sfString (mSettingsWindowUi.usernameEdit->text()) + "@" + server;
 	settings.password = sfString (mSettingsWindowUi.passwordEdit->text());

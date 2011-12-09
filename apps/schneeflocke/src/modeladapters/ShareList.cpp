@@ -6,7 +6,11 @@ ShareList::ShareList (const Controller * controller) {
 }
 
 void ShareList::update () {
-	FileShareInfovec vec = mController->model()->fileSharing()->shared();
+	FileShareInfovec vec;
+	{
+		SF_SCHNEE_LOCK;
+		vec = mController->umodel()->fileSharing()->shared();
+	}
 	QStringList list;
 	for (FileShareInfovec::const_iterator i = vec.begin(); i != vec.end(); i++) {
 		list.append(::qtString(i->shareName));

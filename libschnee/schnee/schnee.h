@@ -2,7 +2,7 @@
 #include <schnee/sftypes.h>
 
 /*
- * Init/DeInit functions for libschnee
+ * init / deinit and fundamental functions for libschnee
  */
 
 namespace sf {
@@ -31,15 +31,32 @@ bool isInitialized ();
 /// Returns the text version of this libschnee distribution
 const char * version ();
 
+/// Returns the main mutex for libschnee
+/// Note: All calls to libschnee must go through this Mutex
+/// Callbacks / Delegate from libschnee will come with this
+/// Mutex locked
+Mutex & mutex ();
+
+/// A Macro for locking libschnee
+/// Is used internally on all asynchronous handlers
+#define SF_SCHNEE_LOCK sf::LockGuard _schneelock (sf::schnee::mutex());
+
 /// A RAII guard for the initializers / deinitializers, you may use it instead of init / deInit
 struct SchneeApp {
 public:
 	/// Initializes the application with your command line parameters
-	SchneeApp (int argc = 0, const char* argv[] = 0) { init (argc, argv); }
+	SchneeApp (int argc = 0, const char* argv[] = 0) {
+		LockGuard guard (mutex());
+		init (argc, argv);
+	}
 	/// Initializes the application with your command line parameters
-	SchneeApp (int argc, char ** argv) { init (argc, argv); }
+	SchneeApp (int argc, char ** argv) {
+		init (argc, argv);
+	}
 	/// Deinitialization, by RAII or at the end of your program
-	~SchneeApp () { deinit (); }
+	~SchneeApp () {
+		deinit ();
+	}
 };
 
 

@@ -7,6 +7,7 @@
 #include <schnee/tools/async/ABind.h>
 #include <schnee/tools/async/Notify.h>
 #include <schnee/sftypes.h>
+#include <schnee/schnee.h>
 #include "IOService.h"
 #include "BufferedReader.h"
 #include "../Channel.h"
@@ -173,6 +174,7 @@ public:
 
 	/// Handler after resolving (not necessary successfull)
 	void resolveHandler (const boost::system::error_code& error, tcp::resolver::iterator i){
+		SF_SCHNEE_LOCK
 		{
 			LockGuard guard (mStateMutex);
 			mPendingOperations--;
@@ -188,6 +190,7 @@ public:
 	}
 
 	void timerHandler (const boost::system::error_code& error) {
+		SF_SCHNEE_LOCK
 		{
 			LockGuard guard (mStateMutex);
 			mWaitForTimer = false;
@@ -232,6 +235,7 @@ public:
 	}
 
 	void connectFailedHandler () {
+		SF_SCHNEE_LOCK
 		{
 			LockGuard guard (mStateMutex);
 			notifyDelegate_locked (mChangedDelegate);
@@ -242,6 +246,7 @@ public:
 	}
 
 	void connectResultHandler (const boost::system::error_code& cerror) {
+		SF_SCHNEE_LOCK;
 		bool informDelegate = false;
 		{
 			LockGuard guard (mStateMutex);
@@ -388,6 +393,7 @@ public:
 	}
 
 	void writeHandler (const boost::system::error_code& werror, std::size_t bytesTransferred) {
+		SF_SCHNEE_LOCK
 		ResultCallback callback; // call write Handler if not null
 		Error callbackResult = NoError;
 		{

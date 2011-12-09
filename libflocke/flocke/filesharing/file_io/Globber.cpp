@@ -1,6 +1,7 @@
 #include "Globber.h"
 #include <schnee/tools/FileTools.h>
 #include <boost/foreach.hpp>
+#include <schnee/schnee.h>
 
 #define foreach BOOST_FOREACH
 
@@ -65,8 +66,11 @@ void Globber::continueGlobbing (AsyncOpId id) {
 		Error e = expand_locked (op, wp.second, wp.first->entries);
 		if (e) return;
 	}
-	op->callback (NoError, op->listing);
-	delete op;
+	{
+		SF_SCHNEE_LOCK;
+		op->callback (NoError, op->listing);
+		delete op;
+	}
 	return;	
 }
 

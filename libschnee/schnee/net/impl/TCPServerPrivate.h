@@ -183,6 +183,7 @@ private:
 	}
 	
 	void acceptHandler (const boost::system::error_code & error){
+		SF_SCHNEE_LOCK;
 		bool con = false; // continue, not in case of an error
 		{
 			LockGuard guard (mStateMutex);

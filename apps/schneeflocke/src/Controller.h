@@ -3,6 +3,7 @@
 #include "AppError.h"
 #include <QSettings>
 #include <schnee/tools/async/DelegateBase.h>
+#include <schnee/schnee.h>
 
 class GUI;
 class UserList;
@@ -26,7 +27,9 @@ class Controller : public sf::DelegateBase {
 public:
 	Controller ();
 	~Controller ();
-	const Model * model () const { return mModel; }
+	/// read-only access to the model
+	/// Note the model must be locked
+	const Model * umodel () const;
 
 	/// Initializes model and view
 	void init ();
@@ -56,7 +59,7 @@ public:
 	void addUser (const sf::UserId & userId);
 	void subscriptionRequestReply (const sf::UserId & userId, bool allow, bool alsoAdd);
 	void removeUser (const sf::UserId & userId);
-	State state () { sf::LockGuard guard (mMutex); return mState; }
+	State state ();
 
 	enum DesiredState { DS_CONNECT, DS_DISCONNECT };
 
@@ -77,6 +80,7 @@ public:
 	ShareList * shareList () { return mShareList; }
 	
 private:
+	void changeConnection_locked (DesiredState connect);
 
 	void onError        (err::Code code, const QString & title, const QString & what);
 	
@@ -107,7 +111,6 @@ private:
 	// Callbacks for FileSharing
 	void onUpdatedOutgoingTransfer (sf::AsyncOpId id, sf::TransferInfo::TransferUpdateType type, const sf::TransferInfo & t);
 
-	sf::Mutex mMutex;
 	Model * mModel;
 	GUI   * mGUI;
 	UserList * mUserList;

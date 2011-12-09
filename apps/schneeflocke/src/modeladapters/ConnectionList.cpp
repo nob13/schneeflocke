@@ -79,7 +79,8 @@ void ConnectionList::timerEvent (QTimerEvent * event) {
 
 void ConnectionList::checkAccuracy () const {
 	if (mOutdated) {
-		mInfos = mController->model()->beacon()->connections().connections();
+		SF_SCHNEE_LOCK;
+		mInfos = mController->umodel()->beacon()->connections().connections();
 		mOutdated = false;
 	}
 }

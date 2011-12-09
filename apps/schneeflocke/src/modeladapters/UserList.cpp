@@ -20,7 +20,8 @@ void UserList::rebuildList () {
 }
 
 void UserList::onPeersChanged () {
-	const sf::InterplexBeacon * beacon = mController->model()->beacon();
+	SF_SCHNEE_LOCK;
+	const sf::InterplexBeacon * beacon = mController->umodel()->beacon();
 	UserInfoMap users = beacon->presences().users();
 
 	QStringList labels;
@@ -97,8 +98,6 @@ void UserList::onUpdatedListing  (const sf::Uri & uri, sf::Error error, const sf
 
 void UserList::setFeatureFilter (const sf::String & filter) {
 	mFeatureFilter = filter;
-	// rebuild list...
-	onPeersChanged ();
 }
 
 userlist::UserItem * UserList::userItem (const QModelIndex & index) {
@@ -111,7 +110,11 @@ userlist::UserItem * UserList::userItem (const QModelIndex & index) {
 }
 
 HostItem * UserList::findHostItem (const sf::HostId & id) {
-	HostInfo info = mController->model()->beacon()->presences().hostInfo (id);
+	HostInfo info;
+	{
+		SF_SCHNEE_LOCK;
+		info = mController->umodel()->beacon()->presences().hostInfo (id);
+	}
 	if (info.userId.empty()) return 0; // does not exist (anymore?)
 	
 	UserItemMap::iterator i = mUserItems.find (info.userId);
