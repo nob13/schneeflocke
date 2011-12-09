@@ -72,7 +72,6 @@ sf::Error IMDispatcher::connect (const sf::String & connectionString, const sf::
 	sf::IMClient * client = sf::IMClient::create(protocol);
 	if (!client) {
 		sf::Log(LogError) << LOGID << "Did not found protocol \"" << protocol << "\"" << std::endl;
-		// IOService::service().post (sf::bind (callback, sf::error::InvalidArgument)); // no callback when using return value
 		return sf::error::InvalidArgument;
 	}
 	mClient = client;
