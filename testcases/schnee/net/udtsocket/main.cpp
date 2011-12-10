@@ -4,7 +4,8 @@
 #include <schnee/test/timing.h>
 #include <schnee/test/test.h>
 #include <schnee/test/PseudoRandom.h>
-#include <schnee/test/ResultCallbackHelper.h>
+#include <schnee/tools/ResultCallbackHelper.h>
+#include <schnee/test/initHelpers.h>
 
 #include <schnee/tools/async/MemFun.h>
 #include <schnee/tools/MicroTime.h>
@@ -190,7 +191,7 @@ int testRendezvous () {
 	return 0;
 }
 
-typedef test::ResultCallbackHelper AsyncConnectHelper;
+typedef ResultCallbackHelper AsyncConnectHelper;
 
 /// Test async rendezvous
 int testAsyncRendezvous () {
@@ -234,8 +235,8 @@ int testReusage () {
 	e = base2.sendTo ("127.0.0.1", aPort, sf::createByteArrayPtr ("You too!"));
 	tcheck (!e, "Shall send");
 
-	tassert1 (base1.waitForReadyRead(2000));
-	tassert1 (base2.waitForReadyRead(2000));
+	tassert1 (test::waitUntilTrueMs(sf::bind (&UDPSocket::datagramsAvailable, base1), 2000));
+	tassert1 (test::waitUntilTrueMs(sf::bind (&UDPSocket::datagramsAvailable, base2), 2000));
 
 	// Checking data
 	String from;

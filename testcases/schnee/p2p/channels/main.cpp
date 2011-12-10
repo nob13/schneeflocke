@@ -17,6 +17,7 @@
 #include <schnee/tools/async/MemFun.h>
 #include <schnee/tools/async/DelegateBase.h>
 #include <schnee/test/test.h>
+#include <schnee/tools/ResultCallbackHelper.h>
 
 #include <boost/weak_ptr.hpp>
 using namespace sf;
@@ -303,15 +304,16 @@ int main (int argc, char * argv[]){
 		String bpw = "gotcha13_y";
 		
 		IMDispatcher dispatcher1;
-		Error e = dispatcher1.connect ("xmpp://" + a, apw);
+		ResultCallbackHelper helper;
+		Error e = dispatcher1.connect ("xmpp://" + a, apw, helper.onResultFunc());
 		assert (!e); if (e) return 1;
-		e = dispatcher1.waitForConnected();
+		e = helper.wait();
 		assert (!e); if (e) return 1;
 
 		IMDispatcher dispatcher2;
-		dispatcher2.connect ("xmpp://" + b, bpw);
+		dispatcher2.connect ("xmpp://" + b, bpw, helper.onResultFunc());
 		assert (!e); if (e) return 1;
-		e = dispatcher2.waitForConnected();
+		e = helper.wait();
 		assert (!e); if (e) return 1;
 
 		ChannelBuildHelper helper1 (dispatcher1);

@@ -34,7 +34,6 @@ public:
 
 	// Implementation of PresenceProvider
 	virtual sf::Error connect(const sf::String & connectionString, const sf::String & password = "", const ResultDelegate & callback = ResultDelegate());
-	virtual sf::Error waitForConnected();
 	virtual void disconnect();
 	virtual HostId hostId () const;
 	virtual OnlineState onlineState () const;

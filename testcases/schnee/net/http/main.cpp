@@ -1,5 +1,5 @@
 #include <schnee/test/test.h>
-#include <schnee/test/ResultCallbackHelper.h>
+#include <schnee/tools/ResultCallbackHelper.h>
 #include <schnee/net/http/HttpContext.h>
 
 using namespace sf;
@@ -11,7 +11,7 @@ void callback (Error e, const HttpResponsePtr & response, const ResultCallback &
 
 HttpResponsePtr testWebsite (const std::string & url) {
 	HttpContext context;
-	test::ResultCallbackHelper helper;
+	ResultCallbackHelper helper;
 	HttpResponsePtr result;
 	context.get(Url (url), 10000, abind (&callback, helper.onResultFunc(), &result));
 	bool suc = helper.waitReadyAndNoError(1000);
@@ -46,7 +46,7 @@ int test302 () {
 
 int testReuse () {
 	HttpContext context;
-	test::ResultCallbackHelper helper;
+	ResultCallbackHelper helper;
 	HttpResponsePtr result;
 	context.get("http://sflx.net/index.html", 100000, abind (&callback, helper.onResultFunc(), &result));
 	bool suc = helper.waitReadyAndNoError(100000);
@@ -62,7 +62,7 @@ int testReuse () {
 
 int testReuseSsl () {
 	HttpContext context;
-	test::ResultCallbackHelper helper;
+	ResultCallbackHelper helper;
 	HttpResponsePtr result;
 	context.get("https://sflx.net/index.html", 100000, abind (&callback, helper.onResultFunc(), &result));
 	bool suc = helper.waitReadyAndNoError(100000);
@@ -101,7 +101,7 @@ int main (int argc, char * argv[]){
 		testcase (testReuseSsl());
 	} else {
 		printf ("Doing custom call to: %s\n", url.toString().c_str());
-		test::ResultCallbackHelper helper;
+		ResultCallbackHelper helper;
 		HttpContext context;
 		context.get(url, 10000, bind (helper.onResultFunc(), _1));
 		bool suc = helper.waitUntilReady(10000);

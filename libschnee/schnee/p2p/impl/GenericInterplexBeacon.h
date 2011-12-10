@@ -34,7 +34,6 @@ public:
 	
 	// Implementation of InterplexBeacon
 	virtual Error connect (const String & connectionString, const String & password = "", const ResultCallback & callback = ResultCallback());
-	virtual Error waitForConnected ();
 	virtual void disconnect ();
 
 	virtual PresenceManagement & presences ();

@@ -60,12 +60,6 @@ public:
 	/// Returns true if there are pending connections
 	bool hasPendingConnections() const;
 	
-	/** Waits for a new connection
-	 * @param msec number of milliseconds to wait, or 0 if we want to wait forever
-	 * @param timedOut you can pass in a bool and will know wether function timed out
-	 * @return true if there was a new connection
-	 */
-	bool waitForNewConnection (int msec = 0, bool * timedOut = 0);
 	///@}
 	
 	///@name Delegates 

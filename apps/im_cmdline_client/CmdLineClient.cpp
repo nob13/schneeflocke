@@ -2,6 +2,7 @@
 #include <schnee/im/IMClient.h>
 #include <schnee/tools/ArgSplit.h>
 #include <schnee/tools/Serialization.h>
+#include <schnee/tools/ResultCallbackHelper.h>
 #include <schnee/schnee.h>
 
 #include <iostream>
@@ -52,8 +53,9 @@ int CmdLineClient::start () {
 	features.push_back ("http://sflx.net/protocols/im_cmdline");
 	mImClient->setFeatures (features);
 	mImClient->setIdentity(sf::String ("sflx.net imclient ") + sf::schnee::version(), "console");
-	mImClient->connect();
-	if (!mImClient->waitForConnected(30000)){
+	sf::ResultCallbackHelper waitHelper;
+	mImClient->connect(waitHelper.onResultFunc());
+	if (!waitHelper.waitReadyAndNoError(30000)){
 		std::cerr << "Timeout or Err during connection" << std::endl;
 		return 1;
 	}

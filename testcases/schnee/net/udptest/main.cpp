@@ -1,18 +1,23 @@
 #include <schnee/schnee.h>
 #include <schnee/test/test.h>
 #include <schnee/net/UDPSocket.h>
+#include <schnee/tools/ResultCallbackHelper.h>
 /**
  * @file Tests UDPSocket class
  */
 using namespace sf;
 
 int testSimpleSendAndReceive () {
+	ResultCallbackHelper helperA;
 	UDPSocket a;
+	a.readyRead() = helperA.onReadyFunc();
 	Error e = a.bind(1200);
 	tassert (!e, "should find some port");
 	tassert1 (a.port() > 0);
 
+	ResultCallbackHelper helperB;
 	UDPSocket b;
+	b.readyRead() = helperB.onReadyFunc();
 	e = b.bind(1201);
 	tassert (!e, "should bind");
 	tassert (b.port() > 0, "should find a port");
@@ -22,7 +27,7 @@ int testSimpleSendAndReceive () {
 	tcheck (!e, "shall send");
 	e = a.sendTo ("127.0.0.1", b.port(), sf::createByteArrayPtr("World"));
 	tcheck (!e, "shall send");
-	bool suc = b.waitForReadyRead(2000);
+	bool suc = helperB.waitUntilReady(2000);
 	tcheck (suc, "b must receive the messages");
 	String sender;
 	int senderPort;
@@ -30,7 +35,7 @@ int testSimpleSendAndReceive () {
 	tassert1 (content && (*content == ByteArray("Hello") || *content == ByteArray ("World")));
 	tassert1 (senderPort == a.port());
 
-	suc = b.waitForReadyRead(2000);
+	suc = b.datagramsAvailable() > 0 || helperB.wait(2000);
 	tcheck (suc, "b must receive both messages");
 	ByteArrayPtr content2 = b.recvFrom (&sender, &senderPort);
 	tcheck (content2 && (*content2 == ByteArray ("Hello") || *content2 == ByteArray ("World")), "data mismatch");

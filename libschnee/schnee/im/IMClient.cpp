@@ -48,24 +48,5 @@ IMClient * IMClient::create(const String & protocol){
 	return 0;
 }
 
-bool IMClient::waitForConnected (int timeOutMs){
-	int waited = 0;
-	int step = 10; // 10ms
-	
-	boost::system_time timeOut = boost::get_system_time() + boost::posix_time::milliseconds (timeOutMs);
-	boost::system_time nextTimeOut = boost::get_system_time();
-
-	while (timeOutMs == -1 || nextTimeOut < timeOut){
-		ConnectionState s = connectionState ();
-		if (s == IMClient::CS_ERROR) return false;
-		if (s == IMClient::CS_CONNECTED) return true;
-		
-		nextTimeOut = boost::get_system_time() + boost::posix_time::milliseconds (10);
-		boost::thread::sleep (nextTimeOut);
-		waited+=step;
-	}
-	return false; // time out
-}
-
 }
 

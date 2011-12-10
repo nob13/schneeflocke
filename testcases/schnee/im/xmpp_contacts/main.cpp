@@ -4,6 +4,7 @@
 #include <schnee/im/xmpp/XMPPClient.h>
 #include <flocke/hardcodedLogin.h>
 #include <schnee/tools/async/DelegateBase.h>
+#include <schnee/tools/ResultCallbackHelper.h>
 using namespace sf;
 
 /**
@@ -30,8 +31,9 @@ public:
 	}
 
 	bool connect () {
-		mClient->connect();
-		bool suc = mClient->waitForConnected(10000);
+		ResultCallbackHelper helper;
+		mClient->connect(helper.onResultFunc());
+		bool suc = helper.waitReadyAndNoError(10000);
 		if (!suc) {
 			fprintf (stderr, "Could not connect %s", mClient->ownId().c_str());
 		} else {

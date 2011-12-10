@@ -275,15 +275,6 @@ public:
 		mStateChange.notify_all ();
 	}
 
-	bool waitForConnected () {
-		assert (!IOService::isCurrentThreadService(mService) && "Cannot waitForConnected from delegate thread");
-		LockGuard lock (mStateMutex);
-		while (!mError && !isConnected_locked()){
-			mStateChange.wait (mStateMutex);
-		}
-		return (isConnected_locked());
-	}
-
 	bool isConnected() const {
 		LockGuard lock (mStateMutex);
 		// if this fails, someone did not change mConnected
@@ -433,18 +424,6 @@ public:
 		mPendingOperations--;
 		mStateMutex.unlock();
 		mStateChange.notify_all();
-	}
-
-	Error waitForAsyncWrite () {
-		Error r = NoError;
-		{
-			LockGuard guard (mStateMutex);
-			while (mAsyncWriting) {
-				mStateChange.wait(mStateMutex);
-			}
-			r = mError;
-		}
-		return r;
 	}
 
 };

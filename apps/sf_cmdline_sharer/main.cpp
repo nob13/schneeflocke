@@ -3,6 +3,7 @@
 #include <schnee/p2p/InterplexBeacon.h>
 #include <schnee/p2p/DataSharingClient.h>
 #include <schnee/p2p/DataSharingServer.h>
+#include <schnee/tools/ResultCallbackHelper.h>
 
 #include <flocke/filesharing/FileSharing.h>
 #include <flocke/filesharing/FileGetting.h>
@@ -99,8 +100,9 @@ struct Model {
 		return err;
 	}
 	sf::Error connect (const sf::String & loginData) {
-		sf::Error err = beacon->connect(loginData);
-		if (err || (err = beacon->waitForConnected())){
+		sf::ResultCallbackHelper helper;
+		sf::Error err = beacon->connect(loginData, "", helper.onResultFunc());
+		if (err || (err = helper.wait())){
 			std::cerr << "Could not connect: " << toString (err) << std::endl;
 		}
 		return err;

@@ -28,9 +28,6 @@ public:
 	/// If given, from and fromPort will be set to the source of the data
 	ByteArrayPtr recvFrom (String * from = 0, int * fromPort = 0);
 
-	/// Waits for some data to be received
-	bool waitForReadyRead (int  timeOutMs = 30000);
-
 	/// Returns available datagrams (-1 on error)
 	int datagramsAvailable ();
 

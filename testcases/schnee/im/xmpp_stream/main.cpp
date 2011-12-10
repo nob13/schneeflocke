@@ -1,6 +1,6 @@
 #include <schnee/test/test.h>
 #include <schnee/test/LocalChannel.h>
-#include <schnee/test/ResultCallbackHelper.h>
+#include <schnee/tools/ResultCallbackHelper.h>
 
 #include <schnee/im/xmpp/XMPPStream.h>
 using namespace sf;
@@ -13,8 +13,8 @@ struct Scenario {
 	}
 
 	Error connect () {
-		test::ResultCallbackHelper initHelper1;
-		test::ResultCallbackHelper initHelper2;
+		ResultCallbackHelper initHelper1;
+		ResultCallbackHelper initHelper2;
 
 		Error e = stream1.startInit(channel1, initHelper1.onResultFunc());
 		if (e) return error::ConnectionError;
@@ -44,7 +44,7 @@ int crossConnectivity () {
 	Error e = scenario.connect();
 	tcheck1(!e);
 
-	test::ResultCallbackHelper closeHandler;
+	ResultCallbackHelper closeHandler;
 	scenario.stream2.closed () = closeHandler.onReadyFunc();
 	scenario.stream1.close();
 
@@ -57,7 +57,7 @@ int channelError () {
 	Error e = scenario.connect();
 	tcheck1(!e);
 
-	test::ResultCallbackHelper channelErrorHelper;
+	ResultCallbackHelper channelErrorHelper;
 	scenario.stream2.asyncError() = channelErrorHelper.onReadyFunc();
 	scenario.channel1->close();
 	tcheck (channelErrorHelper.waitUntilReady(100), "Should get a channel error message");

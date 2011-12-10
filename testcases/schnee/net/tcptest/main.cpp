@@ -3,6 +3,7 @@
 #include <schnee/tools/Log.h>
 #include <schnee/tools/async/DelegateBase.h>
 #include <schnee/test/timing.h>
+#include <schnee/tools/ResultCallbackHelper.h>
 #include <iostream>
 
 /*
@@ -25,8 +26,9 @@ void newData (sf::TCPSocket * mySocket){
 int denyingTest (){
 	sf::TCPSocket mySocket;
 	std::cout << "Connecting..." << std::endl;
-	mySocket.connectToHost ("localhost", 987, 10000);
-	mySocket.waitForConnected();
+	sf::ResultCallbackHelper helper;
+	mySocket.connectToHost ("localhost", 987, 10000, helper.onResultFunc());
+	helper.wait();
 	mySocket.readyRead() = sf::bind (newData, &mySocket);
 	if (mySocket.isConnected()){
 		std::cout << "We are connected, bad" << std::endl;
@@ -37,26 +39,12 @@ int denyingTest (){
 	return 0;
 }
 
-struct WriteCallbackHandler : public sf::DelegateBase {
-	WriteCallbackHandler () : gotCallback (false), result (sf::NoError) {
-		SF_REGISTER_ME;
-	}
-	~WriteCallbackHandler () {
-		SF_UNREGISTER_ME;
-	}
-	void onReady (sf::Error r) {
-		gotCallback = true;
-		result = r;
-	}
-	bool gotCallback;
-	sf::Error result;
-};
-
 int acceptingTest (){
 	sf::TCPSocket mySocket;
 	std::cout << "Connecting..." << std::endl;
-	mySocket.connectToHost ("sflx.net", 80, 10000);
-	mySocket.waitForConnected();
+	sf::ResultCallbackHelper helper;
+	mySocket.connectToHost ("sflx.net", 80, 10000, helper.onResultFunc());
+	helper.wait();
 	mySocket.readyRead() = sf::bind (newData, &mySocket);
 	if (mySocket.isConnected()){
 		std::cout << "We are connected, good" << std::endl;
@@ -64,15 +52,13 @@ int acceptingTest (){
 		std::cout << "Problem connecting, bad" << std::endl;
 		return 1;
 	}
-	WriteCallbackHandler handler;
 	sf::ByteArrayPtr data = sf::createByteArrayPtr("<?xml version='1.0' encoding='utf-8'?><stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' to='localhost' version='1.0'>");
-	mySocket.write (data, sf::dMemFun (&handler, &WriteCallbackHandler::onReady));
-	mySocket.waitForAsyncWrite();
-	if (!handler.gotCallback || handler.result){
+	mySocket.write (data, helper.onResultFunc());
+	sf::Error e = helper.wait();
+	if (e){
 		std::cout << "No callback or wrong code during sending!" << std::endl;
 		return 1;
 	}
-	sf::test::sleep (1);
 	return 0;
 }
 
@@ -101,13 +87,9 @@ int deleteBehaviour2 () {
 	sf::TCPSocket * mySocket = new sf::TCPSocket ();;
 	mySocket->connectToHost ("localhost", 5222, 10000, sf::bind (deleteOnFail, _1, mySocket));
 	mySocket->readyRead() = sf::bind (deleteHandler, mySocket);
-	bool notFail = mySocket->waitForConnected();
-	if (notFail == false){
-		std::cerr << LOGID << "Socket should connect" << std::endl;
-		return 1;
-	}
+	sf::test::sleep(1);
 	mySocket->write (sf::createByteArrayPtr("<?xml version='1.0' encoding='utf-8'?><stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' to='localhost' version='1.0'>"));
-	mySocket->waitForAsyncWrite();
+	sf::test::sleep (1);
 	return 0;
 }
 
@@ -116,13 +98,13 @@ int deleteBehaviour3 () {
 	mySocket->connectToHost ("sflx.net", 80, 10000, sf::bind (deleteOnFail, _1, mySocket));
 	mySocket->readyRead() = sf::bind (deleteHandler, mySocket);
 	mySocket->disconnected() = sf::bind (deleteHandler, mySocket);
-	bool notFail = mySocket->waitForConnected();
-	if (notFail == false){
+	sf::test::sleep (1);
+	if (!mySocket->isConnected()){
 		std::cerr << LOGID << "Socket should connect" << std::endl;
 		return 1;
 	}
 	mySocket->write (sf::createByteArrayPtr("HiDude")); // peer will close it....
-	mySocket->waitForAsyncWrite();
+	sf::test::sleep(1);
 	return 0;
 }
 

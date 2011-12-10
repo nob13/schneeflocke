@@ -37,9 +37,6 @@ public:
 	/// Callback will be called always, even if connect() returns an error (but from a different thread)
 	virtual Error connect (const String & connectionString, const String & password = "", const ResultCallback & callback = ResultCallback()) = 0;
 
-	/// Waits until IMInterplexBeacon is connected
-	virtual Error waitForConnected () = 0;
-
 	/// Disconnects from IM Network
 	virtual void disconnect () = 0;
 

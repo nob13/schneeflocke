@@ -65,28 +65,6 @@ ByteArrayPtr BufferedReader::peek (long maxSize) {
 	return result;
 }
 
-bool BufferedReader::waitForReadyRead (long int timeOutMs, bool more) {
-	assert (!IOService::isCurrentThreadService (mService) && "You cannot wait on a signaling thread of IO facilities; see TCPSocket::waitForReadyRead documentation");
-	Time timeOut = futureInMs (timeOutMs);
-	bool timed = timeOutMs >= 0;
-	
-	LockGuard lock (mStateMutex);
-	size_t minimum = more ? mInputBuffer.size() : 0;
-	if (!mAsyncReading) {
-		mPendingOperations++;
-		mService.post (memFun (this, &BufferedReader::checkAndContinueReadingHandler));
-	}
-	while (mPendingOperations > 0 && mInputBuffer.size() == minimum && !mError){
-		if (timed){
-			if (!mStateChange.timed_wait (mStateMutex, timeOut)){
-				return false; // time out
-			}
-		} else mStateChange.wait (mStateMutex);
-	}
-	size_t s = mInputBuffer.size();
-	return (s > minimum);
-}
-
 long BufferedReader::bytesAvailable() const {
 	LockGuard lock (mStateMutex);
 	return mInputBuffer.size();

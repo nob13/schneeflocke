@@ -1,7 +1,7 @@
 #include <schnee/schnee.h>
 #include <schnee/Error.h>
 #include <schnee/test/test.h>
-#include <schnee/test/ResultCallbackHelper.h>
+#include <schnee/tools/ResultCallbackHelper.h>
 #include <schnee/tools/async/DelegateBase.h>
 
 #include <schnee/tools/async/AsyncOpBase.h>
@@ -205,14 +205,14 @@ int main (int argc, char * argv[]) {
 		}
 		{
 			// opcb_locked function
-			test::ResultCallbackHelper helper;
+			ResultCallbackHelper helper;
 			example.asyncCall3(100, helper.onResultFunc());
 			bool suc = helper.waitReadyAndNoError(100);
 			assert (suc);
 		}
 		{
 			// opcb_locked function2
-			test::ResultCallbackHelper helper;
+			ResultCallbackHelper helper;
 			example.asyncCall3Param0(100, helper.onResultFunc());
 			bool suc = helper.waitReadyAndNoError(100);
 			assert (suc);

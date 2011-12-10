@@ -31,11 +31,6 @@ Error GenericInterplexBeacon::connect (const sf::String & connectionString, cons
 	return e;
 }
 
-Error GenericInterplexBeacon::waitForConnected () {
-	if (!mPresenceProvider) return error::NotInitialized;
-	return mPresenceProvider->waitForConnected ();
-}
-
 void GenericInterplexBeacon::disconnect () {
 	if (mPresenceProvider){
 		mPresenceProvider->disconnect ();

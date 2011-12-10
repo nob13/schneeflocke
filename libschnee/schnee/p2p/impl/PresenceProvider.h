@@ -27,9 +27,6 @@ public:
 	/// @return returns NoError if connection process began, false on error (e.g. invalid protocol / arguments)
 	virtual sf::Error connect(const sf::String & connectionString, const sf::String & password = "", const ResultDelegate & callback = ResultDelegate()) = 0;
 
-	/// Waits until connected or an error happened
-	virtual sf::Error waitForConnected() = 0;
-
 	/// Disconnect from the IM Network
 	virtual void disconnect() = 0;
 

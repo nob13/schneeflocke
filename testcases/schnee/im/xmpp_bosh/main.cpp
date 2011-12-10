@@ -1,5 +1,5 @@
 #include <schnee/test/test.h>
-#include <schnee/test/ResultCallbackHelper.h>
+#include <schnee/tools/ResultCallbackHelper.h>
 
 #include <schnee/im/xmpp/XMPPStream.h>
 #include <schnee/net/http/HttpContext.h>
@@ -44,7 +44,7 @@ int testManualConnect () {
 
 	// BOSHs connect
 	BoshTransportPtr transport (new BoshTransport());
-	test::ResultCallbackHelper helper;
+	ResultCallbackHelper helper;
 	BoshTransport::StringMap addArgs;
 	addArgs["to"] = host;
 	addArgs["xmpp:version"] = "1.0"; // is important for ejabberd
@@ -99,7 +99,7 @@ int testAutoConnect () {
 	Error e = con.setConnectionString("xmpp://autotest1:boom74_x@localhost/autoConnect");
 	tcheck1 (!e);
 
-	test::ResultCallbackHelper conResultHandler;
+	ResultCallbackHelper conResultHandler;
 	e = con.connect(stream, 2500, conResultHandler.onResultFunc());
 	tcheck1 (!e && conResultHandler.waitReadyAndNoError(5000));
 

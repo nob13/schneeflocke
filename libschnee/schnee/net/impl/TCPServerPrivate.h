@@ -146,23 +146,6 @@ public:
 		return (mPendingConnections.size() > 0);
 	}
 	
-	bool waitForNewConnection (int msec, bool * timedOut){
-		LockGuard guard (mStateMutex);
-		Time timeOut = futureInMs (msec);
-		if (timedOut) *timedOut = false;
-		while (mPendingConnections.size() == 0){
-			if (msec == 0){
-				mStateChange.wait(mStateMutex);
-			} else {
-				if (!mStateChange.timed_wait(mStateMutex, timeOut)){
-					if (timedOut) *timedOut = true;
-					return false;
-				}
-				
-			}
-		}
-		return true;
-	}
 private:
 	void startAccept () {
 		{

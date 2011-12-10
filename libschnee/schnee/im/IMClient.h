@@ -145,18 +145,6 @@ public:
 	/// Connect to the IM Network
 	virtual void connect (const ResultDelegate & callback = ResultDelegate ()) = 0;
 
-	/**
-	 * Blocks current thread until there is a connection
-	 *
-	 * Note if nobody calls connect it will wait very long...
-	 *
-	 * Waiting is done in 10ms steps with usleep and will take a bit longer
-	 *
-	 * @param timeOutMs how long to wait?
-	 * @return returns true if there is a succesfull connection or false in case of an error/timeout
-	 */
-	virtual bool waitForConnected (int timeOutMs = 30000);
-
 	/// Disconnect from the IM Network
 	virtual void disconnect () = 0;
 	

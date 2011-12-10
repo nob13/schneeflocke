@@ -40,10 +40,6 @@ public:
 	/// This function is asynchronous.
 	/// Returns only error if already connecting
 	Error connectToHost (const String & host, int port, int timeOut = 30000, const ResultCallback & callback = ResultCallback());
-	/// Waits until the connection was successfull or timed out or error
-	/// May not be called from the delegate thread
-	/// Returns true on success
-	bool waitForConnected ();
 	
 	/// returns state of current connection
 	bool isConnected () const;
@@ -76,19 +72,6 @@ public:
 
 	/// @name Additional IO
 	/// @{
-	
-	/// Waits until all data is sent, returns current error code
-	Error waitForAsyncWrite ();
-
-	/// Waits until there is data to read.
-	/// Note: You cannot call this method from a Delegate. Delegates are called
-	/// From the underlying IO service which also does processing new data. And the IO service
-	/// cannot wait for itself (this would lead into a deadlock)
-	///
-	/// @param timeOutMs a variable timeOut; use -1 for no timeOut
-	/// @param more waits for more data, even when there is already some data.
-	/// @return true if there is new data, false if there was a timeout or error
-	bool waitForReadyRead (long timeOutMs = 30000, bool more = false);
 	
 	/// Socket receieved end of data signal
 	bool atEnd () const;

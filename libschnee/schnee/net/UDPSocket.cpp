@@ -32,11 +32,6 @@ ByteArrayPtr UDPSocket::recvFrom (String * from, int * fromPort) {
 	return d->recvFrom(from, fromPort);
 }
 
-bool UDPSocket::waitForReadyRead (int  timeOutMs) {
-	return d->waitForReadyRead (timeOutMs);
-}
-
-
 int UDPSocket::datagramsAvailable () {
 	return d->datagramsAvailable();
 }

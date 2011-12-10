@@ -48,10 +48,6 @@ bool TCPServer::hasPendingConnections() const{
 	return d->hasPendingConnections ();
 }
 
-bool TCPServer::waitForNewConnection (int msec, bool * timedOut){
-	return d->waitForNewConnection (msec, timedOut);
-}
-
 VoidDelegate & TCPServer::newConnection (){
 	return d->mNewConnectionDelegate;
 }

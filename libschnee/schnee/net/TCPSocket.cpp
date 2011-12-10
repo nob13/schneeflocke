@@ -27,10 +27,6 @@ Error TCPSocket::connectToHost(const String & host, int port, int timeOut, const
 	return d->connectToHost (host, port, timeOut, callback);
 }
 
-bool TCPSocket::waitForConnected () {
-	return d->waitForConnected ();
-}
-
 bool TCPSocket::isConnected() const {
 	return d->isConnected ();
 }
@@ -77,14 +73,6 @@ Channel::ChannelInfo TCPSocket::info () const {
 
 sf::VoidDelegate & TCPSocket::changed () {
 	return d->changed();
-}
-
-Error TCPSocket::waitForAsyncWrite () {
-	return d->waitForAsyncWrite();
-}
-
-bool TCPSocket::waitForReadyRead (long int timeOutMs, bool more) {
-	return d->waitForReadyRead (timeOutMs, more);
 }
 
 bool TCPSocket::atEnd() const {

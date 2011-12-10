@@ -237,19 +237,6 @@ public:
 		if (!ec && mReadyRead) mReadyRead ();
 	}
 
-	bool waitForReadyRead (int  timeOutMs) {
-		assert (!IOService::isCurrentThreadService(mService) && "Would deadlock");
-		LockGuard guard (mStateMutex);
-		if (!mReading) {
-			startAsyncReading_locked ();
-		}
-		Time t = sf::futureInMs(timeOutMs);
-		while (mInputBuffer.empty() && !mError) {
-			if (!mStateChange.timed_wait (mStateMutex, t)) return false;
-		}
-		return !mInputBuffer.empty();
-	}
-
 	int datagramsAvailable () {
 		LockGuard guard (mStateMutex);
 		return mInputBuffer.size();

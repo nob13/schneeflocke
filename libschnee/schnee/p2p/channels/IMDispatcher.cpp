@@ -89,18 +89,6 @@ sf::Error IMDispatcher::connect (const sf::String & connectionString, const sf::
 	return sf::error::NoError;
 }
 
-sf::Error IMDispatcher::waitForConnected(){
-	// LockGuard guard (mMutex); // would dead-lock
-	if (!mClient) return sf::error::InvalidArgument;
-	bool succ = mClient->waitForConnected();
-	if (!succ){
-		// TODO: Connection errors have to be more accurate, not plain strings
-		sf::Log (LogWarning) << LOGID << "Could not connect due " << mClient->errorMessage() << std::endl;
-		return sf::error::ConnectionError;
-	}
-	return sf::NoError;
-}
-
 void IMDispatcher::disconnect (){
 	{
 		LockGuard guard (mMutex);

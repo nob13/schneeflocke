@@ -21,7 +21,6 @@ public:
 	// This interfaces work only if async Reading is on (should be always on; just not during SSL handshake)
 	ByteArrayPtr read (long maxSize);
 	ByteArrayPtr peek (long maxSize);
-	bool waitForReadyRead (long int timeOutMs, bool more);
 	long bytesAvailable () const;
 	bool atEnd () const;
 	
