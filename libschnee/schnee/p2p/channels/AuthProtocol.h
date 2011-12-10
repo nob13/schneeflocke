@@ -9,8 +9,6 @@ namespace sf {
 
 class Deserialization;
 
-class DeadlineTimer;
-
 /**
  * AuthProtocol checks a channel whether it is connected to another host with a given ID.
  * 

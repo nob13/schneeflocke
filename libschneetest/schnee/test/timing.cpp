@@ -1,4 +1,5 @@
 #include "timing.h"
+#include <schnee/schnee.h>
 
 #ifndef WIN32
 #include <sys/time.h>
@@ -18,6 +19,13 @@ void sleep (unsigned int seconds) { ::sleep(seconds); }
 void sleep (unsigned int seconds) { Sleep (seconds * 1000); }
 #endif
 
+void sleep_locked (unsigned int seconds) {
+	schnee::mutex().unlock();
+	sleep (seconds);
+	schnee::mutex().lock();
+}
+
+
 void millisleep (unsigned int ms) {
 #ifdef WIN32
 	::Sleep (ms);
@@ -25,6 +33,13 @@ void millisleep (unsigned int ms) {
 	::usleep (ms * 1000);
 #endif
 }
+
+void millisleep_locked (unsigned int ms) {
+	schnee::mutex().unlock();
+	millisleep(ms);
+	schnee::mutex().lock();
+}
+
 
 
 }

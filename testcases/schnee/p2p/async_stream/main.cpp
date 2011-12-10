@@ -168,11 +168,11 @@ int testConnectivity () {
 	ByteArray testData2 ("How are you?");
 	ByteArray testData = testData1; testData.append (testData2);
 
-	test::millisleep (100);
+	test::millisleep_locked (100);
 	a->feed (sf::createByteArrayPtr (testData1));
-	test::millisleep (100);
+	test::millisleep_locked (100);
 	a->feed (sf::createByteArrayPtr (testData2));
-	test::millisleep (100);
+	test::millisleep_locked (100);
 
 	ByteArrayPtr p = b->consume();
 	tcheck1 (p && *p == testData);
@@ -182,6 +182,7 @@ int testConnectivity () {
 
 int main (int argc, char * argv[]) {
 	schnee::SchneeApp app (argc, argv);
+	SF_SCHNEE_LOCK;
 	testcase_start();
 	testcase (testConnectivity());
 	testcase_end();

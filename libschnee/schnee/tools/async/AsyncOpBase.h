@@ -7,7 +7,6 @@
 #include <schnee/Error.h>
 
 namespace sf {
-class DeadlineTimer;
 
 /// A Base class for objects who want to provide asynchronous operations and timeouts.
 /// Note: All descendants do earn their Mutex from here and are also a DelegateBase.

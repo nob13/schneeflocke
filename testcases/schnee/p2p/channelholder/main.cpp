@@ -168,7 +168,7 @@ int testChannelTimeout () {
 	scenario.holder1.setChannelTimeout(100);
 	scenario.holder1.setChannelTimeoutCheckInterval(100);
 
-	test::millisleep(500);
+	test::millisleep_locked(500);
 	// must be timeouted
 	tcheck1 (!scenario.connectivityTest(500));
 	tcheck1 (!scenario.connectionsAvailable());
@@ -177,7 +177,7 @@ int testChannelTimeout () {
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
-
+	SF_SCHNEE_LOCK;
 	testcase_start();
 	testcase (testChannelAddAndClose());
 	testcase (testChannelTimeout());

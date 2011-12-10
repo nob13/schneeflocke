@@ -1,5 +1,4 @@
 #include "AsyncOpBase.h"
-#include <schnee/net/impl/DeadlineTimer.h>
 #include <schnee/tools/Log.h>
 
 namespace sf {
