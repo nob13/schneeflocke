@@ -62,10 +62,10 @@ InterplexBeacon * createTcpInterplex () {
 
 int main (int argc, char * argv[]) {
 	sf::schnee::SchneeApp app (argc, argv);
-	int ret = 0;
+	testcase_start();
 	testcase (leveling(&createUdtInterplex));  // IM + UDT
 	testcase (leveling(&createTcpInterplex));  // IM + TCP
 	test::millisleep (1000);
 	testcase (leveling(&InterplexBeacon::createIMInterplexBeacon)); // production Interplex
-	return ret;
+	testcase_end();
 }

@@ -1,6 +1,7 @@
 #include "StandardScenario.h"
 
 #include <schnee/tools/Log.h>
+#include <schnee/schnee.h>
 
 namespace sf {
 namespace test {
@@ -13,6 +14,7 @@ StandardScenario::~StandardScenario(){
 }
 
 sf::Error StandardScenario::init(int nodeCount, bool withServer, bool simulated) {
+	assert (simulated && "SLXMPP is not anymore, please fix this code");
 	this->mSimulated = simulated;
 	if (simulated) {
 		genDoubleStarNetwork (mNetwork, nodeCount, withServer, true);
@@ -38,7 +40,6 @@ sf::Error StandardScenario::initWithBeaconCreator (int nodeCount, bool withServe
 
 
 sf::Error StandardScenario::connectThem (int timeOutMs) {
-	assert (!"SLXMPP is not anymore, please fix this code");
 	String prefix = mSimulated ? "" : "slxmpp://";
 	if (mServer){
 		sf::Error err = mServer->beacon->connect (prefix + serverName());

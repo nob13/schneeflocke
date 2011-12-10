@@ -198,7 +198,9 @@ bool testRun (Peer & p1, Peer & p2){
 		p2.ping();
 	}
 	// wait some time in which channels communicate (async)
+	schnee::mutex().unlock();
 	sleep (2);
+	schnee::mutex().lock();
 	int p1open = p1.openPings ();
 	int p2open = p2.openPings ();
 	assert (p1open == 0 && p2open == 0);
@@ -213,7 +215,9 @@ bool testRun (Peer & p1, Peer & p2){
 		int i = 0;
 		for (; i < max; i++){
 			if (p1.mTcpChannel) break;
+			schnee::mutex().unlock();
 			sleep (1);
+			schnee::mutex().lock();
 		}
 		if (i == max) { assert (!"Timeout during connect"); }
 	}
@@ -223,7 +227,9 @@ bool testRun (Peer & p1, Peer & p2){
 		p1.ping ();
 	}
 	// wait some time in which channels communicate (async)
+	schnee::mutex().unlock();
 	sleep (2);
+	schnee::mutex().lock();
 	p1open = p1.openPings ();
 	p2open = p2.openPings ();
 
@@ -243,22 +249,18 @@ struct ChannelBuildHelper {
 	String createdChannelId;
 	ChannelPtr createdChannel;
 	int createdNumCalls;
-	Mutex mutex;
 	Condition condition;
 	void channelCreated (const String & id, ChannelPtr channel) {
-		mutex.lock();
 		createdNumCalls++;
 		createdChannelId = id;
 		createdChannel = channel;
-		mutex.unlock();
 		condition.notify_all();
 	}
 	
 	ChannelPtr waitForChannelCreated (int timeOutMs){
-		LockGuard lock (mutex);
 		Time timeOut = futureInMs (timeOutMs);
 		while (!createdChannel){
-			if (!condition.timed_wait (mutex, timeOut)) break;
+			if (!condition.timed_wait (schnee::mutex(), timeOut)) break;
 		}
 		return createdChannel;
 	}
@@ -267,6 +269,7 @@ struct ChannelBuildHelper {
 
 int main (int argc, char * argv[]){
 	schnee::SchneeApp app (argc, argv);
+	SF_SCHNEE_LOCK;
 	std::vector<String> addresses;
 	bool ret = net::localAddresses (&addresses, false);
 	assert (ret);

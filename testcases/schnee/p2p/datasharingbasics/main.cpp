@@ -191,7 +191,9 @@ int testAsyncTransmission () {
 	tcheck1 (scenario.peer(1)->transmissionState == BasicDataSharingPeer::Started);
 	
 	scenario.peer(0)->releaseOutstandingData();
+	schnee::mutex().unlock();
 	test::millisleep (250);
+	schnee::mutex().lock();
 
 	// Should have received all data now
 	tcheck1 (scenario.peer(1)->transmissionState == BasicDataSharingPeer::Finished);
@@ -233,7 +235,8 @@ int testDeny () {
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
-	int ret = 0;
+	SF_SCHNEE_LOCK;
+	testcase_start();
 	testcase (testRequest());
 	testcase (testRequestNotFound());
 	testcase (testSubscribe());
@@ -246,5 +249,5 @@ int main (int argc, char * argv[]){
 	testcase (testAsyncTransmission());
 	testcase (testSubData());
 	testcase (testDeny ());
-	return ret;
+	testcase_end();
 }

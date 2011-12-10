@@ -67,8 +67,9 @@ int channelError () {
 // A full connection testcase can be found in xmpp_connection
 int main (int argc, char * argv[]){
 	schnee::SchneeApp app (argc, argv);
-	int ret = 0;
+	testcase_start();
 	testcase (crossConnectivity());
 	testcase (channelError());
+	testcase_end();
 	return ret;
 }

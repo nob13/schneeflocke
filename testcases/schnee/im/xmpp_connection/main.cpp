@@ -117,10 +117,11 @@ int registerMyself () {
 
 int main (int argc, char * argv[]) {
 	schnee::SchneeApp app (argc, argv);
-	int ret = 0;
+	testcase_start();
 	testcase (manualConnect());
 	testcase (autoConnect());
 	testcase (registerMyself());
+	testcase_end();
 	return ret;
 }
 

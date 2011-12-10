@@ -134,13 +134,13 @@ int testSockets (UDTSocket * socket1, UDTSocket * socket2) {
 	printf ("Testing socket connectivity between\n  %s and \n  %s\n",
 			toJSONEx (socket1->info(), sf::COMPRESS | sf::COMPACT).c_str(),
 			toJSONEx (socket2->info(), sf::COMPRESS | sf::COMPACT).c_str());
-	int ret = 0;
+	testcase_start();
 	testcase (testConnectivity (socket1, socket2));
 	testcase (testConnectivity (socket2, socket1));
 
 	testcase (testHeavyTraffic (socket1, socket2));
 	testcase (testHeavyTraffic (socket2, socket1));
-	return ret;
+	testcase_end();
 }
 
 /// creates an UDT server and connects using a socket to it
@@ -274,12 +274,11 @@ int testReusage () {
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
 
-	int ret = 0;
+	testcase_start();
 	testcase (testUDTMainLoopRunning());
  	testcase (testUDTServer());
 	testcase (testRendezvous());
 	testcase (testAsyncRendezvous());
 	testcase (testReusage());
-
-	return ret;
+	testcase_end();
 }

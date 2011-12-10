@@ -1,5 +1,5 @@
 #pragma once
-#include <schnee/sftypes.h>
+#include <schnee/schnee.h>
 #include <schnee/test/test.h>
 
 /// A small help tool lets you wait for 'finish' signals
@@ -12,28 +12,22 @@ public:
 	}
 	
 	void mark () {
-		sf::LockGuard guard (mMutex);
 		mAwaited = mCurrent + 1;
 	}
 	void wait () {
-		sf::LockGuard guard (mMutex);
 		while(mCurrent < mAwaited) {
-			mCondition.wait(mMutex);
+			mCondition.wait(sf::schnee::mutex());
 		}
 	}
 	void finish () {
-		sf::LockGuard guard (mMutex);
-		{
-			mCurrent++;
-			if (mCurrent > mAwaited) {
-				fprintf (stderr, "SyncCounter::finish : Not awaited Counter!\n");
-			}
-			mCondition.notify_all();
+		mCurrent++;
+		if (mCurrent > mAwaited) {
+			fprintf (stderr, "SyncCounter::finish : Not awaited Counter!\n");
 		}
+		mCondition.notify_all();
 	}
 private:
 	int       mCurrent;
 	int       mAwaited;
-	sf::Mutex     mMutex;
 	sf::Condition mCondition;
 };

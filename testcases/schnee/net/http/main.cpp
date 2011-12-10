@@ -79,7 +79,7 @@ int testReuseSsl () {
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
-	int ret = 0;
+	testcase_start();
 	
 	// Custom call
 	Url url;
@@ -108,6 +108,6 @@ int main (int argc, char * argv[]){
 		tcheck1 (suc);
 		printf ("Result Code: %s\n", toString (helper.result()));
 	}
-	return ret;
+	testcase_end();
 }
 

@@ -1,11 +1,12 @@
-#include <schnee/sftypes.h>
+#include <schnee/schnee.h>
 #include <schnee/tools/async/DelegateBase.h>
 #include <schnee/tools/async/MemFun.h>
 
 namespace sf {
 
 /**
- * Helper class to easily wait for asynchronous signals.
+ * Helper class to easily wait for asynchronous signals from other threads.
+ * Note: In order to use: libschnee must be locked.
  *
  */
 class ResultCallbackHelper : public DelegateBase {
@@ -27,32 +28,27 @@ public:
 
 	/// Gets a callback for regular VoidCallbacks
 	VoidCallback onReadyFunc () {
-		LockGuard guard (mMutex);
 		reset ();
 		return (dMemFun (this, &ResultCallbackHelper::onReady));
 	}
 
 	bool ready () const {
-		LockGuard guard (mMutex);
 		return mReady;
 	}
 
 	Error result () const {
-		LockGuard guard (mMutex);
 		return mResult;
 	}
 
 	void reset () {
-		LockGuard guard (mMutex);
 		mReady  = false;
 		mResult = NoError;
 	}
 
 	bool waitUntilReady (int timeOutMs) {
-		LockGuard guard (mMutex);
 		Time t (futureInMs (timeOutMs));
 		while (!mReady){
-			if (!mCondition.timed_wait(mMutex, t))
+			if (!mCondition.timed_wait(schnee::mutex(), t))
 				return false;
 		}
 		return true;
@@ -62,7 +58,6 @@ public:
 	bool waitReadyAndNoError (int timeOutMs) {
 		bool suc = waitUntilReady(timeOutMs);
 		if (!suc) return false;
-		LockGuard guard (mMutex);
 		return !mResult;
 	}
 
@@ -77,17 +72,18 @@ private:
 	void onResult (Error result) {
 		mReady  = true;
 		mResult = result;
+		mCondition.notify_all();
 	}
 
 	/// Connect this function (for VoidCallback)
 	void onReady () {
 		mReady  = true;
 		mResult = NoError;
+		mCondition.notify_all();
 	}
 
 	bool _isReady () { return mReady; } /// memFun is not yet const function compatible
 
-	mutable Mutex mMutex;
 	Condition mCondition;
 	bool  mReady;
 	Error mResult;

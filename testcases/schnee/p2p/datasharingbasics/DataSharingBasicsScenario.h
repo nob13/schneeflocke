@@ -103,7 +103,7 @@ struct BasicDataSharingPeer : public test::DataSharingScenario::DataSharingPeer,
 	
 	Error subscribeSync (const Uri & uri) {
 		counter.mark();
-		Error e = client->subscribe(uri.host(), ds::Subscribe(uri.path()), 
+		Error e = client->subscribe(uri.host(), ds::Subscribe(uri.path()),
 				dMemFun (this, &BasicDataSharingPeer::onSubscribeReply),
 				dMemFun (this, &BasicDataSharingPeer::onNotify),
 				100);

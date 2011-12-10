@@ -178,9 +178,8 @@ int testChannelTimeout () {
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
 
-	int ret = 0;
+	testcase_start();
 	testcase (testChannelAddAndClose());
 	testcase (testChannelTimeout());
-
-	return 0;
+	testcase_end();
 }

@@ -75,9 +75,9 @@ int whiteSpaces () {
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
-	int ret = 0;
+	testcase_start();
 	testcase (validStart());
 	testcase (strangeProtocol());
 	testcase (whiteSpaces());
-	return ret;
+	testcase_end();
 }

@@ -89,9 +89,9 @@ int testSflxEchoServer () {
 
 int main (int argc, char * argv[]){
 	schnee::SchneeApp app (argc, argv);
-	int ret = 0;
+	testcase_start();
 	testcase (testNonExistingServer());
 	testcase (testExistingServer());
 	testcase (testSflxEchoServer());
-	return ret;
+	testcase_end();
 }

@@ -224,6 +224,7 @@ struct Scenario : public test::DataSharingScenario, public DelegateBase {
 
 int main (int argc, char * argv[]){
 	schnee::SchneeApp app (argc, argv);
+	SF_SCHNEE_LOCK;
 	{
 		// Test if scenario shutdowns correctly
 		Scenario scenario;
@@ -239,17 +240,17 @@ int main (int argc, char * argv[]){
 		tassert (scenario.waitAllFinished(5000), "Transmission should be done in 5s");
 		tassert (scenario.allSuccessfull(), "All transactions shall be successfull");
 	}
-	{
-		printf ("Scenario 1 with XMPP and TCP\n");
-		// Scenario1
-		Scenario scenario;
-		sf::Error result = scenario.initConnectAndLift (2, false, false);
-		tassert (result == NoError, "Scenario must start");
-		scenario.shareHostFile();
-		scenario.startTransmission (1);
-		tassert (scenario.waitAllFinished(5000), "Transmission should be done in 5s");
-		tassert (scenario.allSuccessfull(), "All transactions shall be successfull");
-	}
+//	{
+//		printf ("Scenario 1 with XMPP and TCP\n");
+//		// Scenario1
+//		Scenario scenario;
+//		sf::Error result = scenario.initConnectAndLift (2, false, false);
+//		tassert (result == NoError, "Scenario must start");
+//		scenario.shareHostFile();
+//		scenario.startTransmission (1);
+//		tassert (scenario.waitAllFinished(5000), "Transmission should be done in 5s");
+//		tassert (scenario.allSuccessfull(), "All transactions shall be successfull");
+//	}
 	{
 		printf ("UnknownSize Scenario\n");
 		Scenario scenario;

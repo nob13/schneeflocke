@@ -182,7 +182,7 @@ int testConnectivity () {
 
 int main (int argc, char * argv[]) {
 	schnee::SchneeApp app (argc, argv);
-	int ret = 0;
+	testcase_start();
 	testcase (testConnectivity());
-	return ret;
+	testcase_end();
 }

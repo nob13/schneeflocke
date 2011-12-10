@@ -1,5 +1,5 @@
 #pragma once
-#include <schnee/sftypes.h>
+#include <schnee/schnee.h>
 #include <schnee/p2p/InterplexBeacon.h>
 #include "Network.h"
 #include "LocalChannel.h"

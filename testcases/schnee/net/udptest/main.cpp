@@ -65,9 +65,9 @@ int freeBind () {
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
-	int ret = 0;
+	testcase_start();
 	testcase (testSimpleSendAndReceive());
 	testcase (testFailingDns ());
 	testcase (freeBind());
-	return ret;
+	testcase_end();
 }

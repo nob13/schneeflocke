@@ -43,14 +43,17 @@ int testManualConnect () {
 	String user = "autotest1";
 
 	// BOSHs connect
-	BoshTransportPtr transport (new BoshTransport());
 	ResultCallbackHelper helper;
-	BoshTransport::StringMap addArgs;
-	addArgs["to"] = host;
-	addArgs["xmpp:version"] = "1.0"; // is important for ejabberd
-	addArgs["xmlns:xmpp"] = "urn:xmpp:xbosh"; // is important for ejabberd
-
-	transport->connect(url, addArgs, timeoutMs, helper.onResultFunc());
+	BoshTransportPtr transport;
+	{
+		SF_SCHNEE_LOCK;
+		transport = BoshTransportPtr  (new BoshTransport());
+		BoshTransport::StringMap addArgs;
+		addArgs["to"] = host;
+		addArgs["xmpp:version"] = "1.0"; // is important for ejabberd
+		addArgs["xmlns:xmpp"] = "urn:xmpp:xbosh"; // is important for ejabberd
+		transport->connect(url, addArgs, timeoutMs, helper.onResultFunc());
+	}
 	tcheck (helper.waitReadyAndNoError(timeoutMs), "Should connect");
 
 	// Feature receivement
@@ -137,11 +140,11 @@ int testReuse () {
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
-	int ret = 0;
+	testcase_start();
 	testcase (testNodeBuildAndParse());
 	testcase (testReuse ());
 	testcase (testManualConnect());
 	testcase (testAutoConnect());
-
+	testcase_end();
 	return ret;
 }

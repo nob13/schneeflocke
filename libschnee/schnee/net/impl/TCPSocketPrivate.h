@@ -6,6 +6,7 @@
 #include <schnee/tools/async/MemFun.h>
 #include <schnee/tools/async/ABind.h>
 #include <schnee/tools/async/Notify.h>
+#include <schnee/tools/async/DelegateBase.h>
 #include <schnee/sftypes.h>
 #include <schnee/schnee.h>
 #include "IOService.h"
@@ -313,8 +314,7 @@ public:
 
 	virtual void close (const ResultCallback & callback) {
 		disconnectFromHost ();
-		if (callback)
-			mService.post (abind (callback, NoError));
+		notifyAsync (callback, NoError);
 	}
 
 	Channel::ChannelInfo info () const {

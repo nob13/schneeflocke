@@ -12,7 +12,9 @@ namespace test {
 bool waitUntilTrue (const sf::function<bool ()>& testFunction, int maxSeconds){
 	int seconds = 0;
 	for (; seconds < maxSeconds && !testFunction (); seconds++){
+		schnee::mutex().unlock();
 		sf::test::sleep (1);
+		schnee::mutex().lock();
 	}
 	return seconds < maxSeconds;
 }
@@ -20,7 +22,9 @@ bool waitUntilTrue (const sf::function<bool ()>& testFunction, int maxSeconds){
 bool waitUntilTrueMs (const sf::function<bool ()>& testFunction, int maxMilliSeconds) {
 	int milliSeconds = 0;
 	for (; milliSeconds < maxMilliSeconds && !testFunction(); milliSeconds+=10){
+		schnee::mutex().unlock();
 		sf::test::millisleep(10);
+		schnee::mutex().lock();
 	}
 	return milliSeconds < maxMilliSeconds;
 }
@@ -28,17 +32,13 @@ bool waitUntilTrueMs (const sf::function<bool ()>& testFunction, int maxMilliSec
 /// Structure to check for pending data inside the work thread.
 struct NoPendingData {
 	sf::Condition condition;
-	sf::Mutex     mutex;
 	bool          done;
 	long          value;
 	sf::test::LocalChannelUsageCollectorPtr collector;
 
 	void exec () {
-		{
-			sf::LockGuard (mutex);
-			value = collector->pendingData();
-			done = true;
-		}
+		value = collector->pendingData();
+		done = true;
 		condition.notify_all ();
 	}
 };
@@ -52,11 +52,10 @@ bool noPendingData (sf::test::LocalChannelUsageCollectorPtr collector) {
 	// Note this works if Messages are not send via multiple Xcalls
 	// Which is not yet the case.
 	static NoPendingData x; // static, because it must be alive when 2nd thread comes back
-	sf::LockGuard guard (x.mutex);
 	x.done = false;
 	x.collector = collector;
 	sf::xcall (sf::bind (&NoPendingData::exec, &x));
-	while (!x.done) x.condition.wait (x.mutex);
+	while (!x.done) x.condition.wait (schnee::mutex());
 	return x.value == 0;
 }
 

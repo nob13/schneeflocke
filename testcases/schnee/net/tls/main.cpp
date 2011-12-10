@@ -151,10 +151,11 @@ int signCertificateTest () {
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
 
-	int ret = 0;
+	testcase_start();
 	testcase (diffieHellmanTest());
 	testcase (x509Comtest());
 	testcase (createCertificateRequestTest());
 	testcase (signCertificateTest());
+	testcase_end();
 	return ret;
 }
