@@ -45,11 +45,12 @@ void boundCaller (const sf::function<void (int)> & f) {
 
 // Abindaround destination func
 void dstFunc (int x, int y, const sf::String & s) {
-	printf ("Called with %d,%d and %s", x, y, s.c_str());
+	printf ("Called with %d,%d and %s\n", x, y, s.c_str());
 }
 
 int main (int argc, char * argv[]) {
 	sf::schnee::SchneeApp app (argc, argv);
+	SF_SCHNEE_LOCK;
 	
 	// Abind weg:
 	asyncDemoFunc (sf::abind (&contextCallback, std::string ("Thats my context")));
@@ -57,7 +58,7 @@ int main (int argc, char * argv[]) {
 	// Boost Weg
 	asyncDemoFunc (boost::bind (&contextCallback, _1, std::string ("Thats my context using boost")));
 	
-	sf::test::millisleep (100);
+	sf::test::millisleep_locked (100);
 	
 	Watched * w = new Watched;
 	boost::function<void ()> call = sf::dMemFun (w, &Watched::func);
