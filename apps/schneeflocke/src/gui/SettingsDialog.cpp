@@ -21,7 +21,6 @@ void SettingsDialog::init() {
 	mSettingsWindowUi.passwordEdit->setText (qtString (settings.password));
 	mSettingsWindowUi.useBoshCheckBox->setCheckState (settings.useBosh ? Qt::Checked : Qt::Unchecked);
 	mSettingsWindowUi.fileDestinationEdit->setText (qtString (settings.destinationDirectory));
-	// mSettingsWindowUi.slxmppCheckbox->setCheckState (settings.useSLXMPP ? Qt::Checked : Qt::Unchecked);
 	mSettingsWindowUi.echoServerIpEdit->setText (qtString (settings.echoServerIp));
 	mSettingsWindowUi.echoServerPortEdit->setValue (settings.echoServerPort);
 	mSettingsWindowUi.autoConnectCheckBox->setCheckState (settings.autoConnect ? Qt::Checked : Qt::Unchecked);
@@ -53,8 +52,6 @@ void SettingsDialog::onSettingsAccepted () {
 	settings.userId = sfString (mSettingsWindowUi.usernameEdit->text()) + "@" + server;
 	settings.password = sfString (mSettingsWindowUi.passwordEdit->text());
 	settings.destinationDirectory = sfString (mSettingsWindowUi.fileDestinationEdit->text());
-	// No SLXMPP Button anymore
-	// settings.useSLXMPP = (mSettingsWindowUi.slxmppCheckbox->checkState() == Qt::Checked ? true : false);
 	settings.useBosh = (mSettingsWindowUi.useBoshCheckBox->checkState() == Qt::Checked ? true : false);
 	settings.echoServerIp   = sfString (mSettingsWindowUi.echoServerIpEdit->text());
 	settings.echoServerPort = mSettingsWindowUi.echoServerPortEdit->value();

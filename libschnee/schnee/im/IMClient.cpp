@@ -3,7 +3,6 @@
 
 #include <boost/thread.hpp> // for waiting
 
-#include "slxmpp/ServerlessXMPPClient.h"
 #include "xmpp/XMPPClient.h"
 
 namespace sf {
@@ -33,18 +32,12 @@ const char* IMClient::messageTypeToString (MessageType t) {
 
 std::set<String> IMClient::availableProtocols(){
 	std::set<String> result;
-#ifdef ENABLE_DNS_SD
-	result.insert ("slxmpp");
-#endif
 	result.insert ("xmpp");
 	return result;
 }
 
 IMClient * IMClient::create(const String & protocol){
 	if (protocol == "xmpp") return new XMPPClient ();
-#ifdef ENABLE_DNS_SD
-	if (protocol == "slxmpp") return new ServerlessXMPPClient ();
-#endif
 	return 0;
 }
 

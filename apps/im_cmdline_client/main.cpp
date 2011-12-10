@@ -15,7 +15,6 @@ int main (int argc, char * argv []){
 	if (argc < 2){
 		std::cout << "usage: im_cmdline_client <conncetion-string> [--enableLog] [--autoAuth]" << std::endl;
 		std::cout << "connection string of the form xmpp://username:password@server/resource" << std::endl;
-		std::cout << "                         or   slxmpp://username" << std::endl;
 		std::cout << "Available protocols: " << sf::toString (sf::IMClient::availableProtocols()) << std::endl;
 		return 1;
 	}

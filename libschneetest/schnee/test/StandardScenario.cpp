@@ -38,6 +38,7 @@ sf::Error StandardScenario::initWithBeaconCreator (int nodeCount, bool withServe
 
 
 sf::Error StandardScenario::connectThem (int timeOutMs) {
+	assert (!"SLXMPP is not anymore, please fix this code");
 	String prefix = mSimulated ? "" : "slxmpp://";
 	if (mServer){
 		sf::Error err = mServer->beacon->connect (prefix + serverName());

@@ -79,10 +79,7 @@ static sf::String fixResourceName (const sf::String & s) {
 sf::Error Model::connect (const sf::ResultCallback & resultCallback) {
 	sf::LockGuard guard (mMutex);
 	sf::String connectionString;
-	if (mSettings.useSlxmpp){
-		connectionString = "slxmpp://" + mSettings.userId;
-	} else
-		connectionString = "xmpp://" + mSettings.userId + "/" + fixResourceName (mSettings.resource);
+	connectionString = "xmpp://" + mSettings.userId + "/" + fixResourceName (mSettings.resource);
 	sf::Error err = mBeacon->connect (connectionString, mSettings.password,  resultCallback);
 	return err;
 }
@@ -96,10 +93,6 @@ void Model::registerAccount (const sf::ResultCallback & callback) {
 	sf::LockGuard guard (mMutex);
 	if (mRegistration) {
 		if (callback) xcall (sf::abind (callback, sf::error::TooMuch));
-		return;
-	}
-	if (mSettings.useSlxmpp){
-		if (callback) xcall (sf::abind (callback, sf::error::NotSupported));
 		return;
 	}
 	mRegistration = new sf::XMPPRegistration ();

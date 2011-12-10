@@ -106,7 +106,7 @@ public:
 	/// @name Creation
 	/// @{
 	/**
-	 * Returns all available protocols, e.g. xmpp or slxmpp
+	 * Returns all available protocols, e.g. xmpp (slxmpp is not supported anymore)
 	 */
 	static std::set<String> availableProtocols ();
 	

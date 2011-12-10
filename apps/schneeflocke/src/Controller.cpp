@@ -57,7 +57,6 @@ void Controller::init () {
 		s.echoServerIp = "82.211.19.149";
 	}
 	s.echoServerPort        = settings.value("echoServerPort", "1234").toInt ();
-	s.useSlxmpp             = settings.value("useSlxmpp", false).toBool();
 	s.useBosh               = settings.value("useBosh", false).toBool();
 	s.autoConnect           = settings.value("autoConnect", false).toBool();
 	settings.endGroup ();
@@ -119,7 +118,6 @@ void Controller::updateSettings(const Model::Settings & s) {
 	settings.setValue("destinationDirectory", qtString (s.destinationDirectory));
 	settings.setValue("echoServerIp", qtString (s.echoServerIp));
 	settings.setValue("echoServerPort", QVariant (s.echoServerPort));
-	settings.setValue ("useSlxmpp", s.useSlxmpp);
 	settings.setValue ("useBosh", s.useBosh);
 	settings.setValue ("autoConnect", s.autoConnect);
 	settings.endGroup ();

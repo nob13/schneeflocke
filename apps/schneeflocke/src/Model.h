@@ -23,14 +23,13 @@ public:
 	sf::Error init ();
 
 	struct Settings {
-		Settings() : echoServerPort (1234), useSlxmpp(false), useBosh (false), autoConnect(false) {}
+		Settings() : echoServerPort (1234), useBosh (false), autoConnect(false) {}
 		sf::UserId userId;
 		sf::String password;
 		sf::String resource;
 		sf::String destinationDirectory;
 		sf::String echoServerIp;
 		int echoServerPort;
-		bool       useSlxmpp;
 		bool       useBosh;
 		bool       autoConnect;
 	};

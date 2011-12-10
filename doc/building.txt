@@ -12,7 +12,6 @@ What you need:
 
 - OpenSSL >= 0.9.8 (?) (on Linux usually already installed, for Windows there is a version shipped with this library)
 - Doxygen, for automatic code documentation generation
-- If you enable DNS-SD (on Linux only), used for SLXMPP , you will also need the Avahi Compatiblity Libs, they 
   are called libavahi-compat-libdnssd-dev on Ubuntu.
   If you want to disable DNS-SD, just pass -DENABLE_DNS_SD=FALSE to CMake
 - sfserialization >= 0.2.4 https://github.com/nob13/sfserialization

@@ -64,7 +64,6 @@ int main (int argc, char * argv[]) {
 	sf::schnee::SchneeApp app (argc, argv);
 	int ret = 0;
 	testcase (leveling(&createUdtInterplex));  // IM + UDT
-	test::millisleep (1000); // needed for SLXMPP presence ?! (BUG!)
 	testcase (leveling(&createTcpInterplex));  // IM + TCP
 	test::millisleep (1000);
 	testcase (leveling(&InterplexBeacon::createIMInterplexBeacon)); // production Interplex

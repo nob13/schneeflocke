@@ -34,7 +34,6 @@ add_automatic_test (schnee/net/udtsocket)
 add_automatic_test (schnee/net/tls)
 add_automatic_test (schnee/net/http)
 
-add_automatic_test (schnee/im/slxmpp)
 add_automatic_test (schnee/im/xmpp_contacts)
 add_automatic_test (schnee/im/xml_stream)
 add_automatic_test (schnee/im/xmpp_stream)
@@ -52,5 +51,4 @@ add_automatic_test (flocke/sharedlists/sharedlists)
 add_automatic_test (flocke/filesharing/filesharing)
 
 # Interactive Tests
-add_interactive_test (schnee/net/dns_sd_testcase)
 add_interactive_test (schnee/im/xmpp_bosh)
