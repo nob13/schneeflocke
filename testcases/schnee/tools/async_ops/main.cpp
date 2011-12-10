@@ -177,7 +177,7 @@ struct DisappearingHandler : public DelegateBase {
 
 int main (int argc, char * argv[]) {
 	schnee::SchneeApp app (argc, argv);
-
+	SF_SCHNEE_LOCK;
 	AsyncExample example;
 	{
 		std::cout << "Time out calculation" << std::endl;
@@ -187,19 +187,19 @@ int main (int argc, char * argv[]) {
 		}
 		{
 			AsyncExample::Op1 op (regTimeOutMs (10000));
-			test::sleep (1);
+			test::sleep_locked (1);
 			int ms = op.lastingTimeMs();
 			assert (ms > 8000 && ms < 9500); // around 9000
 		}
 		{
 			AsyncExample::Op1 op (regTimeOutMs (1));
-			test::sleep (1);
+			test::sleep_locked (1);
 			int ms = op.lastingTimeMs(); // exactly 0 time is out
 			assert (ms == 0);
 		}
 		{
 			AsyncExample::Op1 op (regTimeOutMs (10000));
-			test::sleep (1);
+			test::sleep_locked (1);
 			int ms = op.lastingTimeMs(0.5f);
 			assert (ms > 4000 && ms < 5000); // around 4500
 		}
@@ -225,7 +225,7 @@ int main (int argc, char * argv[]) {
 			DisappearingHandler handler;
 			example.asyncCall1 (100, dMemFun (&handler, &DisappearingHandler::handle));
 		}
-		test::sleep (1);
+		test::sleep_locked (1);
 	}
 	{
 		std::cout << "Testing TimeOut (in backward order)" << std::endl;
@@ -234,7 +234,7 @@ int main (int argc, char * argv[]) {
 			OpId id = example.asyncCall1 (timeOutInMs, mustTimeOutOrdered);
 			std::cout << "Kicking id " << id << " timeOutInMs " << timeOutInMs << std::endl;
 		}
-		test::sleep(3);						//< All must time out
+		test::sleep_locked(3);						//< All must time out
 		assert (example.waitingOps() == 0);		//< No call has to left
 	}
 	{
@@ -243,7 +243,7 @@ int main (int argc, char * argv[]) {
 			example.asyncCall1 (1000, mustBeOffline, 50);
 		}
 		example.cancelCall (50, error::TargetOffline);
-		test::sleep (1);
+		test::sleep_locked (1);
 		assert (example.waitingOps() == 0);
 	}
 	{
@@ -261,7 +261,7 @@ int main (int argc, char * argv[]) {
 			xcall(abind (dMemFun (&example, &AsyncExample::finishCall), startId + i));
 			// xcall (bind (&AsyncExample::finishCall, &example, startId + i));
 		}
-		test::sleep (3);
+		test::sleep_locked (3);
 		assert (example.waitingOps() == 0);		//< No call has to left
 	}
 	{
@@ -269,7 +269,7 @@ int main (int argc, char * argv[]) {
 		// - starting new tasks during timeOut works
 		example.asyncCall1 (100, abind (&startTask, 0, &example));
 		// example.asyncCall1 (100, bind (startTask, _1, _2, 0, &example));
-		test::sleep (1);
+		test::sleep_locked (1);
 		assert (example.waitingOps() == 0);		//< No call has to left
 	}
 	{
@@ -279,7 +279,7 @@ int main (int argc, char * argv[]) {
 		OpId id = example.asyncCall2 (1000, abind (&startTask, &example));
 		// xcall (bind (&AsyncExample::finishCall, &example, id));
 		xcall ( abind (dMemFun (&example, &AsyncExample::finishCall), id));
-		test::sleep (1);
+		test::sleep_locked (1);
 	}
 	{
 		std::cout << "Testing correct shut down" << std::endl;

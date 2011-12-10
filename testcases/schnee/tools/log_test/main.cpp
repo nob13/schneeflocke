@@ -53,6 +53,7 @@ void testFunc4 (const sf::IMClient::Message & m){
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
+	SF_SCHNEE_LOCK;
 
 	sf::IMClient::Message message;
 	message.from ="nob@me";
