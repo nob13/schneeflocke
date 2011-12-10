@@ -44,16 +44,12 @@ int testManualConnect () {
 
 	// BOSHs connect
 	ResultCallbackHelper helper;
-	BoshTransportPtr transport;
-	{
-		SF_SCHNEE_LOCK;
-		transport = BoshTransportPtr  (new BoshTransport());
-		BoshTransport::StringMap addArgs;
-		addArgs["to"] = host;
-		addArgs["xmpp:version"] = "1.0"; // is important for ejabberd
-		addArgs["xmlns:xmpp"] = "urn:xmpp:xbosh"; // is important for ejabberd
-		transport->connect(url, addArgs, timeoutMs, helper.onResultFunc());
-	}
+	BoshTransportPtr transport (new BoshTransport());
+	BoshTransport::StringMap addArgs;
+	addArgs["to"] = host;
+	addArgs["xmpp:version"] = "1.0"; // is important for ejabberd
+	addArgs["xmlns:xmpp"] = "urn:xmpp:xbosh"; // is important for ejabberd
+	transport->connect(url, addArgs, timeoutMs, helper.onResultFunc());
 	tcheck (helper.waitReadyAndNoError(timeoutMs), "Should connect");
 
 	// Feature receivement
@@ -133,13 +129,14 @@ int testReuse () {
 	req.end();
 	std::pair<Error, HttpResponsePtr> res = httpContext.syncRequest(req, 60000);
 	tcheck1(!res.first);
-	test::millisleep(1000);
+	test::millisleep_locked(1000);
 	tcheck1 (httpContext.pendingConnections() == 1);
 	return 0;
 }
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
+	SF_SCHNEE_LOCK;
 	testcase_start();
 	testcase (testNodeBuildAndParse());
 	testcase (testReuse ());

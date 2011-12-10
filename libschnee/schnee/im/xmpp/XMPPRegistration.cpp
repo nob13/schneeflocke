@@ -105,8 +105,11 @@ static void registerSetIqHandler (Error e, const xmpp::Iq & iq, const XMLChunk &
 		Error e = error::Other;
 		const XMLChunk * errorChield = base.getHasChild("error");
 		const XMLChunk * textChild   = errorChield ? errorChield->getHasChild("text") : 0;
-		if (errorChield && textChild) {
-			Log (LogProfile) << LOGID << "Register failed " << textChild->text();
+		if (errorChield) {
+			Log (LogProfile) << LOGID << "Register failed " << std::endl;
+			if (textChild){
+				Log (LogProfile) << LOGID << "Cause: " << textChild->text();
+			}
 			if (errorChield->hasChildWithName("conflict")) e = error::ExistsAlready;
 			if (errorChield->hasChildWithName("not-acceptable")) e = error::NotSupported;
 		}

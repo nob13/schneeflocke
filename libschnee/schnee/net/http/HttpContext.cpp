@@ -1,7 +1,7 @@
 #include "HttpContext.h"
 #include <stdio.h>
 #include "HttpRequest.h"
-
+#include <schnee/schnee.h>
 namespace sf {
 
 HttpContext::HttpContext () {
@@ -40,30 +40,26 @@ public:
 		mCalled = false;
 	}
 	void onResult (Error e, const HttpResponsePtr & response) {
-		{
-			LockGuard guard (mMutex);
-			mResult   = e;
-			mResponse = response;
-			mCalled = true;
-		}
+		mResult   = e;
+		mResponse = response;
+		mCalled = true;
 		mCondition.notify_all();
 	}
 	std::pair<Error,HttpResponsePtr> waitAndReturnResult () {
-		LockGuard guard (mMutex);
 		while (!mCalled) {
-			mCondition.wait(mMutex);
+			mCondition.wait(schnee::mutex());
 		}
 		return std::make_pair(mResult, mResponse);
 	}
 private:
 	Condition mCondition;
-	Mutex mMutex;
 	HttpResponsePtr mResponse;
 	Error mResult;
 	bool mCalled;
 };
 
 std::pair<Error, HttpResponsePtr> HttpContext::syncRequest (const HttpRequest & r, int timeOutMs) {
+	assert (schnee::mutex().try_lock() == false && "SchneeLock must be set and called from foreign thread!");
 	Syncer s;
 	request (r, timeOutMs, sf::memFun (&s, &Syncer::onResult));
 	return s.waitAndReturnResult();

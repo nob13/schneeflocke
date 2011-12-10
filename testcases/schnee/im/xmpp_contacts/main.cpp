@@ -90,6 +90,7 @@ private:
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
+	SF_SCHNEE_LOCK;
 	Peer a (hardcodedLogin ("x1"));
 	Peer b (hardcodedLogin ("x2"));
 	if (!a.connect()) return 1;
@@ -118,7 +119,7 @@ int main (int argc, char * argv[]){
 	tassert (e == NoError, "removeContact failed!");
 
 	if (!a.waitForCanNotSee (b.userId())){
-		fprintf (stderr, "A can still see B, but has dropped removed the contact?!\n");
+		fprintf (stderr, "A can still see B, but has removed him from the contact?!\n");
 		return 4;
 	}
 	if (!b.waitForCanNotSee (a.userId())){
