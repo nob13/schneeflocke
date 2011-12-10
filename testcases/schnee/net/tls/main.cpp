@@ -53,7 +53,7 @@ int comTest (Channel& sa, Channel& sb) {
 	Error e = sa.write (createByteArrayPtr("Hello World"));
 	tcheck (!e, "Should send");
 
-	test::millisleep(100);
+	test::millisleep_locked(100);
 	ByteArrayPtr data = sb.read();
 	tcheck (data, "shall receive");
 	tcheck (*data == ByteArray ("Hello World"), "right");
@@ -70,7 +70,7 @@ int diffieHellmanTest () {
 
 	sa.clientHandshake(TLSChannel::DH);
 	sb.serverHandshake(TLSChannel::DH);
-	test::millisleep (100);
+	test::millisleep_locked (100);
 	return comTest (sa, sb);
 }
 
@@ -91,7 +91,7 @@ int x509Comtest () {
 	sa.clientHandshake(TLSChannel::X509);
 	sb.serverHandshake(TLSChannel::X509);
 
-	test::millisleep (100);
+	test::millisleep_locked (100);
 	return comTest (sa, sb);
 }
 
@@ -150,7 +150,7 @@ int signCertificateTest () {
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
-
+	SF_SCHNEE_LOCK;
 	testcase_start();
 	testcase (diffieHellmanTest());
 	testcase (x509Comtest());

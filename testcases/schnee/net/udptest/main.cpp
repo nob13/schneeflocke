@@ -65,6 +65,7 @@ int freeBind () {
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
+	SF_SCHNEE_LOCK;
 	testcase_start();
 	testcase (testSimpleSendAndReceive());
 	testcase (testFailingDns ());

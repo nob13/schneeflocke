@@ -22,14 +22,14 @@ using namespace sf;
 int testUDTMainLoopRunning () {
 	{
 		UDTSocket a;
-		test::millisleep (100);
+		test::millisleep_locked (100);
 		tassert (UDTMainLoop::instance().isRunning(), "should run");
 	}
 	tassert (!UDTMainLoop::instance().isRunning(), "should not run");
 	{
 		UDTSocket a;
 		UDTSocket b;
-		test::millisleep (100);
+		test::millisleep_locked (100);
 		tassert (UDTMainLoop::instance().isRunning(), "should run");
 		UDTServer s;
 	}
@@ -156,7 +156,7 @@ int testUDTServer () {
 	e = socket.connect ("127.0.0.1", port); // localhost won't work!
 	tassert (!e, "Should connect");
 
-	test::millisleep (100);
+	test::millisleep_locked (100);
 	tassert (server.pendingConnections() == 1, "Should have one pending connection");
 
 	UDTSocket * socket2 = server.nextConnection();
@@ -166,7 +166,7 @@ int testUDTServer () {
 	tassert (testSockets (&socket, socket2) == 0, "Sockets shall support this test");
 
 	socket2->close();
-	test::millisleep (100);
+	test::millisleep_locked (100);
 	tassert1 (!socket.isConnected());
 	delete socket2;
 
@@ -183,10 +183,12 @@ int testRendezvous () {
 	tassert (!e, "socket shall bind");
 	printf ("A bound to %d, B bound to %d\n", a.port(), b.port());
 	xcall (abind (memFun (&b, &UDTSocket::connectRendezvous), String ("127.0.0.1"), a.port())); // b connecting in IOService thread back
+	schnee::mutex().unlock();
 	e = a.connectRendezvous("127.0.0.1", b.port());
+	schnee::mutex().lock();
 	tassert (!e, "Shall connect");
 
-	test::millisleep (100); // giving IOService thread enough time to connectRendezvous
+	test::millisleep_locked (100); // giving IOService thread enough time to connectRendezvous
 	tassert (testSockets (&a, &b) == 0, "Sockets shall support this test");
 	return 0;
 }
@@ -265,7 +267,7 @@ int testReusage () {
 	e = a.connectRendezvous("127.0.0.1", b.port());
 	tcheck (!e, "Shall be no problem to connect now");
 
-	test::millisleep (100); // giving IOService thread enough time to connectRendezvous
+	test::millisleep_locked (100); // giving IOService thread enough time to connectRendezvous
 
 	tassert (testSockets (&a, &b) == 0, "supports shall work");
 	return 0;
@@ -273,7 +275,7 @@ int testReusage () {
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
-
+	SF_SCHNEE_LOCK;
 	testcase_start();
 	testcase (testUDTMainLoopRunning());
  	testcase (testUDTServer());
