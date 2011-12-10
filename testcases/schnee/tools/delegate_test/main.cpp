@@ -55,10 +55,6 @@ struct TestObject : public sf::DelegateBase {
 
 };
 
-void aFunctionToBind (int a, char b, const sf::String & c, void * d){
-	printf ("I was called a=%d, b=%c c=%s, d=0x%lx\n", a, b, c.c_str(), (long) d);
-}
-
 bool timeWasCalled = false;
 sf::Time callTime;
 void callIt (){
@@ -70,18 +66,13 @@ typedef sf::function <void (int arg)> Delegate;
 
 int main (int argc, char * argv[]) {
 	sf::schnee::SchneeApp app (argc, argv);
-	// DelegateRegister::initInstance(); // is Done by SchneeApp
-	{
-		// bind still fails!!!!!
-		// bla = sf::abind (aFunctionToBind,"Hello", 0xdeadbabe);
-		// bla (5,'a');
-	}
+	SF_SCHNEE_LOCK;
 	{
 		// Timed Xcall
 		sf::Time startTime = sf::currentTime();
-		sf::test::millisleep (250);
+		sf::test::millisleep_locked (250);
 		sf::xcallTimed(callIt, sf::futureInMs (100));
-		sf::test::millisleep (250);
+		sf::test::millisleep_locked (250);
 		tassert (timeWasCalled, "sf::xcallTimed seems not to work");
 		std::cout << "Time delta: " << (callTime - startTime).total_milliseconds() << std::endl;
 	}
@@ -137,7 +128,7 @@ int main (int argc, char * argv[]) {
 		TestObject obj;
 		xcall (sf::abind (dMemFun (&obj, &TestObject::withDoubleConstRef), sf::String ("Comes"), sf::String ("Through")));
 		// Should come through
-		sf::test::sleep(1);
+		sf::test::millisleep_locked(1);
 	}
 	{
 		// XCall2, shall not come through
