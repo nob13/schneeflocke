@@ -35,8 +35,12 @@ int testSimpleSendAndReceive () {
 	tassert1 (content && (*content == ByteArray("Hello") || *content == ByteArray ("World")));
 	tassert1 (senderPort == a.port());
 
-	suc = b.datagramsAvailable() > 0 || helperB.wait(2000);
-	tcheck (suc, "b must receive both messages");
+	helperB.reset();
+	suc = (b.datagramsAvailable() > 0) || (helperB.wait(2000));
+	if (!suc) {
+		fprintf (stderr, "B must reiceive both messsages, but has only: %d\n", b.datagramsAvailable());
+		return 1;
+	}
 	ByteArrayPtr content2 = b.recvFrom (&sender, &senderPort);
 	tcheck (content2 && (*content2 == ByteArray ("Hello") || *content2 == ByteArray ("World")), "data mismatch");
 	tcheck (senderPort == a.port(), "wrong sender pot");
