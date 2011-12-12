@@ -25,19 +25,15 @@ struct SyncGlobProcess : public DelegateBase{
 	}
 	
 	void wait () {
-		LockGuard lock (mMutex);
 		while (!mReady){
-			mCondition.wait (mMutex);
+			mCondition.wait (schnee::mutex());
 		}
 	}
 	
 	void onGlobResult (Error result, const RecursiveDirectoryListingPtr & listing) {
-		{
-			LockGuard lock (mMutex);
-			mReady   = true;
-			mListing = listing;
-			mResult  = result;
-		}
+		mReady   = true;
+		mListing = listing;
+		mResult  = result;
 		mCondition.notify_all ();
 	}
 	
@@ -90,6 +86,7 @@ void checkIteratorAndSize (RecursiveDirectoryListingPtr listing) {
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
+	SF_SCHNEE_LOCK;
 	if (!sf::fileExists("testbed")){
 		fprintf (stderr, "testbed folder doesn't exist, test is failing\n");
 		return 1;
@@ -125,7 +122,7 @@ int main (int argc, char * argv[]){
 		sf::Globber globber;
 		globber.glob ("/usr", &mayNotCall, 1000000);
 		globber.glob ("/usr", &mayNotCall, 1000000);
-		test::millisleep (1);
+		test::millisleep_locked (1);
 	}
 	{
 		printf ("Really big folder\n");
