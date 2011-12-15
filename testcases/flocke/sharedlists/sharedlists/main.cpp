@@ -66,58 +66,62 @@ public:
 		}
 	};
 	SharedListPeer * peer (int i) { return (SharedListPeer*) mPeers[i]; }
-	SharedListPeer * server () { return (SharedListPeer*) mServer; }
+	SharedListPeer * _server () { return (SharedListPeer*) mServer; }
 
 	virtual Peer * createPeer (InterplexBeacon * beacon) { return new SharedListPeer (beacon); }
 };
 
 /// Try to automatic connect before tracking (was bug 83)
-void testAutoConnect () {
+int testAutoConnect () {
 	// TEST 0 (Bug #83)
 	// Try to auto connect if not shared
 	SharedListScenario s;
-	tassert1 (!s.init(3, true, false)); // must be not simulated
+	tassert1 (!s.init(4, false, false)); // must be not simulated
 	tassert1 (!s.connectThem ());
 	
-	sf::HostId shost = s.server()->hostId();
+	// Peer 3 plays server as non-simulated network has no server
+
+	sf::HostId shost = s.peer(3)->hostId();
 	sf::Error err = s.peer(0)->autoLiftTrackShared(shost);
 	tassert (!err, "Shall connect automatically now");
-	test::sleep(1);
+	test::sleep_locked(5);
 	// should have data now
+	fprintf (stderr, "Current connections: %s\n", toJSON (s.peer(0)->beacon->connections().connections()).c_str());
 	tassert (s.peer(0)->listTracker->sharedLists().count(shost) > 0, "must have data from server now");
-	tassert (s.peer(0)->fastConnected(s.server()), "shall use a lifted connection now"); // must be tcp or similar
+	tassert (s.peer(0)->fastConnected(s.peer(3)), "shall use a lifted connection now"); // must be tcp or similar
 	
 	// now try this two at once
 	err = s.peer(1)->autoLiftTrackShared(shost);
 	err = s.peer(2)->autoLiftTrackShared(shost);
-	test::sleep(5);
-	tassert (s.peer(1)->fastConnected(s.server()), "must be fast connected now");
-	tassert (s.peer(2)->fastConnected(s.server()), "must be fast connected now");
+	test::sleep_locked(5);
+	tassert (s.peer(1)->fastConnected(s.peer (3)), "must be fast connected now");
+	tassert (s.peer(2)->fastConnected(s.peer (3)), "must be fast connected now");
 	tassert (s.peer(1)->listTracker->sharedLists().count (shost) > 0, "must have a list from the server");
 	tassert (s.peer(2)->listTracker->sharedLists().count (shost) > 0, "must have a list from the server");
+	return 0;
 }
 
-void testTrackingListSync () {
+int testTrackingListSync () {
 	SharedListScenario s;
 	tassert (!s.initConnectAndLift(3), "Must init and connect");
 
-	sf::HostId shost = s.server()->hostId();
+	sf::HostId shost = s._server()->hostId();
 
 	ds::DataDescription dirDesc;
 	dirDesc.user  = "dir";
 	ds::DataDescription fileDesc;
 	fileDesc.user = "file"; 
 	
-	sf::Error err = s.server()->listServer->add ("A.file", SharedElement ("testbed/a", 1234, fileDesc));
+	sf::Error err = s._server()->listServer->add ("A.file", SharedElement ("testbed/a", 1234, fileDesc));
 	tassert1 (!err);
-	err = s.server()->listServer->add ("emptyfile", SharedElement ("testbed/emptyfile", 5678, fileDesc));
+	err = s._server()->listServer->add ("emptyfile", SharedElement ("testbed/emptyfile", 5678, fileDesc));
 	tassert1 (!err);
-	err = s.server()->listServer->add ("B.dir", SharedElement ("testbed/dir1", 0, dirDesc));
+	err = s._server()->listServer->add ("B.dir", SharedElement ("testbed/dir1", 0, dirDesc));
 	tassert1 (!err);
 
 	err = s.peer(0)->listTracker->trackShared(shost);
 	tassert (!err, "Should be no problem to track");
-	test::millisleep (500);
+	test::millisleep_locked (500);
 
 	SharedListTracker::SharedListMap slm = s.peer(0)->listTracker->sharedLists();
 	tassert1 (slm.count(shost) > 0);
@@ -133,20 +137,20 @@ void testTrackingListSync () {
 	{
 		for (int i = 0; i < 5; i++) {
 			// Add a directory C
-			err = s.server()->listServer->add ("C", SharedElement ("testbed/dir2"));
+			err = s._server()->listServer->add ("C", SharedElement ("testbed/dir2"));
 			tassert1 (!err);
 
 			// Wait until full transfer
-			test::millisleep (100);
+			test::millisleep_locked (100);
 
 			// Assume C blinks on the peer now
 			slm = s.peer(0)->listTracker->sharedLists();
 			tassert1 (slm[shost].count("C") > 0);
 
 			// Unshare it again
-			err = s.server()->listServer->remove ("C");
+			err = s._server()->listServer->remove ("C");
 			tassert1 (!err);
-			test::millisleep (100);
+			test::millisleep_locked (100);
 
 			// Assume C doesn't blink anymore
 			slm = s.peer(0)->listTracker->sharedLists();
@@ -155,21 +159,25 @@ void testTrackingListSync () {
 	}
 	
 	// must hold sync on clearance
-	s.server()->listServer->clear ();
-	test::millisleep (100);
+	s._server()->listServer->clear ();
+	test::millisleep_locked (100);
 	slm = s.peer(0)->listTracker->sharedLists();
 	tassert (slm[shost].empty(), "Must be empty now");
 	
 	// must lost tracking
-	s.server()->beacon->disconnect();
-	test::millisleep (100);
+	s._server()->beacon->disconnect();
+	test::millisleep_locked (100);
 	slm = s.peer(0)->listTracker->sharedLists();
 	tassert (slm.count(shost) == 0, "Should delete the server from its tracking - server is offline");
+	return 0;
 }
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
-	testAutoConnect ();
-	testTrackingListSync ();
+	SF_SCHNEE_LOCK;
+	testcase_start();
+	testcase (testAutoConnect ());
+	testcase (testTrackingListSync ());
+	testcase_end();
 	return 0;
 }
