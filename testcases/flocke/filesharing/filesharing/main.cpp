@@ -113,6 +113,7 @@ void checkRequestReply (const HostId & sender, const ds::RequestReply & reply, c
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
+	SF_SCHNEE_LOCK;
 
 #ifndef WIN32
 	{
@@ -157,7 +158,7 @@ int main (int argc, char * argv[]){
 
 		err = s.peer(0)->listTracker->trackShared(shost);
 		tassert (!err, "Should be no problem to track");
-		test::millisleep (500);
+		test::millisleep_locked (500);
 
 		sf::SharedListTracker::SharedListMap slm = s.peer(0)->listTracker->sharedLists();
 		tassert1 (slm.count(shost) > 0);
@@ -180,7 +181,7 @@ int main (int argc, char * argv[]){
 				fprintf (stderr, "Error on getting file=%s\n", toString (err));
 			}
 			tassert (!err, "Should find file");
-			test::millisleep (500);
+			test::millisleep_locked (500);
 			TransferInfoMap transfers = s.peer(0)->getting->transfers();
 			tassert (transfers.count (opId) > 0, "Must have transfer in its map");
 			tassert1 (transfers[opId].state == TransferInfo::FINISHED);
@@ -191,7 +192,7 @@ int main (int argc, char * argv[]){
 			AsyncOpId opId;
 			Error err = s.peer(0)->getting->request (Uri (shost, path), &opId);
 			tassert (!err, "Should find file");
-			test::millisleep (500);
+			test::millisleep_locked (500);
 			TransferInfoMap transfers = s.peer(0)->getting->transfers();
 			tassert (transfers.count (opId) > 0, "Must have transfer in its map");
 			tassert1 (transfers[opId].state == TransferInfo::FINISHED);
@@ -203,7 +204,7 @@ int main (int argc, char * argv[]){
 			AsyncOpId opId;
 			Error err = s.peer(0)->getting->request (Uri (shost, list["A.file"].path), &opId);
 			tassert (!err, "should be no problem to start transfer twice");
-			test::millisleep (500);
+			test::millisleep_locked (500);
 			TransferInfoMap transfers = s.peer(0)->getting->transfers();
 			tassert (transfers.count (opId) > 0, "Must have Transfer in its map");
 			tassert1 (transfers[opId].state == TransferInfo::FINISHED);
@@ -214,7 +215,7 @@ int main (int argc, char * argv[]){
 			AsyncOpId opId;
 			Error err = s.peer(0)->getting->request (Uri (shost, list["B.dir"].path + Path("a")), &opId);
 			tassert (!err, "should be no problem to start transfer");
-			test::millisleep (500);
+			test::millisleep_locked (500);
 			TransferInfoMap transfers = s.peer(0)->getting->transfers();
 			tassert (transfers.count(opId) > 0, "Must have transfer in its map");
 			tassert1 (transfers[opId].state == TransferInfo::FINISHED);
@@ -228,14 +229,14 @@ int main (int argc, char * argv[]){
 			r.mark = ds::Request::Transmission;
 			err = s.peer(0)->client->request (shost, r, &checkRequestReply);
 			tassert1 (!err);
-			test::millisleep (500);
+			test::millisleep_locked (500);
 		}
 		// 1.6 Transfer the whole directory
 		{
 			AsyncOpId opId;
 			Error err = s.peer(0)->getting->requestDirectory (Uri (shost, list["B.dir"].path), &opId);
 			tassert (!err, "should be no problem to start directory transfer");
-			test::millisleep (5000);
+			test::millisleep_locked (5000);
 			TransferInfoMap transfers = s.peer(0)->getting->transfers();
 			tassert (transfers.count(opId) > 0, "must have transfer in its map");
 			tassert1 (transfers[opId].state == TransferInfo::FINISHED);
@@ -245,7 +246,7 @@ int main (int argc, char * argv[]){
 			AsyncOpId opId;
 			Error err = s.peer(0)->getting->requestDirectory (Uri (shost, list["B.dir"].path + Path ("dir2")), &opId);
 			tassert (!err, "should be no problem to start directory transfer");
-			test::millisleep (5000);
+			test::millisleep_locked (5000);
 			TransferInfoMap transfers = s.peer(0)->getting->transfers();
 			tassert (transfers.count(opId) > 0, "must have transfer in its map");
 			tassert1 (transfers[opId].state == TransferInfo::FINISHED);
