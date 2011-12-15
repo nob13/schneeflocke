@@ -35,9 +35,7 @@ void GenericInterplexBeacon::disconnect () {
 	if (mPresenceProvider){
 		mPresenceProvider->disconnect ();
 	}
-	mMutex.lock();
 	mHosts.clear();
-	mMutex.unlock();
 	mConnectionManagement.clear();
 }
 
@@ -66,10 +64,7 @@ const GenericConnectionManagement & GenericInterplexBeacon::connections() const 
 void GenericInterplexBeacon::onOnlineStateChanged (OnlineState os) {
 	HostId id;
 	if (os == OS_ONLINE){
-		{
-			LockGuard guard (mMutex);
-			id = mPresenceProvider->hostId ();
-		}
+		id = mPresenceProvider->hostId ();
 		mConnectionManagement.setHostId (id);
 		mConnectionManagement.startPing();
 	} else {
@@ -83,7 +78,6 @@ void GenericInterplexBeacon::onPeersChanged () {
 	 * Offliners : kill connections to them (TODO: is this really necessary?)
 	 * Onliners:   request for additional information
 	 */
-	mMutex.lock();
 	PresenceManagement::HostInfoMap hosts = mPresenceProvider->hosts();
 	HostSet wentOffline;
 	for (PresenceManagement::HostInfoMap::const_iterator i = mHosts.begin(); i != mHosts.end(); i++) {
@@ -99,7 +93,6 @@ void GenericInterplexBeacon::onPeersChanged () {
 		}
 	}
 	mHosts.swap(hosts);
-	mMutex.unlock ();
 	for (HostSet::const_iterator i = wentOffline.begin(); i != wentOffline.end(); i++) {
 		mCommunicationMultiplex.distChannelChange(*i);
 	}

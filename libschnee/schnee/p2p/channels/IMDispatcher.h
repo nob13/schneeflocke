@@ -38,8 +38,8 @@ public:
 	virtual HostId hostId () const;
 	virtual OnlineState onlineState () const;
 	virtual OnlineState onlineState (const sf::HostId & user) const;
-	virtual UserInfoMap users () const { LockGuard guard (mMutex); return mUsers; }
-	virtual HostInfoMap hosts () const { LockGuard guard (mMutex); return mHosts; }
+	virtual UserInfoMap users () const { return mUsers; }
+	virtual HostInfoMap hosts () const { return mHosts; }
 	virtual HostInfoMap hosts(const UserId & user) const;
 	virtual HostInfo hostInfo (const HostId & host) const;
 	virtual Error updateFeatures (const HostId & host, const ResultCallback & callback);

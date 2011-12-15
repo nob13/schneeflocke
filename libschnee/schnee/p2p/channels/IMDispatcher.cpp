@@ -19,7 +19,6 @@ IMDispatcher::~IMDispatcher (){
 }
 
 sf::Error IMDispatcher::createChannel (const HostId & target, const ResultCallback & callback, int timeOutMs) {
-	LockGuard guard (mMutex);
 	if (!mClient){
 		sf::Log (LogError) << LOGID << "No im client available" << std::endl;
 		return error::InvalidArgument;
@@ -31,12 +30,10 @@ sf::Error IMDispatcher::createChannel (const HostId & target, const ResultCallba
 		if (channel->state () != OS_OFFLINE){
 			Log (LogWarning) << LOGID << "Deleting existing channel, will lead to a reconnection" << std::endl;
 		}
-		mMutex.unlock ();
 		channel->invalidate();
-		mMutex.lock ();
 		mChannels.erase (i);
 	}
-	AsyncOpId id = genFreeId_locked ();
+	AsyncOpId id = genFreeId ();
 	CreateChannelOp * op = new CreateChannelOp (sf::regTimeOutMs(timeOutMs));
 	op->setId (id);
 	op->target   = target;
@@ -50,13 +47,12 @@ sf::Error IMDispatcher::createChannel (const HostId & target, const ResultCallba
 
 	mChannels[target] = op->channel;
 
-	add_locked (op);
+	addAsyncOp (op);
 	return NoError;
 }
 
 
 void IMDispatcher::setHostId (const sf::HostId & id) {
-	sf::LockGuard guard (mMutex);
 	if (id != mHostId){
 		Log (LogWarning) << LOGID << "Set host id " << id << " differs from presence id " << mHostId  << " (ignoring)"<< std::endl;
 	}
@@ -64,7 +60,6 @@ void IMDispatcher::setHostId (const sf::HostId & id) {
 
 sf::Error IMDispatcher::connect (const sf::String & connectionString, const sf::String & password, const ResultDelegate & callback) {
 	disconnect ();
-	LockGuard guard (mMutex);
 	// figure out protocol
 	size_t pos = connectionString.find("://");
 	if (pos == connectionString.npos) return sf::error::InvalidArgument;
@@ -90,44 +85,37 @@ sf::Error IMDispatcher::connect (const sf::String & connectionString, const sf::
 }
 
 void IMDispatcher::disconnect (){
-	{
-		LockGuard guard (mMutex);
-		for (ChannelMap::iterator i = mChannels.begin(); i != mChannels.end(); i++){
-			i->second->invalidate();
-		}
-		mChannels.clear();
-		if (mClient) {
-			mClient->disconnect();	// callback will be send asynchronous
-			// TODO: We have to give it  some time here in order to mark us offline!!
-			// BUG: #159
-			delete mClient;
-			mClient = 0;
-		}
-		mHosts.clear();
-		mUsers.clear();
-		if (mPeersChanged) xcall (mPeersChanged);
+	for (ChannelMap::iterator i = mChannels.begin(); i != mChannels.end(); i++){
+		i->second->invalidate();
 	}
+	mChannels.clear();
+	if (mClient) {
+		mClient->disconnect();	// callback will be send asynchronous
+		// TODO: We have to give it  some time here in order to mark us offline!!
+		// BUG: #159
+		delete mClient;
+		mClient = 0;
+	}
+	mHosts.clear();
+	mUsers.clear();
+	if (mPeersChanged) xcall (mPeersChanged);
 }
 
 sf::HostId IMDispatcher::hostId() const {
-	LockGuard guard (mMutex);
 	return mHostId;
 }
 
 OnlineState IMDispatcher::onlineState () const {
-	LockGuard guard (mMutex);
 	if (!mClient) return OS_OFFLINE;
 	if (mClient->isConnected()) return OS_ONLINE;
 	else return OS_OFFLINE;
 }
 
 OnlineState IMDispatcher::onlineState (const HostId & user) const {
-	LockGuard guard (mMutex);
 	return onlineState_locked (user);
 }
 
 IMDispatcher::HostInfoMap IMDispatcher::hosts(const UserId & user) const {
-	LockGuard guard (mMutex);
 	HostInfoMap result;
 	for (HostInfoMap::const_iterator i = mHosts.begin(); i != mHosts.end(); i++){
 		if (i->second.userId == user) {
@@ -138,14 +126,12 @@ IMDispatcher::HostInfoMap IMDispatcher::hosts(const UserId & user) const {
 }
 
 IMDispatcher::HostInfo IMDispatcher::hostInfo (const HostId & host) const {
-	LockGuard guard (mMutex);
 	HostInfoMap::const_iterator i = mHosts.find (host);
 	if (i == mHosts.end()) return HostInfo();
 	return i->second;
 }
 
 Error IMDispatcher::updateFeatures (const HostId & host, const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	HostInfoMap::const_iterator i = mHosts.find(host);
 	if (i == mHosts.end()) return error::NotFound;
 	if (!mClient) return error::ConnectionError;
@@ -153,26 +139,22 @@ Error IMDispatcher::updateFeatures (const HostId & host, const ResultCallback & 
 }
 
 Error IMDispatcher::setOwnFeature (const String & client, const std::vector<String> & features) {
-	LockGuard guard (mMutex);
 	mClientName = client;
 	mFeatures = features;
 	return NoError;
 }
 
 Error IMDispatcher::subscribeContact (const sf::UserId & user) {
-	LockGuard guard (mMutex);
 	if (!mClient) return error::ConnectionError;
 	return mClient->subscribeContact(user);
 }
 
 Error IMDispatcher::subscriptionRequestReply (const sf::UserId & user, bool allow, bool alsoAdd) {
-	LockGuard guard (mMutex);
 	if (!mClient) return error::ConnectionError;
 	return mClient->subscriptionRequestReply(user, allow, alsoAdd);
 }
 
 Error IMDispatcher::removeContact (const sf::UserId & user) {
-	LockGuard guard (mMutex);
 	if (!mClient) return error::ConnectionError;
 	return mClient->removeContact(user);
 }
@@ -187,19 +169,15 @@ bool IMDispatcher::send (const sf::IMClient::Message & m){
 }
 
 void IMDispatcher::onOpCanceled (const HostId& target, const IMChannelPtr & channel) {
-	{
-		LockGuard guard (mMutex);
-		if (mChannels[target] == channel){
-			mChannels.erase(target);
-		}
+	if (mChannels[target] == channel){
+		mChannels.erase(target);
 	}
 	channel->invalidate();
 }
 
 void IMDispatcher::onAuthFinishedCreatingChannel (Error err, AsyncOpId id) {
-	LockGuard guard (mMutex);
 	CreateChannelOp * op;
-	getReady_locked (id, CREATE_CHANNEL, &op);
+	getReadyAsyncOp (id, CREATE_CHANNEL, &op);
 	if (!op){
 		Log (LogWarning) << LOGID << "Auth result on non-existing channel, propably timeouted" << std::endl;
 		return;
@@ -209,9 +187,7 @@ void IMDispatcher::onAuthFinishedCreatingChannel (Error err, AsyncOpId id) {
 		return;
 	}
 	if (err){
-		mMutex.unlock ();
 		op->channel->invalidate();
-		mMutex.lock ();
 		if (mChannels[op->target] == op->channel) { // perhaps there is another connect process already going on
 			mChannels.erase (op->target);
 		}
@@ -226,9 +202,8 @@ void IMDispatcher::onAuthFinishedCreatingChannel (Error err, AsyncOpId id) {
 }
 
 void IMDispatcher::onAuthFinishedRespondingChannel (Error err, AsyncOpId id) {
-	LockGuard guard (mMutex);
 	RespondChannelOp * op;
-	getReady_locked (id, RESPOND_CHANNEL, &op);
+	getReadyAsyncOp (id, RESPOND_CHANNEL, &op);
 	if (!op){
 		Log (LogWarning) << LOGID << "Auth result on non-existing channel, probably timeouted" << std::endl;
 		return;
@@ -238,9 +213,7 @@ void IMDispatcher::onAuthFinishedRespondingChannel (Error err, AsyncOpId id) {
 		return;
 	}
 	if (err) {
-		mMutex.unlock ();
 		op->channel->invalidate();
-		mMutex.lock ();
 		if (mChannels[op->source] == op->channel) {
 			mChannels.erase (op->source);
 		}
@@ -272,7 +245,6 @@ void IMDispatcher::onSubscribeRequest (const sf::UserId & from) {
 }
 
 void IMDispatcher::onConnectionStateChanged (sf::IMClient::ConnectionState state) {
-	LockGuard guard (mMutex);
 	Log (LogProfile) << LOGID << "IMDispatcher::onConnectionStateChanged " << toString (state) << std::endl;
 	if (state == sf::IMClient::CS_CONNECTED) {
 		mClient->setPresence (IMClient::PS_CHAT, "Schneeflocke (http://sflx.net)", -10);
@@ -328,96 +300,88 @@ static String getResourceName (const sf::HostId & hostId){
 }
 
 void IMDispatcher::onContactRosterChanged (){
-	{
-		LockGuard guard (mMutex);
-		if (!mClient) { // may happen - if client is already shut down and signal is async
-			return;
-		}
-		mRoster = mClient->contactRoster();
-		Log (LogInfo) << LOGID << "Updating roster to " << sf::toJSONEx (mRoster, sf::COMPRESS | sf::COMPACT) << std::endl;
-		mUsers.clear();
-		mHosts.clear();
-		
-		for (sf::IMClient::Contacts::const_iterator i = mRoster.begin(); i != mRoster.end(); i++) {
-			const sf::IMClient::ContactInfo & info = i->second;
-			if (info.hide) continue;
-			
-			UserInfo & userInfo = mUsers[info.id];
-			userInfo.userId    = info.id;
-			userInfo.name      = info.name;
-			userInfo.waitForSubscription = info.waitForSubscription;
-			userInfo.error     = info.error;
-			userInfo.errorText = info.errorText;
-			
-			for (sf::IMClient::ClientPresences::const_iterator j = info.presences.begin(); j != info.presences.end(); j++) {
-				const IMClient::ClientPresence & p = *j;
-				if (p.presence == IMClient::PS_OFFLINE) continue; // ignoring offline presences
-				if (j->id == mHostId) continue; // ignoring own id
-				HostInfo & hostInfo = mHosts[j->id];
-				hostInfo.hostId = p.id;
-				hostInfo.userId = userInfo.userId;
-				hostInfo.name  = getResourceName (p.id);
-			}
-		}
+	if (!mClient) { // may happen - if client is already shut down and signal is async
+		return;
+	}
+	mRoster = mClient->contactRoster();
+	Log (LogInfo) << LOGID << "Updating roster to " << sf::toJSONEx (mRoster, sf::COMPRESS | sf::COMPACT) << std::endl;
+	mUsers.clear();
+	mHosts.clear();
 
-		// Updating all Channels...
-		for (ChannelMap::iterator i = mChannels.begin(); i != mChannels.end(); i++){
-			OnlineState s = onlineState_locked (i->first);
-			i->second->setState (s);
+	for (sf::IMClient::Contacts::const_iterator i = mRoster.begin(); i != mRoster.end(); i++) {
+		const sf::IMClient::ContactInfo & info = i->second;
+		if (info.hide) continue;
+
+		UserInfo & userInfo = mUsers[info.id];
+		userInfo.userId    = info.id;
+		userInfo.name      = info.name;
+		userInfo.waitForSubscription = info.waitForSubscription;
+		userInfo.error     = info.error;
+		userInfo.errorText = info.errorText;
+		
+		for (sf::IMClient::ClientPresences::const_iterator j = info.presences.begin(); j != info.presences.end(); j++) {
+			const IMClient::ClientPresence & p = *j;
+			if (p.presence == IMClient::PS_OFFLINE) continue; // ignoring offline presences
+			if (j->id == mHostId) continue; // ignoring own id
+			HostInfo & hostInfo = mHosts[j->id];
+			hostInfo.hostId = p.id;
+			hostInfo.userId = userInfo.userId;
+			hostInfo.name  = getResourceName (p.id);
 		}
+	}
+
+	// Updating all Channels...
+	for (ChannelMap::iterator i = mChannels.begin(); i != mChannels.end(); i++){
+		OnlineState s = onlineState_locked (i->first);
+		i->second->setState (s);
 	}
 	if (mPeersChanged) mPeersChanged ();
 }
 
 void IMDispatcher::onMessageReceived (const sf::IMClient::Message & message){
 	IMChannelPtr channel;
+	ChannelMap::iterator i = mChannels.find (message.from);
+
+	bool isCreateChannel = false;
 	{
-		LockGuard guard (mMutex);
-		ChannelMap::iterator i = mChannels.find (message.from);
+		sf::String cmd;
+		sf::Deserialization ds (message.body, cmd);
+		if (!ds.error() && cmd == "createChannel") isCreateChannel = true;
+	}
 
-		bool isCreateChannel = false;
-		{
-			sf::String cmd;
-			sf::Deserialization ds (message.body, cmd);
-			if (!ds.error() && cmd == "createChannel") isCreateChannel = true;
+	if (i == mChannels.end() || isCreateChannel){
+		if (!isCreateChannel) {
+			sf::Log (LogWarning) << LOGID << "Creating channel on a not isCreateChannel operation, will fail" << std::endl;
+			IMClient::Message reply;
+			reply.to   = message.from;
+			reply.body = "This is a schneeflocke client who cannot chat! See http://sflx.net for more information! :)";
+			reply.id = message.id;
+			reply.type = message.type;
+			mClient->sendMessage (reply);
+			return;
 		}
-
-		if (i == mChannels.end() || isCreateChannel){
-			if (!isCreateChannel) {
-				sf::Log (LogWarning) << LOGID << "Creating channel on a not isCreateChannel operation, will fail" << std::endl;
-				IMClient::Message reply;
-				reply.to   = message.from;
-				reply.body = "This is a schneeflocke client who cannot chat! See http://sflx.net for more information! :)";
-				reply.id = message.id;
-				reply.type = message.type;
-				mClient->sendMessage (reply);
-				return;
-			}
-			if (i != mChannels.end()){
-				// deactivate old channel
-				mMutex.unlock ();
-				i->second->invalidate();
-				mMutex.lock ();
-			}
-			String source = message.from;
-			AsyncOpId id = genFreeId_locked ();
-			RespondChannelOp * op = new RespondChannelOp (sf::regTimeOutMs (mTimeOutMs));
-			op->setId(id);
-
-			op->source   = source;
-			op->state    = RespondChannelOp::AwaitAuth;
-			op->channel  = IMChannelPtr (new IMChannel (this, source, onlineState_locked (source)));
-			op->cancelOp = abind (dMemFun (this, &IMDispatcher::onOpCanceled), source, op->channel);
-			op->auth.init     (op->channel, mClient->ownId());
-			op->auth.finished() = abind (dMemFun (this, &IMDispatcher::onAuthFinishedRespondingChannel), id);
-			op->auth.passive (source);
-
-			mChannels[source] = op->channel;
-			channel = op->channel;
-			add_locked (op);
-		} else {
-			channel = i->second;
+		if (i != mChannels.end()){
+			// deactivate old channel
+			i->second->invalidate();
 		}
+		String source = message.from;
+		AsyncOpId id = genFreeId ();
+		RespondChannelOp * op = new RespondChannelOp (sf::regTimeOutMs (mTimeOutMs));
+		op->setId(id);
+
+		op->source   = source;
+		op->state    = RespondChannelOp::AwaitAuth;
+		op->channel  = IMChannelPtr (new IMChannel (this, source, onlineState_locked (source)));
+		op->cancelOp = abind (dMemFun (this, &IMDispatcher::onOpCanceled), source, op->channel);
+		op->auth.init     (op->channel, mClient->ownId());
+		op->auth.finished() = abind (dMemFun (this, &IMDispatcher::onAuthFinishedRespondingChannel), id);
+		op->auth.passive (source);
+
+		mChannels[source] = op->channel;
+		channel = op->channel;
+		addAsyncOp (op);
+	} else {
+		channel = i->second;
 	}
 	channel->pushMessage (message);
 }
@@ -430,8 +394,6 @@ void IMDispatcher::onServerStreamErrorRecevied (const String & text) {
 void IMDispatcher::onFeatureRequestReply (Error result, const IMClient::FeatureInfo & features, const HostId & host, const ResultCallback & originalCallback) {
 	if (result)
 		return notify (originalCallback, result);
-
-	LockGuard guard (mMutex);
 	HostInfoMap::iterator i = mHosts.find(host);
 	if (i == mHosts.end()) {
 		return notifyAsync (originalCallback, error::NotFound);

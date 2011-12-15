@@ -30,7 +30,6 @@ Error GenericConnectionManagement::init (CommunicationMultiplex * multiplex) {
 void GenericConnectionManagement::uninit () {
 	SF_UNREGISTER_ME;
 
-	LockGuard guard (mMutex);
 	for (ChannelProviderMap::iterator i = mChannelProviders.begin(); i != mChannelProviders.end(); i++){
 		if (i->second->protocol())
 			mCommunicationMultiplex->delComponent(i->second->protocol());
@@ -39,17 +38,14 @@ void GenericConnectionManagement::uninit () {
 }
 
 void GenericConnectionManagement::clear () {
-	LockGuard guard (mMutex);
 	mChannels.forceClear();
 }
 
 void GenericConnectionManagement::clear (const HostId & id) {
-	LockGuard guard (mMutex);
 	mChannels.closeChannelsToHost(id);
 }
 
 void GenericConnectionManagement::setHostId (const HostId & hostId) {
-	LockGuard guard (mMutex);
 	mChannels.setHostId(hostId);
 	for (ChannelProviderMap::const_iterator i = mChannelProviders.begin(); i != mChannelProviders.end(); i++){
 		i->second->setHostId (hostId);
@@ -58,17 +54,14 @@ void GenericConnectionManagement::setHostId (const HostId & hostId) {
 }
 
 void GenericConnectionManagement::startPing () {
-	LockGuard guard (mMutex);
 	mChannelPinger.start();
 }
 
 void GenericConnectionManagement::stopPing () {
-	LockGuard guard (mMutex);
 	mChannelPinger.stop();
 }
 
 Error GenericConnectionManagement::addChannelProvider  (ChannelProviderPtr channelProvider, int priority){
-	LockGuard guard (mMutex);
 	if (mChannelProviders.find (priority) != mChannelProviders.end()){
 		sf::Log (LogError) << LOGID << "Have already a ChannelProvider with priority " << priority << std::endl;
 		return error::ExistsAlready;
@@ -92,9 +85,7 @@ Error GenericConnectionManagement::liftConnection (const HostId & hostId, const 
 }
 
 Error GenericConnectionManagement::liftToAtLeast  (int level, const HostId & hostId, const ResultCallback & callback, int timeOutMs) {
-	LockGuard guard (mMutex);
-
-	AsyncOpId id = genFreeId_locked ();
+	AsyncOpId id = genFreeId ();
 	LiftConnectionOp * op = new LiftConnectionOp (regTimeOutMs (timeOutMs));
 
 	op->target = hostId;
@@ -108,7 +99,6 @@ Error GenericConnectionManagement::liftToAtLeast  (int level, const HostId & hos
 }
 
 Error GenericConnectionManagement::closeChannel (const HostId & host, int level) {
-	LockGuard guard (mMutex);
 	ChannelId c = mChannels.findChannel (host, level);
 	if (c == 0)
 		return error::NotFound;
@@ -116,7 +106,6 @@ Error GenericConnectionManagement::closeChannel (const HostId & host, int level)
 }
 
 Error GenericConnectionManagement::send (const HostId & receiver, const sf::Datagram & datagram, const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	ChannelId id = mChannels.findBestChannel(receiver);
 	if (id == 0) return error::ConnectionError;
 	return mChannels.send(id, datagram, true, callback);
@@ -134,7 +123,6 @@ Error GenericConnectionManagement::send (const HostSet & receivers, const sf::Da
 }
 
 int GenericConnectionManagement::channelLevel (const HostId & receiver) {
-	LockGuard guard (mMutex);
 	return mChannels.findBestChannelLevel(receiver);
 }
 
@@ -150,7 +138,7 @@ void GenericConnectionManagement::startLifting_locked (LiftConnectionOp * op){
 				break;
 			Error e = provider->createChannel(op->target, abind (dMemFun (this, &GenericConnectionManagement::onChannelCreate), true, op->id()), op->lastingTimeMs (0.66));
 			if (!e) {
-				add_locked (op);
+				addAsyncOp (op);
 				return;
 			}
 		}
@@ -183,7 +171,7 @@ void GenericConnectionManagement::lift_locked (LiftConnectionOp * op) {
 		Log (LogInfo) << LOGID << "Trying level con " << op->target << " to " << op->lastLevelTried << " current=" << level << std::endl;
 		Error e = provider->createChannel (op->target, abind (dMemFun (this, &GenericConnectionManagement::onChannelCreate), false, op->id()), op->lastingTimeMs(0.66));
 		if (!e) {
-			add_locked (op);
+			addAsyncOp (op);
 			return;
 		}
 	}
@@ -202,12 +190,11 @@ void GenericConnectionManagement::lift_locked (LiftConnectionOp * op) {
 }
 
 void GenericConnectionManagement::onChannelCreate (Error result, bool wasInitial, AsyncOpId id) {
-	LockGuard guard (mMutex);
 	LiftConnectionOp * op;
 	if (wasInitial) {
-		getReadyInState_locked (id, LIFT_CONNECTION, LiftConnectionOp::CreateInitial, &op);
+		getReadyAsyncOpInState (id, LIFT_CONNECTION, LiftConnectionOp::CreateInitial, &op);
 	} else {
-		getReadyInState_locked (id, LIFT_CONNECTION, LiftConnectionOp::Lift, &op);
+		getReadyAsyncOpInState (id, LIFT_CONNECTION, LiftConnectionOp::Lift, &op);
 	}
 	if (!op) return;
 	Log (LogInfo) << LOGID << "Leveled " << mHostId << " --> " << op->target << " to " << op->lastLevelTried << " initial=" << wasInitial << " resulted=" << toString (result) << std::endl;
@@ -229,10 +216,7 @@ void GenericConnectionManagement::onChannelCreate (Error result, bool wasInitial
 }
 
 void GenericConnectionManagement::onChannelCreated (const HostId & target, ChannelPtr channel, bool requested, int level) {
-	{
-		LockGuard guard (mMutex);
-		mChannels.add(channel, target, requested, level);
-	}
+	mChannels.add(channel, target, requested, level);
 	mCommunicationMultiplex->distChannelChange(target);
 	notify (mConDetailsChanged);
 }

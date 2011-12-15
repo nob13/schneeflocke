@@ -15,7 +15,7 @@ AsyncOpBase::~AsyncOpBase () {
 	}
 }
 
-AsyncOpBase::OpId AsyncOpBase::add_locked (AsyncOp * op) {
+AsyncOpBase::OpId AsyncOpBase::addAsyncOp (AsyncOp * op) {
 	sf::cancelTimer (mTimerHandle);
 
 	if (op->id() == 0) {
@@ -30,13 +30,13 @@ AsyncOpBase::OpId AsyncOpBase::add_locked (AsyncOp * op) {
 	return id;
 }
 
-AsyncOpBase::OpId AsyncOpBase::genFreeId_locked () {
+AsyncOpBase::OpId AsyncOpBase::genFreeId () {
 	AsyncOpBase::OpId id = mNextId++;
 	return id;
 }
 
 
-AsyncOpBase::AsyncOp * AsyncOpBase::getReady_locked (OpId id) {
+AsyncOpBase::AsyncOp * AsyncOpBase::getReadyAsyncOp (OpId id) {
 	AsyncOp * result = 0;
 	AsyncOpMap::iterator i = mAsyncOpMap.find (id);
 	if (i != mAsyncOpMap.end()){
@@ -56,7 +56,7 @@ AsyncOpBase::AsyncOp * AsyncOpBase::getReady_locked (OpId id) {
 	return result;
 }
 
-void AsyncOpBase::cancelOperations_locked (int key, Error err) {
+void AsyncOpBase::cancelAsyncOps (int key, Error err) {
 	AsyncOpMap::iterator i = mAsyncOpMap.begin();
 	while (i != mAsyncOpMap.end()){
 		AsyncOp * op = i->second;
@@ -64,11 +64,9 @@ void AsyncOpBase::cancelOperations_locked (int key, Error err) {
 			mAsyncOps.erase (op);
 			mAsyncOpMap.erase (i++);
 			mCount--;
-			mMutex.unlock();
 			sf::Log (LogInfo) << LOGID << "Op " << op << " key=" << key << ", type=" << op->type() << " canceled with " << toString (err) << std::endl;
 			op->onCancel (err);
 			delete op;
-			mMutex.lock();
 			i = mAsyncOpMap.begin(); // i could be changed - we were not locked
 		} else
 			i++;
@@ -76,7 +74,6 @@ void AsyncOpBase::cancelOperations_locked (int key, Error err) {
 }
 
 void AsyncOpBase::onTimer () {
-	LockGuard guard (mMutex);
 	mTimerHandle = TimedCallHandle ();
 	sf::Time ct = sf::currentTime ();
 	AsyncOpSet::iterator i = mAsyncOps.begin();
@@ -85,11 +82,9 @@ void AsyncOpBase::onTimer () {
 		mAsyncOpMap.erase (op->id());
 		mAsyncOps.erase (i);
 		mCount--;
-		mMutex.unlock();
 		sf::Log (LogInfo) << LOGID << "Op " << op << " (id= " << op->id() << " type=" << op->type() << " timeouted)" << std::endl;
 		op->onCancel (error::TimeOut);
 		delete op;
-		mMutex.lock();
 		i = mAsyncOps.begin();
 	}
 	if (!mAsyncOps.empty()){

@@ -99,8 +99,8 @@ public:
 	UDTChannelConnector();
 	virtual ~UDTChannelConnector();
 
-	NetEndpoint echoServer () { LockGuard guard (mMutex); return mEchoServer; }
-	void setEchoServer (const NetEndpoint & server) { LockGuard guard (mMutex); mEchoServer = server; }
+	NetEndpoint echoServer () { return mEchoServer; }
+	void setEchoServer (const NetEndpoint & server) { mEchoServer = server; }
 
 	// Implementation of ChannelProvider
 	virtual sf::Error createChannel (const HostId & target, const ResultCallback & callback, int timeOutMs = -1);

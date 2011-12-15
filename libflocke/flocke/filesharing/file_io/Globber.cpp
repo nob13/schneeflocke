@@ -25,12 +25,12 @@ Error Globber::glob (const String & directory, const GlobCallback & callback, in
 		return error::InvalidArgument;
 	}
 	if (timeOutMs < 0) timeOutMs = mDefaultTimeOutMs;
-	AsyncOpId id = genFreeId_locked ();
+	AsyncOpId id = genFreeId ();
 	GlobOp * op = new GlobOp (sf::regTimeOutMs(timeOutMs));
 	op->setId(id);
 	op->callback  = callback;
 	op->directory = directory;
-	add_locked (op);
+	addAsyncOp (op);
 	addGlobbingWork_locked (id);
 	return NoError;
 }
@@ -38,7 +38,7 @@ Error Globber::glob (const String & directory, const GlobCallback & callback, in
 void Globber::continueGlobbing (AsyncOpId id) {
 	LockGuard guard (mMutex);
 	GlobOp * op;
-	getReady_locked (id, GLOB, &op);
+	getReadyAsyncOp (id, GLOB, &op);
 	if (!op) {
 		// probably timeouted
 		return;
@@ -55,7 +55,7 @@ void Globber::continueGlobbing (AsyncOpId id) {
 	
 	while (!op->workQueue.empty()){
 		if(sf::currentTime() > stop) {
-			add_locked (op);
+			addAsyncOp (op);
 			addGlobbingWork_locked (id);
 			return;
 		}

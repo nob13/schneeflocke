@@ -15,10 +15,9 @@ UDTChannelConnector::~UDTChannelConnector() {
 }
 
 sf::Error UDTChannelConnector::createChannel (const HostId & target, const ResultCallback & callback, int timeOutMs) {
-	LockGuard guard (mMutex);
 	CreateChannelOp * op = new CreateChannelOp (sf::regTimeOutMs(timeOutMs));
 	op->callback = callback;
-	op->setId(genFreeId_locked ());
+	op->setId(genFreeId ());
 	op->target = target;
 	op->connector = true;
 	startConnecting_locked (op);
@@ -30,7 +29,6 @@ CommunicationComponent * UDTChannelConnector::protocol () {
 }
 
 void UDTChannelConnector::setHostId (const sf::HostId & id) {
-	LockGuard guard (mMutex);
 	mHostId = id;
 }
 
@@ -53,17 +51,16 @@ void UDTChannelConnector::startConnecting_locked (CreateChannelOp * op) {
 	op->echoClient.start(mEchoServer.address, mEchoServer.port, op->lastingTimeMs(0.3));
 	// waiting for an answer...
 	op->setState (CreateChannelOp::WaitOwnAddress);
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void UDTChannelConnector::onEchoClientResult (Error result, AsyncOpId id) {
-	LockGuard guard (mMutex);
 	CreateChannelOp * op;
-	getReady_locked (id, CREATE_CHANNEL, &op);
+	getReadyAsyncOp (id, CREATE_CHANNEL, &op);
 	if (!op) return; // die.
 	if (op->state() != CreateChannelOp::WaitOwnAddress) {
 		Log (LogInfo) << LOGID << "Ignoring echo result " << toString(result) << ", as being in wrong state " << op->state() << " (addr was=" << op->echoClient.address() << ":" << op->echoClient.port() << ")" << std::endl;
-		add_locked (op);
+		addAsyncOp (op);
 		return;
 	}
 	Log (LogInfo) << LOGID << "Echoing result: " << toString (result) << " (lasting time=" << op->lastingTimeMs() << ")" << std::endl;
@@ -98,23 +95,22 @@ void UDTChannelConnector::onEchoClientResult (Error result, AsyncOpId id) {
 		op->setState (CreateChannelOp::Connecting);
 		xcall (abind (dMemFun (this, &UDTChannelConnector::udpConnect), op->id()));
 	}
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void UDTChannelConnector::udpConnect (AsyncOpId id) {
-	LockGuard guard (mMutex);
 	CreateChannelOp * op;
-	getReady_locked (id, CREATE_CHANNEL, &op);
+	getReadyAsyncOp (id, CREATE_CHANNEL, &op);
 	if (!op) return;
 	if (op->state() != CreateChannelOp::Connecting) {
 		// ignoring; maybe a bit further now
 		Log (LogInfo) << LOGID << "Canceling punching, already in further state=" << op->state() << std::endl;
-		add_locked (op);
+		addAsyncOp (op);
 		return;
 	}
 	if (op->sentAck) {
 		Log (LogInfo) << LOGID << "Canceling punching, sent ack already" << std::endl;
-		add_locked (op);
+		addAsyncOp (op);
 		return; // already through procedure.
 	}
 	op->udpSocket.readyRead() = abind (dMemFun (this, &UDTChannelConnector::onUdpReadyRead), op->id());
@@ -142,26 +138,25 @@ void UDTChannelConnector::udpConnect (AsyncOpId id) {
 		op->udpSocket.sendTo (p.address, p.port, sf::createByteArrayPtr(toJSONCmd (punch)));
 	}
 
-	add_locked (op);
+	addAsyncOp (op);
 	xcallTimed (abind (dMemFun (this, &UDTChannelConnector::udpConnect), id), futureInMs (mPunchRetryTimeMs));
 }
 
 void UDTChannelConnector::onUdpReadyRead (AsyncOpId id) {
-	LockGuard guard (mMutex);
 	CreateChannelOp * op;
-	getReady_locked (id, CREATE_CHANNEL, &op);
+	getReadyAsyncOp (id, CREATE_CHANNEL, &op);
 	if (!op) return;
 
 	while (op->state() == CreateChannelOp::Connecting) {
 		NetEndpoint sender;
 		ByteArrayPtr data = op->udpSocket.recvFrom(&sender.address, &sender.port);
 		if (!data) {
-			add_locked (op);
+			addAsyncOp (op);
 			return;
 		}
 		String cmd;
 		Deserialization d (*data, cmd);
-		if (d.error()) { add_locked (op); return; } // net noise
+		if (d.error()) { addAsyncOp (op); return; } // net noise
 		Log (LogInfo) << LOGID << mHostId << " recv " << cmd << " " << d << " from " << toJSON (sender)  << "(size=" << data->size() << ")" << std::endl;
 		if (cmd == PunchUDP::getCmdName()) {
 			PunchUDP punch;
@@ -184,7 +179,7 @@ void UDTChannelConnector::onUdpReadyRead (AsyncOpId id) {
 			Log (LogInfo) << LOGID << "Strange protocol, recv=" << *data << std::endl;
 	}
 	Log (LogInfo) << LOGID << "Ignoring ready read, changed state=" << op->state() << std::endl;
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void UDTChannelConnector::onUdpRecvPunch_locked (const NetEndpoint & from, CreateChannelOp * op, const PunchUDP & punch) {
@@ -228,7 +223,7 @@ void UDTChannelConnector::onUdpRecvPunchReply_locked (const NetEndpoint & from, 
 void UDTChannelConnector::onUdpRecvAck_locked (const NetEndpoint & from, CreateChannelOp * op, const AckUDP & ack) {
 	if (ack.remote != mHostId || ack.local != op->target) {
 		Log (LogInfo) << LOGID << "Discarding noise from other clients " << toJSONCmd (ack) << std::endl;
-		add_locked (op);
+		addAsyncOp (op);
 	}
 	if (!op->sentAck) {
 		AckUDP ack;
@@ -274,7 +269,7 @@ void UDTChannelConnector::onUdtConnectResult_locked (CreateChannelOp * op, Error
 		delete op;
 		return;
 	}
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void UDTChannelConnector::onTlsHandshake_locked (CreateChannelOp * op, Error result) {
@@ -295,7 +290,7 @@ void UDTChannelConnector::onTlsHandshake_locked (CreateChannelOp * op, Error res
 	} else {
 		op->authProtocol.passive(op->target, op->lastingTimeMs());
 	}
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void UDTChannelConnector::onAuthResult_locked (CreateChannelOp * op, Error result) {
@@ -315,9 +310,8 @@ void UDTChannelConnector::onAuthResult_locked (CreateChannelOp * op, Error resul
 }
 
 void UDTChannelConnector::onRpc (const HostId & sender, const RequestUDTConnect & request, const ByteArray & data) {
-	LockGuard guard (mMutex);
 	CreateChannelOp * op = new CreateChannelOp (sf::regTimeOutMs (mRemoteTimeOutMs));
-	op->setId (genFreeId_locked());
+	op->setId (genFreeId());
 	op->connector = false;
 	op->remoteId   = request.id;
 	op->remoteInternAddresses  = request.intern;
@@ -329,9 +323,8 @@ void UDTChannelConnector::onRpc (const HostId & sender, const RequestUDTConnect 
 }
 
 void UDTChannelConnector::onRpc (const HostId & sender, const RequestUDTConnectReply & reply, const ByteArray & data) {
-	LockGuard guard (mMutex);
 	CreateChannelOp * op;
-	getReadyInState_locked (reply.id, CREATE_CHANNEL, CreateChannelOp::WaitForeign, &op);
+	getReadyAsyncOpInState (reply.id, CREATE_CHANNEL, CreateChannelOp::WaitForeign, &op);
 	if (!op) return;
 	op->remoteInternAddresses  = reply.intern;
 	if (reply.extern_.valid())
@@ -339,7 +332,7 @@ void UDTChannelConnector::onRpc (const HostId & sender, const RequestUDTConnectR
 	guessSomeExternAddresses_locked (op);
 	op->remoteId              = reply.localId;
 	op->setState (CreateChannelOp::Connecting);
-	add_locked (op);
+	addAsyncOp (op);
 	xcall (abind (dMemFun (this, &UDTChannelConnector::udpConnect), reply.id));
 }
 

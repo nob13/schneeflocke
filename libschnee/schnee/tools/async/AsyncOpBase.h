@@ -9,7 +9,6 @@
 namespace sf {
 
 /// A Base class for objects who want to provide asynchronous operations and timeouts.
-/// Note: All descendants do earn their Mutex from here and are also a DelegateBase.
 class AsyncOpBase : public DelegateBase {
 public:
 	typedef AsyncOpId OpId;
@@ -102,43 +101,43 @@ protected:
 	
 	/// Adds a timeout; also sets id,type,timeOut, returns it's id
 	/// if opt id is 0, one will be generated
-	OpId add_locked (AsyncOp * op);
+	OpId addAsyncOp (AsyncOp * op);
 
 	/// Generate a new free id
-	OpId genFreeId_locked ();
+	OpId genFreeId ();
 
 
 	/// Returns an async op and deletes it from the waiting list
 	/// (Do it if the async op returned)
 	/// Returns 0 if not found or timer was already through
-	AsyncOp * getReady_locked (OpId id);
+	AsyncOp * getReadyAsyncOp (OpId id);
 
 	/// Cancel Operations for a given key
-	void cancelOperations_locked (int key, Error err);
+	void cancelAsyncOps (int key, Error err);
 
 	/// Returns an async op (via param ret) and delete it from the waiting list.
 	/// Converts it automatically to the given Type/type id
 	/// Ret is non null on success. Type mismatches will be logged
-	template <class T> void getReady_locked (OpId id, int type, T ** ret);
+	template <class T> void getReadyAsyncOp (OpId id, int type, T ** ret);
 	
 	/// Returns an async op (stored in ret) in a desired state
 	/// If op is in wrong state, it will be deleted and an error message is printed
-	template <class T> void getReadyInState_locked (OpId id, int type, int desiredState, T ** ret);
+	template <class T> void getReadyAsyncOpInState (OpId id, int type, int desiredState, T ** ret);
 
 	/// Executes given functor(AsyncOp) for each stored asynchronous function
-	template <class Functor> void forEachAsyncOp_locked (Functor & func);
+	template <class Functor> void forEachAsyncOp (Functor & func);
 	
 
 	/**
 	 * Generates a callback useful for asynchronous operations, which when executed
-	 * does DelegateBase-check, locks Mutex and checks whether the Op is from the right type and right state
+	 * does DelegateBase-check, and checks whether the Op is from the right type and right state
 	 * and when all this is true, the function will be called with AsyncOp (which you have to add() before)
 	 *
 	 * This way you can create nice asynchronous operation cascades, used in many networking algorithms.
 	 *
 	 * @param op     - The operation - must already have it's state when the callback strikes.
 	 * @param dstFun - The function with signature YourType::*fun (Op * op). The function will be called
-	 * LOCKED, DelegateBase-protected and with the Op type and the right op state (may not change afterwards).
+	 * DelegateBase-protected and with the Op type and the right op state (may not change afterwards).
 	 *
 	 */
 	template <class ThisType, class OpType> VoidCallback aOpMemFun (OpType * op, void (ThisType::*dstFun) (OpType *));
@@ -150,9 +149,6 @@ protected:
 
 	// Like aOpMemFun, but with tree arguments who get bound until dstFun
 	template <class ThisType, class OpType, class Param0, class Param1, class Param2> function<void (Param0, Param1, Param2)> aOpMemFun (OpType * op, void (ThisType::*dstFun) (OpType *, Param0 result0, Param1 result1, Param2 result2));
-
-	/// Main mutex for this object. Descendants have to use it too!
-	mutable Mutex mMutex;
 
 private:
 	/// Executes given function (appending op), when op with given id is found, has the right type and the right state
@@ -184,9 +180,9 @@ private:
 
 // Implementation of templates (boring)
 
-template <class T> void AsyncOpBase::getReady_locked (OpId id, int type, T ** ret) {
+template <class T> void AsyncOpBase::getReadyAsyncOp (OpId id, int type, T ** ret) {
 	*ret = 0;
-	AsyncOp * op = getReady_locked (id);
+	AsyncOp * op = getReadyAsyncOp (id);
 	if (!op) { *ret = 0; return; }					 // not found, still ok, maybe timeouted
 	if (op->type() == type) { *ret = static_cast<T*> (op); return;} // success
 	sf::Log (LogWarning) << LOGID << "Type mismatch, requested type=" << type << " found type=" << op->type() << std::endl;
@@ -194,8 +190,8 @@ template <class T> void AsyncOpBase::getReady_locked (OpId id, int type, T ** re
 }
 
 
-template <class T> void AsyncOpBase::getReadyInState_locked (OpId id, int type, int desiredState, T ** ret) {
-	getReady_locked (id, type, ret);
+template <class T> void AsyncOpBase::getReadyAsyncOpInState (OpId id, int type, int desiredState, T ** ret) {
+	getReadyAsyncOp (id, type, ret);
 	if (!*ret) return;
 	if ((*ret)->state() != desiredState){
 		sf::Log (LogError) << LOGID << "AsyncOp " << id << " is in wrong state (desired=" << desiredState << " found=" << (*ret)->state() << ")" << std::endl;
@@ -205,7 +201,7 @@ template <class T> void AsyncOpBase::getReadyInState_locked (OpId id, int type, 
 	}
 }
 
-template <class Functor> void AsyncOpBase::forEachAsyncOp_locked (Functor & func) {
+template <class Functor> void AsyncOpBase::forEachAsyncOp (Functor & func) {
 	   for (std::map<OpId, AsyncOp*>::const_iterator i = mAsyncOpMap.begin(); i != mAsyncOpMap.end(); i++){
 			   const AsyncOp * op = i->second;
 			   func (op);
@@ -247,9 +243,8 @@ template <class ThisType, class OpType, class Param0, class Param1, class Param2
 }
 
 template <class OpType> void AsyncOpBase::executeOpCheck (const function<void (OpType*)>& functor, OpId id, int requiredOpType, int requiredOpState){
-	LockGuard guard (mMutex);
 	OpType * op;
-	this->getReadyInState_locked (id, requiredOpType, requiredOpState, &op);
+	this->getReadyAsyncOpInState (id, requiredOpType, requiredOpState, &op);
 	if (!op) return;
 	return functor(op);
 }

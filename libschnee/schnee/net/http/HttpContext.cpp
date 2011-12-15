@@ -20,15 +20,14 @@ void HttpContext::get (const Url & url, int timeOutMs, const RequestCallback & c
 }
 
 void HttpContext::request (const HttpRequest & request, int timeOutMs, const RequestCallback & callback){
-	LockGuard guard (mMutex);
 	HttpGetOperation * op = new HttpGetOperation (sf::regTimeOutMs(timeOutMs));
-	op->setId(genFreeId_locked());
+	op->setId(genFreeId());
 	op->url = request.url();
 	op->request = request.result();
 	op->callback = callback;
 	op->setState (HttpGetOperation::HG_WAITCONNECT);
 	mConnectionManager.requestConnection(op->url, timeOutMs, abind(dMemFun(this, &HttpContext::onConnect), op->id()));
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 /// Helper class for synchronizing HttpRequest calls
@@ -67,9 +66,8 @@ std::pair<Error, HttpResponsePtr> HttpContext::syncRequest (const HttpRequest & 
 
 
 void HttpContext::onConnect (Error result, HttpConnectionPtr con, AsyncOpId id) {
-	LockGuard guard (mMutex);
 	HttpGetOperation * op;
-	getReadyInState_locked (id, GetOperation, HttpGetOperation::HG_WAITCONNECT, &op);
+	getReadyAsyncOpInState (id, GetOperation, HttpGetOperation::HG_WAITCONNECT, &op);
 	if (!op) return;
 	do {
 		if (result) break;
@@ -91,17 +89,16 @@ void HttpContext::onConnect (Error result, HttpConnectionPtr con, AsyncOpId id) 
 		finish_locked (result, op);
 		return;
 	}
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void HttpContext::onChanged (AsyncOpId id) {
-	LockGuard guard (mMutex);
 	HttpGetOperation * op;
-	getReadyInState_locked (id, GetOperation,HttpGetOperation::HG_RECEIVE, &op);
+	getReadyAsyncOpInState (id, GetOperation,HttpGetOperation::HG_RECEIVE, &op);
 	if (!op) return;
 	if (op->finished) {
 		// op is destroying
-		add_locked (op);
+		addAsyncOp (op);
 		return;
 	}
 	ByteArrayPtr all = op->con->channel->read();
@@ -123,7 +120,7 @@ void HttpContext::onChanged (AsyncOpId id) {
 			return;
 		}
 	}
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void HttpContext::finish_locked (Error result, HttpGetOperation * op) {

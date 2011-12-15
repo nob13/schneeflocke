@@ -23,11 +23,9 @@ public:
 	ContactInfo ownInfo ();
 	String ownId ();
 	virtual ConnectionState connectionState () const {
-		LockGuard guard (mMutex);
-		return connectionState_locked ();
+		return mConnectionState;
 	}
 	virtual String errorMessage () const {
-		LockGuard guard (mMutex);
 		return mErrorText;
 	}
 
@@ -91,13 +89,6 @@ private:
 	void onStreamError ();
 	void onAsyncCloseStream (); /// < Close stream asyncronously (on StreamErrors)
 
-	ConnectionState connectionState_locked () const {
-		return mConnectionState;
-	}
-	bool isConnected_locked() const {
-		return connectionState_locked() == CS_CONNECTED;
-	}
-
 	// Login data
 	String mConnectionString;
 	String mPassword;
@@ -107,7 +98,6 @@ private:
 	XMPPStreamPtr mStream;
 
 	Contacts 		 mContacts;
-	mutable Mutex 	 mMutex;
 	
 	// Delegates
 	SubscribeRequestDelegate    mContactAddRequestDelegate;

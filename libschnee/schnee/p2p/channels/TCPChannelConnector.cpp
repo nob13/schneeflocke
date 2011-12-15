@@ -15,7 +15,6 @@ TCPChannelConnector::~TCPChannelConnector () {
 }
 
 sf::Error TCPChannelConnector::start (int port) {
-	LockGuard guard (mMutex);
 	bool suc = mServer.listen (port);
 	if (!suc) {
 		mProtocol.setOwnDetails (ConnectDetailsPtr());
@@ -34,45 +33,37 @@ sf::Error TCPChannelConnector::start (int port) {
 }
 
 void TCPChannelConnector::stop () {
-	LockGuard guard (mMutex);
 	mServer.close();
 }
 
 bool TCPChannelConnector::isStarted () const {
-	LockGuard guard (mMutex);
 	return mServer.isListening();
 }
 
 int TCPChannelConnector::port () const {
-	LockGuard guard (mMutex);
 	return mServer.serverPort();
 }
 
 TCPChannelConnector::AddressVec TCPChannelConnector::addresses () const {
-	LockGuard guard (mMutex);
 	return mAddresses;
 }
 
 void TCPChannelConnector::setTimeOut (int timeOutMs){
-	LockGuard guard (mMutex);
 	mTimeOutMs = timeOutMs;
 }
 
 HostId TCPChannelConnector::hostId () const {
-	LockGuard guard (mMutex);
 	return mHostId;
 }
 
 sf::Error TCPChannelConnector::createChannel (const HostId & target, const ResultCallback & callback, int timeOutMs) {
-	LockGuard guard (mMutex);
-
-	AsyncOpId id = genFreeId_locked ();
+	AsyncOpId id = genFreeId ();
 	CreateChannelOp * op = new CreateChannelOp (sf::regTimeOutMs(timeOutMs));
 	op->callback = callback;
 	op->setId(id);
 	op->setState(CreateChannelOp::Start);
 	op->target   = target;
-	add_locked (op);
+	addAsyncOp (op);
 	// cannot do that yet; as we are called from a possible locked Beacon.
 	// and the tcp connect protocoll will also lock the beacon.
 	xcall (aOpMemFun  (op, &TCPChannelConnector::startConnecting_locked));
@@ -80,7 +71,6 @@ sf::Error TCPChannelConnector::createChannel (const HostId & target, const Resul
 }
 
 void TCPChannelConnector::setHostId (const sf::HostId & id) {
-	LockGuard guard (mMutex);
 	mHostId = id;
 }
 
@@ -93,7 +83,7 @@ void TCPChannelConnector::startConnecting_locked (CreateChannelOp * op) {
 		delete op;
 		return;
 	}
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 
@@ -107,7 +97,7 @@ void TCPChannelConnector::onTcpConnectResult_locked (CreateChannelOp * op, Error
 	op->connectDetails = details;
 	op->nextAddress    = op->connectDetails.addresses.begin();
 	op->setState (CreateChannelOp::Connecting);
-	add_locked (op);
+	addAsyncOp (op);
 	xcall (aOpMemFun (op, &TCPChannelConnector::connectNext_locked));
 }
 
@@ -124,7 +114,7 @@ void TCPChannelConnector::connectNext_locked (CreateChannelOp * op){
 	int leftTime = op->lastingTimeMs(0.66);
 	Log (LogInfo) << LOGID << "Start connecting to " << next << ":" << op->connectDetails.port << " with a timeOut of " << leftTime << "ms" << std::endl;
 	op->socket->connectToHost (next, op->connectDetails.port, leftTime, aOpMemFun (op, &TCPChannelConnector::onConnect_locked));
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void TCPChannelConnector::onConnect_locked (CreateChannelOp * op, Error result) {
@@ -138,7 +128,7 @@ void TCPChannelConnector::onConnect_locked (CreateChannelOp * op, Error result) 
 		if (e) {
 			xcall (abind (aOpMemFun (op, &TCPChannelConnector::onTlsHandshake_locked), e));
 		}
-		add_locked (op);
+		addAsyncOp (op);
 	}
 }
 
@@ -155,7 +145,7 @@ void TCPChannelConnector::onTlsHandshake_locked (CreateChannelOp * op, Error res
 	op->authProtocol.init (op->tlsChannel, mHostId);
 	op->authProtocol.finished() = aOpMemFun (op, &TCPChannelConnector::onAuthProtocolFinished_locked);
 	op->authProtocol.connect (op->target, op->lastingTimeMs(0.66));
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void TCPChannelConnector::onAuthProtocolFinished_locked (CreateChannelOp * op, Error result) {
@@ -175,7 +165,6 @@ void TCPChannelConnector::onAuthProtocolFinished_locked (CreateChannelOp * op, E
 }
 
 void TCPChannelConnector::onNewConnection (){
-	LockGuard guard (mMutex);
 	TCPSocketPtr socket = mServer.nextPendingConnection();
 	assert (socket);
 	if (!socket) return;
@@ -183,7 +172,7 @@ void TCPChannelConnector::onNewConnection (){
 		Log (LogWarning) << LOGID << "Getting incoming connection but no host id set yet, throwing away" << std::endl;
 		return;
 	}
-	AsyncOpId id = genFreeId_locked ();
+	AsyncOpId id = genFreeId ();
 	AcceptConnectionOp * op = new AcceptConnectionOp (sf::regTimeOutMs(mTimeOutMs));
 	op->setId(id);
 	op->setState (AcceptConnectionOp::TlsHandshaking);
@@ -195,7 +184,7 @@ void TCPChannelConnector::onNewConnection (){
 		delete op;
 		return;
 	}
-	add_locked (op);
+	addAsyncOp (op);
 	Log (LogInfo) << LOGID << "New connection, starting tls handshake, time left " << op->lastingTimeMs() << std::endl;
 }
 
@@ -210,7 +199,7 @@ void TCPChannelConnector::onAcceptTlsHandshake_locked (AcceptConnectionOp * op, 
 	op->authProtocol.init (op->tlsChannel, mHostId);
 	op->authProtocol.finished () = aOpMemFun (op, &TCPChannelConnector::onAcceptAuthFinished_locked);
 	op->authProtocol.passive(String(), -1);
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void TCPChannelConnector::onAcceptAuthFinished_locked (AcceptConnectionOp * op, Error result) {

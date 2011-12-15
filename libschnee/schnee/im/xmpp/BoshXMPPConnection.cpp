@@ -15,12 +15,10 @@ BoshXMPPConnection::~BoshXMPPConnection () {
 #define LOG_STATE(X) Log(LogProfile) << LOGID << "Enter state " << X << std::endl;
 
 XMPPConnection::State BoshXMPPConnection::state () const {
-	LockGuard guard (mMutex);
 	return mState;
 }
 
 Error BoshXMPPConnection::setConnectionString (const String & s) {
-	LockGuard guard (mMutex);
 	mDetails.defaultValues();
 	mDetails.port = 443; // Bosh
 	bool suc = mDetails.setTo (s);
@@ -29,18 +27,15 @@ Error BoshXMPPConnection::setConnectionString (const String & s) {
 }
 
 Error BoshXMPPConnection::setPassword (const String & p) {
-	LockGuard guard (mMutex);
 	mDetails.password = p;
 	return NoError;
 }
 
 Error BoshXMPPConnection::connect (const XMPPStreamPtr& stream, int timeOutMs, const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	return startConnect_locked (true, stream, timeOutMs, callback);
 }
 
 Error BoshXMPPConnection::pureConnect (const XMPPStreamPtr & stream, int timeOutMs, const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	return startConnect_locked (false, stream, timeOutMs, callback);
 }
 
@@ -54,7 +49,7 @@ Error BoshXMPPConnection::startConnect_locked (bool withLogin, const XMPPStreamP
 		return error::ExistsAlready;
 	}
 	ConnectingOp * op = new ConnectingOp (sf::regTimeOutMs (timeOutMs));
-	op->setId (genFreeId_locked());
+	op->setId (genFreeId());
 	op->resultCallback = callback;
 	op->withLogin = withLogin;
 	op->transport = BoshTransportPtr (new BoshTransport());
@@ -71,14 +66,13 @@ Error BoshXMPPConnection::startConnect_locked (bool withLogin, const XMPPStreamP
 	op->transport->connect(url, addArgs, op->lastingTimeMs(), abind (dMemFun (this, &BoshXMPPConnection::onBoshConnect), op->id()));
 	op->setState (ConnectingOp::WAIT_BOSH_CONNECT);
 	setState_locked (IMClient::CS_CONNECTING);
-	add_locked (op);
+	addAsyncOp (op);
 	return NoError;
 }
 
 void BoshXMPPConnection::onBoshConnect (Error result, AsyncOpId id) {
-	LockGuard guard (mMutex);
 	ConnectingOp * op;
-	getReadyInState_locked (id, CONNECT_OP, ConnectingOp::WAIT_BOSH_CONNECT, &op);
+	getReadyAsyncOpInState (id, CONNECT_OP, ConnectingOp::WAIT_BOSH_CONNECT, &op);
 	if (!op) return;
 
 	if (result) {
@@ -89,7 +83,7 @@ void BoshXMPPConnection::onBoshConnect (Error result, AsyncOpId id) {
 	op->setState (ConnectingOp::WAIT_FEATURE);
 	LOG_STATE ("WAIT_FEATURE");
 	op->stream->waitFeatures(aOpMemFun (op, &BoshXMPPConnection::onFeatures_locked));
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void BoshXMPPConnection::onFeatures_locked (ConnectingOp * op, Error result) {
@@ -103,7 +97,7 @@ void BoshXMPPConnection::onFeatures_locked (ConnectingOp * op, Error result) {
 	op->setState (ConnectingOp::WAIT_LOGIN);
 	LOG_STATE ("WAIT_LOGIN");
 	op->stream->authenticate(mDetails.username, mDetails.password, aOpMemFun (op, &BoshXMPPConnection::onLogin_locked));
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void BoshXMPPConnection::onLogin_locked (ConnectingOp * op, Error result) {
@@ -117,7 +111,7 @@ void BoshXMPPConnection::onLogin_locked (ConnectingOp * op, Error result) {
 	LOG_STATE ("WAIT_FEATURE2"); // Note: Internal state, not external state
 	setState_locked (IMClient::CS_AUTHENTICATING);
 
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void BoshXMPPConnection::onFeatures2_locked (ConnectingOp * op, Error result) {
@@ -130,7 +124,7 @@ void BoshXMPPConnection::onFeatures2_locked (ConnectingOp * op, Error result) {
 	function <void (Error, const String &)> xx = aOpMemFun (op, &BoshXMPPConnection::onResourceBind_locked);
 
 	op->stream->bindResource(mDetails.resource, aOpMemFun (op, &BoshXMPPConnection::onResourceBind_locked));
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void BoshXMPPConnection::onResourceBind_locked (ConnectingOp * op, Error result, const String& fullJid) {
@@ -140,7 +134,7 @@ void BoshXMPPConnection::onResourceBind_locked (ConnectingOp * op, Error result,
 	op->setState (ConnectingOp::WAIT_SESSION);
 	LOG_STATE ("WAIT_SESSION");
 	op->stream->startSession(aOpMemFun (op, &BoshXMPPConnection::onStartSession_locked));
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void BoshXMPPConnection::onStartSession_locked (ConnectingOp * op, Error result) {

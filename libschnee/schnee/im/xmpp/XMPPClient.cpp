@@ -26,19 +26,16 @@ XMPPClient::~XMPPClient() {
 }
 
 void XMPPClient::setConnectionString(const String & connectionString) {
-	LockGuard guard (mMutex);
 	mConnectionString = connectionString;
 	mPassword.clear();
 	mToAuthorize.clear();
 }
 
 void XMPPClient::setPassword(const String & password) {
-	LockGuard guard (mMutex);
 	mPassword = password;
 }
 
 void XMPPClient::connect(const ResultDelegate & callback) {
-	LockGuard guard (mMutex);
 	XMPPConnectionPtr connector;
 	if (schnee::settings().forceBoshXmpp) {
 		connector = XMPPConnectionPtr (new BoshXMPPConnection());
@@ -57,7 +54,6 @@ void XMPPClient::connect(const ResultDelegate & callback) {
 }
 
 void XMPPClient::disconnect() {
-	LockGuard guard (mMutex);
 	if (mStream) {
 		mStream->close();
 		mStream.reset();
@@ -67,7 +63,6 @@ void XMPPClient::disconnect() {
 }
 
 IMClient::ContactInfo XMPPClient::ownInfo() {
-	LockGuard guard (mMutex);
 	String fullJid = mStream->ownFullJid();
 	String bareJid = fullJidToBareJid(fullJid);
 	Contacts::iterator i = mContacts.find(bareJid);
@@ -80,12 +75,10 @@ IMClient::ContactInfo XMPPClient::ownInfo() {
 }
 
 String XMPPClient::ownId () {
-	LockGuard guard (mMutex);
 	return mStream->ownFullJid();
 }
 
 void XMPPClient::setPresence (const PresenceState & state, const String & desc, int priority) {
-	LockGuard guard (mMutex);
 	xmpp::PresenceInfo p;
 	p.state  = state;
 	p.status = desc;
@@ -94,7 +87,6 @@ void XMPPClient::setPresence (const PresenceState & state, const String & desc, 
 }
 
 IMClient::Contacts XMPPClient::contactRoster() const {
-	LockGuard m(mMutex);
 	return mContacts;
 }
 
@@ -105,8 +97,7 @@ struct RosterIq : public xmpp::Iq {
 };
 
 void XMPPClient::updateContactRoster() {
-	LockGuard guard (mMutex);
-	if (!isConnected_locked()) {
+	if (!isConnected()) {
 		Log (LogInfo) << LOGID << "Not connected, aborting" << std::endl;
 		return;
 	}
@@ -115,8 +106,7 @@ void XMPPClient::updateContactRoster() {
 }
 
 bool XMPPClient::sendMessage(const Message & msg) {
-	LockGuard guard (mMutex);
-	if (!isConnected_locked()) {
+	if (!isConnected()) {
 		Log (LogWarning) << LOGID
 				<< "No connection, will throw message away";
 		return false;
@@ -156,8 +146,7 @@ static void onRequestFeatureResult (const Error result, const xmpp::Iq & iq, con
 }
 
 Error XMPPClient::requestFeatures (const HostId & dst, const FeatureCallback & callback) {
-	LockGuard guard (mMutex);
-	if (!isConnected_locked()) {
+	if (!isConnected()) {
 		Log (LogInfo) << LOGID << "Not connected, aborting" << std::endl;
 		return error::ConnectionError;
 	}
@@ -170,13 +159,11 @@ Error XMPPClient::requestFeatures (const HostId & dst, const FeatureCallback & c
 }
 
 Error XMPPClient::setFeatures (const std::vector<String> & features) {
-	LockGuard guard (mMutex);
 	mFeatures = features;
 	return NoError;
 }
 
 Error XMPPClient::setIdentity (const String & name, const String & type) {
-	LockGuard guard (mMutex);
 	mClientName = name;
 	mClientType = type;
 	return NoError;
@@ -184,13 +171,11 @@ Error XMPPClient::setIdentity (const String & name, const String & type) {
 
 
 Error XMPPClient::subscribeContact (const sf::UserId & user) {
-	LockGuard guard (mMutex);
 	return subscribeContact_locked (user);
 }
 
 Error XMPPClient::subscriptionRequestReply (const sf::UserId & user, bool allow, bool alsoAdd) {
-	LockGuard guard (mMutex);
-	if (!isConnected_locked()) {
+	if (!isConnected()) {
 		return error::ConnectionError;
 	}
 	if (!checkUserId (user))
@@ -212,8 +197,7 @@ Error XMPPClient::subscriptionRequestReply (const sf::UserId & user, bool allow,
 }
 
 Error XMPPClient::cancelSubscription (const sf::UserId & user) {
-	LockGuard guard (mMutex);
-	if (!isConnected_locked()) {
+	if (!isConnected()) {
 		return error::ConnectionError;
 	}
 	if (!checkUserId (user)) return error::InvalidArgument;
@@ -249,7 +233,6 @@ Error XMPPClient::cancelSubscription (const sf::UserId & user) {
 }
 
 Error XMPPClient::removeContact (const sf::UserId & user) {
-	LockGuard guard (mMutex);
 	return removeContact_locked (user);
 }
 
@@ -277,7 +260,7 @@ struct RemoveContactIq : public xmpp::Iq {
 };
 
 Error XMPPClient::subscribeContact_locked (const sf::UserId & user) {
-	if (!isConnected_locked()){
+	if (!isConnected()){
 		return error::ConnectionError;
 	}
 	if (!checkUserId (user))
@@ -330,14 +313,11 @@ Error XMPPClient::removeContact_locked (const UserId & user) {
 }
 
 void XMPPClient::onConnect (Error result, const XMPPConnectionPtr& connector, const ResultCallback & originalCallback) {
-	{
-		LockGuard guard (mMutex);
-		if (!result) {
-			mConnectionState = CS_CONNECTED;
-			notifyAsync (mConnectionStateChangedDelegate, mConnectionState);
-		} else {
-			mErrorText = connector->errorText();
-		}
+	if (!result) {
+		mConnectionState = CS_CONNECTED;
+		notifyAsync (mConnectionStateChangedDelegate, mConnectionState);
+	} else {
+		mErrorText = connector->errorText();
 	}
 	if (originalCallback) {
 		originalCallback (result);
@@ -351,50 +331,47 @@ void XMPPClient::onConnectionStateChanged (ConnectionState state) {
 }
 
 void XMPPClient::onIncomingRosterIq(const xmpp::RosterIq & rosterIq) {
-	{
-		LockGuard guard (mMutex);
-		bool deleteNotFound = false;
-		if (rosterIq.type == "result"){
-			deleteNotFound = true; // Behavior on full reload.
-		}
-		if (rosterIq.type != "result" && rosterIq.type != "set") {
-			Log (LogWarning) << LOGID << "Strange RosterIq type: " << rosterIq.type << std::endl;
-		}
+	bool deleteNotFound = false;
+	if (rosterIq.type == "result"){
+		deleteNotFound = true; // Behavior on full reload.
+	}
+	if (rosterIq.type != "result" && rosterIq.type != "set") {
+		Log (LogWarning) << LOGID << "Strange RosterIq type: " << rosterIq.type << std::endl;
+	}
 
-		std::set<String> existingJids;
-		for (std::vector<xmpp::RosterIq::Item>::const_iterator i = rosterIq.items.begin(); i != rosterIq.items.end(); i++) {
-			const xmpp::RosterIq::Item & item = *i;
+	std::set<String> existingJids;
+	for (std::vector<xmpp::RosterIq::Item>::const_iterator i = rosterIq.items.begin(); i != rosterIq.items.end(); i++) {
+		const xmpp::RosterIq::Item & item = *i;
 
-			String bareJid = item.jid;
-			Log (LogInfo) << LOGID << "(RemoveMe) Item " << toJSON (item) << std::endl;
-			if (item.remove) {
-				Log (LogInfo) << LOGID << "Removing " << bareJid << std::endl;
-				mContacts.erase(bareJid);
-			} else {
-				ContactInfo & info = mContacts[bareJid];
-				info.id    = item.jid;
-				info.name  = item.name;
-				info.state = item.subscription;
-				info.waitForSubscription = item.waitForSubscription;
-				if (info.waitForSubscription) {
-					// trust the server
-					// he saves that over session borders for us
-					mToAuthorize.insert(bareJid);
-				}
-				info.hide = false;
-				existingJids.insert (bareJid);
+		String bareJid = item.jid;
+		Log (LogInfo) << LOGID << "(RemoveMe) Item " << toJSON (item) << std::endl;
+		if (item.remove) {
+			Log (LogInfo) << LOGID << "Removing " << bareJid << std::endl;
+			mContacts.erase(bareJid);
+		} else {
+			ContactInfo & info = mContacts[bareJid];
+			info.id    = item.jid;
+			info.name  = item.name;
+			info.state = item.subscription;
+			info.waitForSubscription = item.waitForSubscription;
+			if (info.waitForSubscription) {
+				// trust the server
+				// he saves that over session borders for us
+				mToAuthorize.insert(bareJid);
 			}
+			info.hide = false;
+			existingJids.insert (bareJid);
 		}
-		if (deleteNotFound) {
-			Contacts::iterator i = mContacts.begin();
-			while (i != mContacts.end()){
-				if (existingJids.count(i->first) == 0){
-					// remove that contact, doesn't exist anymore
-					mContacts.erase(i++);
-					continue;
-				} else
-					i++;
-			}
+	}
+	if (deleteNotFound) {
+		Contacts::iterator i = mContacts.begin();
+		while (i != mContacts.end()){
+			if (existingJids.count(i->first) == 0){
+				// remove that contact, doesn't exist anymore
+				mContacts.erase(i++);
+				continue;
+			} else
+				i++;
 		}
 	}
 	if (mContactRosterChangedDelegate) mContactRosterChangedDelegate();
@@ -411,10 +388,8 @@ void XMPPClient::onIncomingPresence(const xmpp::PresenceInfo & elem, const XMLCh
 		bool toAuthorize = false;
 
 		// We added it?
-		mMutex.lock ();
 		toAuthorize = mToAuthorize.count (bareJid (elem.from)) > 0;
 		if (toAuthorize) mToAuthorize.erase (bareJid (elem.from));
-		mMutex.unlock ();
 		// Ask the user?
 		if (!toAuthorize && mContactAddRequestDelegate) {
 			mContactAddRequestDelegate (elem.from);
@@ -444,7 +419,6 @@ void XMPPClient::onIncomingPresence(const xmpp::PresenceInfo & elem, const XMLCh
 			return;
 		}
 		{
-			LockGuard lock (mMutex);
 			if (mContacts.count(elem.from) == 0) {
 				mContacts[elem.from].hide = true;
 			}
@@ -459,70 +433,67 @@ void XMPPClient::onIncomingPresence(const xmpp::PresenceInfo & elem, const XMLCh
 
 	// regular presence...
 	bool change = false;
-	{
-		LockGuard guard (mMutex);
 
-		/*
-		 * PresenceInfos from not full jid are usually offline
-		 * informations. We add them to the contact list but with
-		 * no active clients connected to
-		 */
+	/*
+	 * PresenceInfos from not full jid are usually offline
+	 * informations. We add them to the contact list but with
+	 * no active clients connected to
+	 */
 
-		String bareJid;
-		bool containsFullJid;
-		if (!isFullJid (elem.from)){
-			containsFullJid = false;
-			bareJid = elem.from;
-		} else {
-			bareJid = fullJidToBareJid (elem.from);
-			containsFullJid = true;
+	String bareJid;
+	bool containsFullJid;
+	if (!isFullJid (elem.from)){
+		containsFullJid = false;
+		bareJid = elem.from;
+	} else {
+		bareJid = fullJidToBareJid (elem.from);
+		containsFullJid = true;
+	}
+
+	if (mContacts.find (bareJid) == mContacts.end()) {
+		if (elem.type == "error" || elem.state == PS_OFFLINE){
+			// don't care.
+			return;
 		}
+		Log (LogInfo) << LOGID << bareJid << " doesn't exist in roster so far, inserting it as hidden" << std::endl;
+		change = true;
+		ContactInfo & info (mContacts[bareJid]);
+		info.hide = true;
+		info.state = SS_NONE;
+	}
+	ContactInfo & info = mContacts[bareJid];
+	if (info.id.empty()){
+		info.id = bareJid;
+	}
 
-		if (mContacts.find (bareJid) == mContacts.end()) {
-			if (elem.type == "error" || elem.state == PS_OFFLINE){
-				// don't care.
-				return;
-			}
-			Log (LogInfo) << LOGID << bareJid << " doesn't exist in roster so far, inserting it as hidden" << std::endl;
-			change = true;
-			ContactInfo & info (mContacts[bareJid]);
-			info.hide = true;
-			info.state = SS_NONE;
-		}
-		ContactInfo & info = mContacts[bareJid];
-		if (info.id.empty()){
-			info.id = bareJid;
-		}
+	if (containsFullJid) {
+		// Modifying state of the peer, we have full jid
 
-		if (containsFullJid) {
-			// Modifying state of the peer, we have full jid
-
-			bool found = false;
-			for (std::vector<ClientPresence>::iterator i = info.presences.begin(); i != info.presences.end(); i++) {
-				if (i->id == elem.from) {
-					found = true;
-					if (i->presence != elem.state) {
-						if (elem.state == IMClient::PS_OFFLINE) {
-							// client went offline, removing it from list
-							info.presences.erase(i);
-							change = true;
-						} else {
-							// client just changed state
-							i->presence = elem.state;
-							change = true;
-						}
+		bool found = false;
+		for (std::vector<ClientPresence>::iterator i = info.presences.begin(); i != info.presences.end(); i++) {
+			if (i->id == elem.from) {
+				found = true;
+				if (i->presence != elem.state) {
+					if (elem.state == IMClient::PS_OFFLINE) {
+						// client went offline, removing it from list
+						info.presences.erase(i);
+						change = true;
+					} else {
+						// client just changed state
+						i->presence = elem.state;
+						change = true;
 					}
-					break;
 				}
+				break;
 			}
-			if (!found) {
-				// client is new
-				ClientPresence p;
-				p.id       = elem.from;
-				p.presence = elem.state;
-				info.presences.push_back (p);
-				change = true;
-			}
+		}
+		if (!found) {
+			// client is new
+			ClientPresence p;
+			p.id       = elem.from;
+			p.presence = elem.state;
+			info.presences.push_back (p);
+			change = true;
 		}
 	}
 	if (change && mContactRosterChangedDelegate) {
@@ -579,18 +550,12 @@ void XMPPClient::onStreamClosed () {
 }
 
 void XMPPClient::onStreamError () {
-	{
-		LockGuard guard (mMutex);
-		xcall (dMemFun (this, &XMPPClient::onAsyncCloseStream));
-	}
+	xcall (dMemFun (this, &XMPPClient::onAsyncCloseStream));
 	if (mConnectionStateChangedDelegate) mConnectionStateChangedDelegate (CS_ERROR);
 }
 
 void XMPPClient::onAsyncCloseStream () {
-	LockGuard guard (mMutex);
 	mStream->close();
 }
-
-
 
 }

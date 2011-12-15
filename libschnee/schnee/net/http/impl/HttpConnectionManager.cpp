@@ -16,7 +16,6 @@ HttpConnectionManager::~HttpConnectionManager() {
 }
 
 void HttpConnectionManager::requestConnection (const Url & url, int timeOutMs, const RequestConnectionCallback & callback) {
-	LockGuard guard (mMutex);
 	assert (callback);
 	{
 		// Check the pool
@@ -26,7 +25,7 @@ void HttpConnectionManager::requestConnection (const Url & url, int timeOutMs, c
 				AsyncOpId id = i->second.front();
 				i->second.pop_front();
 				PendingConnectionOp * op;
-				getReady_locked (id, PendingConnection, &op);
+				getReadyAsyncOp (id, PendingConnection, &op);
 				mPendingConnectionsCount--;
 				if (op) {
 					Log (LogInfo) << LOGID << "Reusing connection to " << url.protocol() << "/" << url.host() << " id=" << op->id() << std::endl;
@@ -52,14 +51,14 @@ void HttpConnectionManager::requestConnection (const Url & url, int timeOutMs, c
 	op->connection->protocol = url.protocol();
 	TCPSocketPtr sock = TCPSocketPtr (new TCPSocket ());
 	op->connection->channel = sock;
-	op->setId(genFreeId_locked());
+	op->setId(genFreeId());
 	op->setState(EstablishConnectionOp::WaitTcpConnect);
 	Error e = sock->connectToHost(url.pureHost(), url.port(), timeOutMs, abind(dMemFun(this, &HttpConnectionManager::onTcpConnect), op->id()));
 	if (e) {
 		delete op;
 		return xcall (abind(callback, e, HttpConnectionPtr()));
 	}
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 static void throwAway (const HttpConnectionPtr & con) {
@@ -67,7 +66,6 @@ static void throwAway (const HttpConnectionPtr & con) {
 }
 
 void HttpConnectionManager::giveBack (Error lastResult, const HttpConnectionPtr & connection) {
-	LockGuard guard (mMutex);
 	if (lastResult) {
 		// throw away, asynchronous
 		// we do not trust this anymore...
@@ -75,14 +73,14 @@ void HttpConnectionManager::giveBack (Error lastResult, const HttpConnectionPtr 
 		return;
 	}
 	PendingConnectionOp * op = new PendingConnectionOp (regTimeOutMs (mGeneralTimeoutMs));
-	AsyncOpId id = genFreeId_locked();
+	AsyncOpId id = genFreeId();
 	op->setId(id);
 	op->connection = connection;
 	op->boss = this;
 	op->connection->channel->changed() = abind (dMemFun (this, &HttpConnectionManager::onChannelChange), id);
 	addToPendingConnections_locked (op);
 	Log (LogInfo) << LOGID << "Storing pending connection to " << connection->host <<  " id=" << id << std::endl;
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void HttpConnectionManager::PendingConnectionOp::onCancel (sf::Error reason) {
@@ -95,9 +93,8 @@ void HttpConnectionManager::PendingConnectionOp::onCancel (sf::Error reason) {
 }
 
 void HttpConnectionManager::onTcpConnect (Error result, AsyncOpId id) {
-	LockGuard guard (mMutex);
 	EstablishConnectionOp * op;
-	getReadyInState_locked (id, EstablishConnection, EstablishConnectionOp::WaitTcpConnect, &op);
+	getReadyAsyncOpInState (id, EstablishConnection, EstablishConnectionOp::WaitTcpConnect, &op);
 	if (!op) return;
 
 	if (result) {
@@ -110,7 +107,7 @@ void HttpConnectionManager::onTcpConnect (Error result, AsyncOpId id) {
 		op->connection->channel = tlsChannel;
 		tlsChannel->clientHandshake(TLSChannel::X509, abind (dMemFun(this, &HttpConnectionManager::onTlsHandshake), id));
 		op->setState (EstablishConnectionOp::WaitTls);
-		add_locked (op);
+		addAsyncOp (op);
 		return;
 	}
 	// plain http, can finish now..
@@ -118,9 +115,8 @@ void HttpConnectionManager::onTcpConnect (Error result, AsyncOpId id) {
 }
 
 void HttpConnectionManager::onTlsHandshake (Error result, AsyncOpId id) {
-	LockGuard guard (mMutex);
 	EstablishConnectionOp * op;
-	getReadyInState_locked (id, EstablishConnection, EstablishConnectionOp::WaitTls, &op);
+	getReadyAsyncOpInState (id, EstablishConnection, EstablishConnectionOp::WaitTls, &op);
 	if (!op) return;
 	doFinish_locked (result, op);
 }
@@ -139,9 +135,8 @@ void HttpConnectionManager::doFinish_locked (Error result, EstablishConnectionOp
 }
 
 void HttpConnectionManager::onChannelChange (AsyncOpId id) {
-	LockGuard guard (mMutex);
 	PendingConnectionOp * op;
-	getReady_locked (id, PendingConnection, &op);
+	getReadyAsyncOp (id, PendingConnection, &op);
 	if (!op) return;
 
 	ByteArrayPtr all = op->connection->channel->read();
@@ -160,7 +155,7 @@ void HttpConnectionManager::onChannelChange (AsyncOpId id) {
 		return;
 	}
 	// data ready? nobody knows, add it again...
-	add_locked (op);
+	addAsyncOp (op);
 }
 
 void HttpConnectionManager::addToPendingConnections_locked (PendingConnectionOp * op) {
@@ -170,7 +165,6 @@ void HttpConnectionManager::addToPendingConnections_locked (PendingConnectionOp 
 }
 
 void HttpConnectionManager::removeFromPendingConnections (ConId c, AsyncOpId id) {
-	LockGuard guard (mMutex);
 	removeFromPendingConnections_locked (c,id);
 }
 

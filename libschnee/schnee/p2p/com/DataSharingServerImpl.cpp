@@ -18,7 +18,6 @@ DataSharingServerImpl::~DataSharingServerImpl (){
 }
 
 Error DataSharingServerImpl::shutdown () {
-	sf::LockGuard guard (mMutex);
 	for (SharedDataMap::const_iterator i = mShared.begin(); i != mShared.end(); i++){
 		const SharedData & data (i->second);
 		Notify n;
@@ -31,7 +30,6 @@ Error DataSharingServerImpl::shutdown () {
 }
 
 Error DataSharingServerImpl::share (const Path & path, const SharingPromisePtr & promise){
-	sf::LockGuard guard (mMutex);
 	if (path.hasSubPath()){
 		sf::Log (LogError) << LOGID << "Path may not have a sub path (implementation limitation)" << std::endl;
 		return error::NotSupported;
@@ -52,7 +50,6 @@ Error DataSharingServerImpl::share (const Path & path, const SharingPromisePtr &
 }
 
 Error DataSharingServerImpl::update (const Path & path, const SharingPromisePtr & promise){
-	sf::LockGuard guard (mMutex);
 	if (!promise) {
 		sf::Log (LogError) << LOGID << "Invalid 0 promise" << std::endl;
 		return error::InvalidArgument;
@@ -71,7 +68,6 @@ Error DataSharingServerImpl::update (const Path & path, const SharingPromisePtr 
 }
 
 Error DataSharingServerImpl::unShare (const Path & path){
-	sf::LockGuard guard (mMutex);
 	SharedDataMap::iterator i = mShared.find (path);
 	if (i == mShared.end()){
 		Log (LogWarning) << LOGID << path << " not found" << std::endl;
@@ -89,23 +85,21 @@ Error DataSharingServerImpl::unShare (const Path & path){
 }
 
 Error DataSharingServerImpl::cancelTransfer (AsyncOpId id) {
-	sf::LockGuard guard (mMutex);
 	AsyncOp * op;
-	op = getReady_locked (id);
+	op = getReadyAsyncOp (id);
 	if (!op) return error::NotFound;
 	if (op->type() != TRANSMISSION) {
-		add_locked (op);
+		addAsyncOp (op);
 		return error::InvalidArgument; // id was not a transmission!
 	}
 	Log (LogInfo) << LOGID << "Canceled transfer" << id <<  " (will do in next iteration)" << std::endl;
 	xcall (abind (dMemFun (this, &DataSharingServerImpl::continueTransmission), error::Canceled, id));
-	add_locked (op);
+	addAsyncOp (op);
 	return NoError;
 }
 
 
 DataSharingServer::SharedDataDescMap DataSharingServerImpl::shared () const {
-	LockGuard guard (mMutex);
 	DataSharingServer::SharedDataDescMap result;
 	for (SharedDataMap::const_iterator i = mShared.begin(); i != mShared.end(); i++){
 		const SharedData & data (i->second); // src
@@ -118,7 +112,6 @@ DataSharingServer::SharedDataDescMap DataSharingServerImpl::shared () const {
 }
 
 DataSharingServer::SharedDataDesc  DataSharingServerImpl::shared (const Path & path, bool * found) const {
-	LockGuard guard (mMutex);
 	SharedDataMap::const_iterator i = mShared.find (path);
 	if (i == mShared.end()) { if (found) *found = false; return SharedDataDesc (); }
 	const SharedData & data (i->second);
@@ -137,7 +130,6 @@ void DataSharingServerImpl::onChannelChange (const HostId & host) {
 	typedef std::set<Subscription> SubscriptionSet;
 	SubscriptionSet lostSubscriptions;
 	assert (!host.empty());
-	LockGuard guard (mMutex);
 	// stop subscriptions for offline users
 	for (SharedDataMap::iterator i = mShared.begin(); i != mShared.end(); i++){
 		SharedData & data (i->second);
@@ -163,7 +155,6 @@ void DataSharingServerImpl::onRpc (const HostId & sender, const Request & reques
 
 	RequestReply answer;
 	sf::ByteArrayPtr answerContent = sf::createByteArrayPtr();
-	LockGuard guard (mMutex);
 	do {
 		answer.path = request.path;
 		answer.id  = request.id;
@@ -254,18 +245,16 @@ void DataSharingServerImpl::onRequestTransmission (const HostId & sender, const 
 	reply.id   = request.id;
 	reply.path = request.path;
 	do {
-		LockGuard guard (mMutex);
-
 		String shareName = request.path.head();
 		
 		if (request.mark == Request::TransmissionCancel){
 			TransmissionFinder finder (request.id);
-			forEachAsyncOp_locked (finder);
+			forEachAsyncOp (finder);
 			if (finder.result.empty()){
 				Log (LogInfo) << LOGID << "Got transmissioncancel for nonexisting transmission" << std::endl;
 			} else for (TransmissionFinder::ResultVec::iterator i = finder.result.begin(); i != finder.result.end(); i++) {
 				Transmission * t = 0;
-				getReady_locked (*i, TRANSMISSION, &t);
+				getReadyAsyncOp (*i, TRANSMISSION, &t);
 				if (t) {
 					delete t; // dropping transmission
 				}
@@ -340,7 +329,7 @@ void DataSharingServerImpl::onRequestTransmission (const HostId & sender, const 
 		trans->revision  = usedRevision;
 		trans->promise   = data;
 		trans->nextChunk = 0;
-		AsyncOpId opid = add_locked (trans);
+		AsyncOpId opid = addAsyncOp (trans);
 		xcall (abind(dMemFun (this, &DataSharingServerImpl::continueTransmission), NoError, opid));
 		// mTransmissions.add (trans);
 		
@@ -361,7 +350,6 @@ void DataSharingServerImpl::onRequestTransmission (const HostId & sender, const 
 void DataSharingServerImpl::onRpc (const HostId & sender, const Subscribe & subscribe, const ByteArray & data) {
 	SubscribeReply reply;
 	do {
-		LockGuard guard (mMutex);
 		reply.id  = subscribe.id;
 		reply.path = subscribe.path;
 
@@ -432,9 +420,8 @@ Error DataSharingServerImpl::notify_locked (const Path & path) {
 }
 
 void DataSharingServerImpl::continueTransmission (Error lastError, AsyncOpId id) {
-	LockGuard guard (mMutex);
 	Transmission * t;
-	getReady_locked(id, TRANSMISSION, &t);
+	getReadyAsyncOp(id, TRANSMISSION, &t);
 	if (!t) return; // probably timeouted;
 	if (lastError) {
 		// stop transmission (receiver won't probably receive it)
@@ -456,7 +443,7 @@ void DataSharingServerImpl::continueTransmission (Error lastError, AsyncOpId id)
 		// not ready yet
 		sf::xcallTimed(abind(dMemFun(this, &DataSharingServerImpl::continueTransmission),NoError, id), futureInMs (100)); // try again in 100ms
 		t->setTimeOut(sf::regTimeOutMs(mTransmissionTimeOutMs));
-		add_locked (t);
+		addAsyncOp (t);
 		return;
 	}
 
@@ -517,7 +504,7 @@ void DataSharingServerImpl::continueTransmission (Error lastError, AsyncOpId id)
 	} else {
 		// reordering
 		t->setTimeOut (sf::regTimeOutMs (mTransmissionTimeOutMs));
-		add_locked (t);
+		addAsyncOp (t);
 	}
 }
 

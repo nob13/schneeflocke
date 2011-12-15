@@ -79,6 +79,7 @@ private:
 	};
 	WorkThread mWorkThread;
 	int        mDefaultTimeOutMs;
+	mutable Mutex mMutex;
 };
 
 typedef shared_ptr<Globber> GlobberPtr;

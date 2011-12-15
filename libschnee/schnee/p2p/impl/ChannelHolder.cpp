@@ -23,12 +23,10 @@ ChannelHolder::~ChannelHolder () {
 }
 
 void ChannelHolder::setHostId (const HostId & id) {
-	LockGuard guard (mMutex);
 	mHostId = id;
 }
 
 ChannelHolder::ChannelId ChannelHolder::add (ChannelPtr channel, const HostId & target, bool requested, int level) {
-	LockGuard guard (mMutex);
 	assert (channel);
 	ChannelId id = mNextChannelId++;
 
@@ -76,12 +74,10 @@ ChannelHolder::ChannelId ChannelHolder::add (ChannelPtr channel, const HostId & 
 }
 
 Error ChannelHolder::close (ChannelId id) {
-	LockGuard guard (mMutex);
 	return close_locked (id);
 }
 
 Error ChannelHolder::closeChannelsToHost (const HostId & host) {
-	LockGuard guard (mMutex);
 	PeerMap::iterator i = mPeers.find (host);
 	if (i == mPeers.end()) return error::NotFound;
 	PeerInfo & info (i->second);
@@ -93,7 +89,6 @@ Error ChannelHolder::closeChannelsToHost (const HostId & host) {
 }
 
 Error ChannelHolder::closeRedundantChannelsToHost (const HostId & host) {
-	LockGuard guard (mMutex);
 	PeerMap::iterator i = mPeers.find (host);
 	if (i == mPeers.end()) return error::NotFound;
 	PeerInfo & info (i->second);
@@ -108,7 +103,6 @@ Error ChannelHolder::closeRedundantChannelsToHost (const HostId & host) {
 }
 
 Error ChannelHolder::forceClear () {
-	LockGuard guard (mMutex);
 	for (ChannelMap::iterator i = mChannels.begin(); i != mChannels.end(); i++) {
 		ChannelReceiver & receiver (i->second);
 		if (!receiver.closing) {
@@ -121,12 +115,11 @@ Error ChannelHolder::forceClear () {
 	mChannels.clear();
 	mPeers.clear();
 	// all operations do have key 0
-	cancelOperations_locked (0, error::Canceled);
+	cancelAsyncOps (0, error::Canceled);
 	return NoError;
 }
 
 ChannelHolder::ChannelId ChannelHolder::findChannel (const HostId & host, int level) const {
-	LockGuard guard (mMutex);
 	PeerMap::const_iterator i = mPeers.find (host);
 	if (i == mPeers.end()) {
 		return 0;
@@ -137,7 +130,6 @@ ChannelHolder::ChannelId ChannelHolder::findChannel (const HostId & host, int le
 }
 
 ChannelHolder::ChannelId ChannelHolder::findBestChannel (const HostId & host) const {
-	LockGuard guard (mMutex);
 	PeerMap::const_iterator i = mPeers.find (host);
 	if (i == mPeers.end()) {
 		return 0;
@@ -146,7 +138,6 @@ ChannelHolder::ChannelId ChannelHolder::findBestChannel (const HostId & host) co
 }
 
 int ChannelHolder::findBestChannelLevel (const HostId & host) const {
-	LockGuard guard (mMutex);
 	PeerMap::const_iterator i = mPeers.find (host);
 	if (i == mPeers.end()) {
 		return 0;
@@ -166,7 +157,6 @@ static String getStack (ChannelPtr channel) {
 
 
 ConnectionManagement::ConnectionInfos ChannelHolder::connections () const {
-	LockGuard guard (mMutex);
 	ConnectionManagement::ConnectionInfos result;
 	for (ChannelMap::const_iterator i = mChannels.begin(); i != mChannels.end(); i++) {
 		const ChannelReceiver & r (i->second);
@@ -187,7 +177,6 @@ ConnectionManagement::ConnectionInfos ChannelHolder::connections () const {
 }
 
 Error ChannelHolder::send (ChannelId id, const Datagram & d, bool highLevel, const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	ChannelMap::iterator i = mChannels.find(id);
 	if (i == mChannels.end()) return error::NotFound;
 	if (i->second.closing) return error::Closed;
@@ -199,7 +188,6 @@ Error ChannelHolder::send (ChannelId id, const Datagram & d, bool highLevel, con
 }
 
 Error ChannelHolder::addChannelPingMeasure (ChannelId id, float seconds) {
-	LockGuard guard (mMutex);
 	ChannelMap::iterator i = mChannels.find(id);
 	if (i == mChannels.end()) return error::NotFound;
 	if (i->second.closing) return error::Closed;
@@ -208,12 +196,10 @@ Error ChannelHolder::addChannelPingMeasure (ChannelId id, float seconds) {
 }
 
 void ChannelHolder::setChannelTimeout (int timeoutMs) {
-	LockGuard guard (mMutex);
 	mChannelTimeoutMs = timeoutMs;
 }
 
 void ChannelHolder::setChannelTimeoutCheckInterval (int intervalMs) {
-	LockGuard guard (mMutex);
 	mChannelTimeoutCheckIntervalMs = intervalMs;
 	cancelTimer (mChannelTimeoutId);
 	mChannelTimeoutId = TimedCallHandle();
@@ -243,11 +229,11 @@ Error ChannelHolder::close_locked (ChannelId id){
 		return e;
 	}
 	CloseChannelOp * op = new CloseChannelOp (sf::regTimeOutMs(mCloseTimeoutMs));
-	op->setId(genFreeId_locked());
+	op->setId(genFreeId());
 	op->channelId = id;
 	op->callback = abind (dMemFun (this, &ChannelHolder::onCloseChannelError), id);
 	receiver.closing = op->id();
-	add_locked (op);
+	addAsyncOp (op);
 	return NoError;
 }
 
@@ -255,7 +241,6 @@ void ChannelHolder::onChannelChange (ChannelId id) {
 	HostId sender;
 	std::vector<Datagram> received; // we can store them, they are cheap.
 	{
-		LockGuard guard (mMutex);
 		ChannelMap::iterator i = mChannels.find (id);
 		if (i == mChannels.end()) {
 			Log (LogWarning) << LOGID << "Channel change from unknown channel?!" << std::endl;
@@ -309,7 +294,6 @@ void ChannelHolder::onChannelChange (ChannelId id) {
 				}
 			} else {
 				if (!updatedUTime) {
-					LockGuard guard (mMutex);
 					ChannelMap::iterator j = mChannels.find(id);
 					if (j != mChannels.end()){
 						j->second.utime = currentTime();
@@ -324,7 +308,6 @@ void ChannelHolder::onChannelChange (ChannelId id) {
 }
 
 void ChannelHolder::onCloseChannelError (Error err, ChannelId id) {
-	LockGuard guard (mMutex);
 	Log (LogWarning) << LOGID << "Received " << toString(err) << " during waiting on channel close" << std::endl;
 	if (mChannels.count(id) == 0){
 		Log (LogWarning) << LOGID << "Did not found channel for close op?" << std::endl;
@@ -334,7 +317,6 @@ void ChannelHolder::onCloseChannelError (Error err, ChannelId id) {
 }
 
 void ChannelHolder::onReceivedCloseChannel (ChannelId id) {
-	LockGuard guard (mMutex);
 	ChannelMap::iterator i = mChannels.find(id);
 	if (i == mChannels.end()) {
 		Log (LogWarning) << LOGID << "Received closeChannel from nonexisting channel" << std::endl;
@@ -345,7 +327,7 @@ void ChannelHolder::onReceivedCloseChannel (ChannelId id) {
 		// we asked for closing
 		// it must be removed from peer info connections
 		CloseChannelOp * op;
-		getReady_locked (receiver.closing, CLOSE_CHANNEL, &op);
+		getReadyAsyncOp (receiver.closing, CLOSE_CHANNEL, &op);
 		if (!op) {
 			Log (LogWarning) << LOGID << "Received close after timeout?!" << std::endl;
 		} else {
@@ -363,7 +345,6 @@ void ChannelHolder::onReceivedCloseChannel (ChannelId id) {
 }
 
 void ChannelHolder::onCheckForTimeoutedChannels () {
-	LockGuard guard (mMutex);
 	mChannelTimeoutId = TimedCallHandle();
 	Time t = currentTime ();
 	if (mChannelTimeoutMs > 0) {
@@ -423,7 +404,6 @@ Error ChannelHolder::removeChannel_locked (ChannelId id) {
 }
 
 void ChannelHolder::throwAwayChannel (ChannelPtr channel) {
-	LockGuard guard (mMutex);
 	// intentionally nothing
 }
 

@@ -59,32 +59,29 @@ public:
 	};
 
 	OpId asyncCall1 (int timeOutMs, const ResultCallback1& result, int key = 0) {
-		LockGuard guard (mMutex);
 		Time timeOut = regTimeOutMs(timeOutMs);
 		Op1 * op = new Op1 (timeOut);
 		op->cb = result;
 		op->setKey(key);
-		return add_locked (op);
+		return addAsyncOp (op);
 	}
 
 	OpId asyncCall2 (int timeOutMs, const ResultCallback2& result, int key = 0) {
-		LockGuard guard (mMutex);
 		Time timeOut = regTimeOutMs(timeOutMs);
 		Op2 * op = new Op2 (timeOut);
 		op->cb = result;
 		op->setKey(key);
-		return add_locked (op);
+		return addAsyncOp (op);
 	}
 
 	/// Tests some wired template, finishes immediately
 	void asyncCall3 (int timeOutMs, const ResultCallback & callback) {
-		LockGuard guard (mMutex);
 		Op3 * op = new Op3 (regTimeOutMs(timeOutMs));
-		op->setId(genFreeId_locked());
+		op->setId(genFreeId());
 		op->cb = callback;
 
 		xcall (aOpMemFun (op, &AsyncExample::onFinishOp3_locked));
-		add_locked (op);
+		addAsyncOp (op);
 	}
 
 	void onFinishOp3_locked (Op3 * op) {
@@ -93,12 +90,11 @@ public:
 	}
 
 	void asyncCall3Param0 (int timeOutMs, const ResultCallback & callback) {
-		LockGuard guard (mMutex);
 		Op3 * op = new Op3 (regTimeOutMs (timeOutMs));
-		op->setId(genFreeId_locked());
+		op->setId(genFreeId());
 		op->cb = callback;
 		xcall (abind (aOpMemFun (op, &AsyncExample::onFinishOp3Param0_locked), NoError));
-		add_locked (op);
+		addAsyncOp (op);
 	}
 
 	void onFinishOp3Param0_locked (Op3 * op, Error e) {
@@ -107,10 +103,7 @@ public:
 
 	void finishCall (int64_t call) {
 		AsyncOp * op;
-		{
-			LockGuard guard (mMutex);
-			op = getReady_locked (call);
-		}
+		op = getReadyAsyncOp (call);
 		if (op) {
 			assert (op->type() == 1 || op->type() == 2);
 			if (op->type() == 1) { Op1 * op1 = (Op1*) op; op1->cb (op->id(), NoError); }
@@ -120,8 +113,7 @@ public:
 	}
 
 	void cancelCall (int key, Error e) {
-		LockGuard gaurd (mMutex);
-		cancelOperations_locked (key, e);
+		cancelAsyncOps (key, e);
 	}
 
 };

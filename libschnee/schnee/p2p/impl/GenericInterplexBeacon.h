@@ -54,8 +54,6 @@ private:
 	PresenceManagement::HostInfoMap mHosts;
 	CommunicationMultiplex      mCommunicationMultiplex;
 	GenericConnectionManagement mConnectionManagement;
-
-	mutable sf::Mutex mMutex;
 };
 
 

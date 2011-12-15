@@ -33,8 +33,8 @@ public:
 	/// Gives back a connection to the pool so it can be reused
 	void giveBack (Error lastResult, const HttpConnectionPtr & connection);
 
-	int pendingConnections () const { LockGuard guard (mMutex); return mPendingConnectionsCount; }
-	int createdConnections () const { LockGuard guard (mMutex); return mCreatedConnections; }
+	int pendingConnections () const { return mPendingConnectionsCount; }
+	int createdConnections () const { return mCreatedConnections; }
 
 
 private:
