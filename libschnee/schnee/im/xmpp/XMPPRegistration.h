@@ -29,7 +29,6 @@ private:
 	/// Shutdown connection (uncoupled)
 	void onShutdown ();
 
-	Mutex mMutex;
 	bool mProcessing;
 	shared_ptr<XMPPStream> mStream;
 	typedef shared_ptr<XMPPConnection> XMPPConnectionPtr;

@@ -56,9 +56,6 @@ private:
 	// Input queue
 	sf::ByteArray mInputBuffer;
 
-	/// Protecting state and input buffer
-	mutable sf::Mutex     mMutex;
-
 	// Delegates
 	sf::VoidDelegate mChanged;
 

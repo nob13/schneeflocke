@@ -18,7 +18,6 @@ CommunicationMultiplex::~CommunicationMultiplex (){
 }
 
 void CommunicationMultiplex::setCommunicationDelegate (CommunicationDelegate * delegate) {
-	LockGuard guard (mComponentSetLock);
 	mCommunicationDelegate = delegate;
 	for (ComponentSet::iterator i = mComponents.begin(); i != mComponents.end(); i++){
 		(*i)->setDelegate(mCommunicationDelegate);
@@ -26,8 +25,6 @@ void CommunicationMultiplex::setCommunicationDelegate (CommunicationDelegate * d
 }
 
 Error CommunicationMultiplex::addComponent (CommunicationComponent * component) {
-	LockGuard guard (mComponentSetLock);
-
 	const char ** commands = component->commands();
 
 	for (const char ** cmd = commands; *cmd != 0; cmd++){
@@ -46,7 +43,6 @@ Error CommunicationMultiplex::addComponent (CommunicationComponent * component) 
 }
 
 Error CommunicationMultiplex::delComponent (CommunicationComponent * component){
-	LockGuard guard (mComponentSetLock);
 	if (mComponents.count(component) == 0){
 		sf::Log (LogError) << LOGID << "Protocol not found!" << std::endl;
 		return error::NotFound;
@@ -61,7 +57,6 @@ Error CommunicationMultiplex::delComponent (CommunicationComponent * component){
 }
 
 std::set<const CommunicationComponent *> CommunicationMultiplex::components () const {
-	LockGuard guard (mComponentSetLock);
 	std::set<const CommunicationComponent*> result;
 	for (ComponentSet::const_iterator i = mComponents.begin(); i != mComponents.end(); i++){
 		result.insert (*i);
@@ -71,13 +66,11 @@ std::set<const CommunicationComponent *> CommunicationMultiplex::components () c
 
 
 Error CommunicationMultiplex::dispatch (const HostId & sender, const String & cmd, const sf::Deserialization & ds, const ByteArray & data){
-	LockGuard guard (mComponentSetLock);
 	if (!mCommunicationDelegate) return error::NotInitialized;
 	return dispatch_locked (sender, cmd, ds, data);
 }
 
 void CommunicationMultiplex::distChannelChange (const HostId & host) {
-	LockGuard guard (mComponentSetLock);
 	if (!mCommunicationDelegate) return; // do not distribute, its maybe about to close
 	for (ComponentSet::const_iterator i = mComponents.begin(); i != mComponents.end(); i++){
 		(*i)->onChannelChange (host);

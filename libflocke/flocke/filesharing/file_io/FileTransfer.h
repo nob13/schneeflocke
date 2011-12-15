@@ -48,7 +48,7 @@ SF_AUTOREFLECT_ENUM (TransferInfo::State);
 /// Base class for File/Directory-Transfers
 class Transfer : public DelegateBase {
 public:
-	TransferInfo info () const { LockGuard (mMutex); return mInfo; };
+	TransferInfo info () const { return mInfo; };
 
 	/// Cancel a transfer
 	virtual void cancel (Error cause = NoError) = 0;
@@ -63,7 +63,6 @@ protected:
 		mInfo.error = e;
 		return e;
 	}
-	mutable Mutex mMutex;
 	TransferInfo mInfo;
 };
 

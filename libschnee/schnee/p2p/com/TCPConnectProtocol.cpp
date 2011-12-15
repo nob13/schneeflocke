@@ -20,7 +20,6 @@ void TCPConnectProtocol::setOwnDetails(const ConnectDetailsPtr & details){
 }
 
 Error TCPConnectProtocol::requestDetails (const HostId & target, const RequestConnectDetailsCallback & callback, int timeOutMs){
-	LockGuard guard (mMutex);
 	OpId id = genFreeId ();
 	RequestConnectDetails req;
 	req.id = id;
@@ -36,18 +35,14 @@ Error TCPConnectProtocol::requestDetails (const HostId & target, const RequestCo
 void TCPConnectProtocol::onRpc (const HostId & sender, const RequestConnectDetails & r, const sf::ByteArray & content) {
 	ConnectDetailsReply reply;
 	reply.id   = r.id;
-	mMutex.lock ();
 	reply.error     = mOwnDetails->error;
 	reply.port      = mOwnDetails->port;
 	reply.addresses = mOwnDetails->addresses;
-	mMutex.unlock ();
 	mCommunicationDelegate->send (sender, Datagram::fromCmd(reply));
 }
 
 void TCPConnectProtocol::onRpc (const HostId & sender, const ConnectDetailsReply & reply, const ByteArray & content) {
-	mMutex.lock();
 	AsyncOp * op = getReadyAsyncOp (reply.id);
-	mMutex.unlock ();
 	if (!op) {
 		Log (LogWarning) << LOGID << "Did not found op " << reply.id  << " (maybe timeouted)" << std::endl;
 		return;

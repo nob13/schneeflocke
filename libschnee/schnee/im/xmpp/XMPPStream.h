@@ -169,8 +169,6 @@ private:
 	void throwAwayOnClose (Error result, ChannelPtr channel) { return throwAwayChannel (channel); }
 	void throwAwayChannel (ChannelPtr channel);
 
-
-	mutable Mutex mMutex;
 	ChannelPtr mChannel;
 	String mOwnJid;		 		///< Own XMPP's id
 	String mFullJid;			///< Own full jid

@@ -119,7 +119,6 @@ static void registerSetIqHandler (Error e, const xmpp::Iq & iq, const XMLChunk &
 }
 
 Error XMPPRegistration::start (const String & server, const Credentials & credentials, int timeOutMs, const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	mCredentials    = credentials;
 	mResultCallback = callback;
 	mProcessing = true;
@@ -136,7 +135,6 @@ Error XMPPRegistration::start (const String & server, const Credentials & creden
 }
 
 void XMPPRegistration::onConnect (Error result) {
-	LockGuard guard (mMutex);
 	if (!mProcessing) return;
 	if (result) return end_locked (result);
 
@@ -146,7 +144,6 @@ void XMPPRegistration::onConnect (Error result) {
 }
 
 void XMPPRegistration::onRegisterGet (Error result, const String & instructions, const std::vector<String> & fields) {
-	LockGuard guard (mMutex);
 	Log (LogProfile) << LOGID << "RegisterGet result: " << toString(result) << std::endl;
 	Log (LogProfile) << LOGID << "Instructions: " << instructions << std::endl;
 	Log (LogProfile) << LOGID << "Fields: " << toString (fields) << std::endl;
@@ -162,14 +159,12 @@ void XMPPRegistration::onRegisterGet (Error result, const String & instructions,
 }
 
 void XMPPRegistration::onRegisterSet (Error result) {
-	LockGuard guard (mMutex);
 	Log (LogProfile) << LOGID << "RegisterSet result: " << toString (result) << std::endl;
 	if (result) end_locked (result);
 	end_locked (NoError);
 }
 
 void XMPPRegistration::onTimeout () {
-	LockGuard guard (mMutex);
 	if (!mProcessing) return;
 	if (mResultCallback) xcall (abind (mResultCallback, error::TimeOut));
 }
@@ -183,7 +178,6 @@ void XMPPRegistration::end_locked (Error result) {
 }
 
 void XMPPRegistration::onShutdown () {
-	LockGuard guard (mMutex);
 	if (mStream) mStream->close();
 }
 

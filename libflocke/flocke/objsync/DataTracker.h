@@ -51,7 +51,6 @@ private:
 
 	TrackInfoMap  mTracked;	///< Current Tracked URIs
 	DataSharingClient * mSharingClient;	///< DataSharing client
-	sf::Mutex	  mMutex;
 	int           mTimeOutMs;
 };
 

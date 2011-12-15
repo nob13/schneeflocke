@@ -13,18 +13,15 @@ public:
 	}
 	
 	void release () { 
-		sf::LockGuard guard (mMutex);
 		mReady = true; 
 	}
 	
 	// Implementation of DataSharingPromise
 	virtual bool ready () const { 
-		sf::LockGuard guard (mMutex);
 		return mReady; 
 	}
 	
 	virtual sf::Error read (const sf::ds::Range & range, sf::ByteArray & dst) { 
-		sf::LockGuard guard (mMutex);
 		assert (range.isValid());
 		if (!mReady) return sf::error::NotInitialized;
 		if (range.from >= (int64_t) mData->size()){
@@ -39,13 +36,11 @@ public:
 	}
 	
 	virtual int64_t size () const { 
-		sf::LockGuard guard (mMutex);
 		if (!mReady) return -1;
 		return mData->size();
 	}
 	
 private:
-	mutable sf::Mutex mMutex;
 	bool mReady;
 	sf::ByteArrayPtr mData;
 };

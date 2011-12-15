@@ -13,7 +13,6 @@ DataTracker::~DataTracker () {
 }
 
 Error DataTracker::track (const sf::Uri & uri, const DataUpdateCallback & dataUpdateCallback, const StateChangeCallback & stateChangeCallback){
-	LockGuard guard (mMutex);
 	TrackInfoPtr info (new TrackInfo);
 	Error subscribeResult = mSharingClient->subscribe (
 			uri.host(),
@@ -33,7 +32,6 @@ Error DataTracker::track (const sf::Uri & uri, const DataUpdateCallback & dataUp
 }
 
 Error DataTracker::untrack (const sf::Uri & uri) {
-	LockGuard guard (mMutex);
 	TrackInfoMap::iterator i = mTracked.find (uri);
 	if (i == mTracked.end()) return error::NotFound;
 
@@ -48,7 +46,6 @@ Error DataTracker::untrack (const sf::Uri & uri) {
 void DataTracker::onSubscribeReply (const HostId & sender, const ds::SubscribeReply & reply, TrackInfoPtr info) {
 	bool doNotifyState = false;
 	do {
-		LockGuard guard (mMutex);
 		info->awaiting &= ~AwaitSubscribe;
 		if (info->state == TO_DELETE || info->state == ERROR){
 			return;
@@ -82,7 +79,6 @@ void DataTracker::onRequestReply   (const HostId & sender, const ds::RequestRepl
 	bool doNotifyState  = false;
 	bool doNotifyUpdate = false;
 	do {
-		LockGuard guard (mMutex);
 		info->awaiting &= ~AwaitRequest;
 		if (info->state == TO_DELETE || info->state == ERROR){
 			return;
@@ -110,7 +106,6 @@ void DataTracker::onRequestReply   (const HostId & sender, const ds::RequestRepl
 void DataTracker::onNotify         (const HostId & sender, const ds::Notify & notify, TrackInfoPtr info) {
 	bool doNotifyState  = false;
 	do {
-		LockGuard guard (mMutex);
 		if (notify.mark == ds::Notify::SubscriptionCancel){
 			info->state = LOST;
 			doNotifyState = true;

@@ -117,8 +117,6 @@ private:
 	FinishedAuthDelegate mFinished;
 	TimedCallHandle mTimer;
 	
-	Mutex mMutex;
-	
 	State mState;
 
 	DatagramReader mDatagramReader;

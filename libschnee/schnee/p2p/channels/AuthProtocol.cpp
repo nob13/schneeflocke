@@ -21,7 +21,6 @@ AuthProtocol::AuthProtocol () {
 }
 
 void AuthProtocol::init (ChannelPtr channel, const sf::HostId & me) {
-	LockGuard guard (mMutex);
 	sf::cancelTimer(mTimer);
 	mMe        = me;
 	mChannel   = channel;
@@ -35,7 +34,6 @@ AuthProtocol::~AuthProtocol () {
 }
 
 void AuthProtocol::connect (const HostId & other, int timeOutInMs) {
-	sf::LockGuard guard (mMutex);
 	cancelTimer (mTimer);
 
 	CreateChannel cmd;
@@ -57,7 +55,6 @@ void AuthProtocol::connect (const HostId & other, int timeOutInMs) {
 }
 
 void AuthProtocol::passive (const HostId & other, int timeOutInMs) {
-	sf::LockGuard guard (mMutex);
 	mOther = other;
 	mChannel->changed () = dMemFun (this, &AuthProtocol::onChannelChange);
 	xcall (dMemFun (this, &AuthProtocol::onChannelChange)); // could already received some data
@@ -71,13 +68,10 @@ void AuthProtocol::onChannelChange () {
 	// TODO: Locking cleanup!
 	sf::Error err;
 	sf::ByteArrayPtr header;
-	{
-		LockGuard  guard (mMutex);
-		if (mState == AUTH_ERROR || mState == TIMEOUT || mState == FINISHED) return;
-		// err = datagram.receiveFrom(mChannel);
-		err = mDatagramReader.read(mChannel);
-		header = mDatagramReader.datagram().header();
-	}
+	if (mState == AUTH_ERROR || mState == TIMEOUT || mState == FINISHED) return;
+	// err = datagram.receiveFrom(mChannel);
+	err = mDatagramReader.read(mChannel);
+	header = mDatagramReader.datagram().header();
 	if (err == error::NotEnough) return;
 	if (err) {
 		onError (error::BadProtocol);
@@ -124,9 +118,7 @@ void AuthProtocol::onChannelChange () {
 				if (err) {
 					onError (error::ConnectionError);
 				} else {
-					mMutex.lock ();
 					mState = SENT_CREATE_CHANNEL_ACCEPT;
-					mMutex.unlock ();
 				}
 			} else {
 				if (!isFail) {
@@ -163,18 +155,14 @@ void AuthProtocol::onChannelChange () {
 }
 
 void AuthProtocol::onTimeOut () {
-	{
-		sf::LockGuard guard (mMutex);
-		if (mState == FINISHED) return;
-		mChannel->changed() = sf::VoidDelegate ();
-		mState = TIMEOUT;
-		mTimer = TimedCallHandle();
-	}
+	if (mState == FINISHED) return;
+	mChannel->changed() = sf::VoidDelegate ();
+	mState = TIMEOUT;
+	mTimer = TimedCallHandle();
 	xcall (abind (mFinished, error::TimeOut));
 }
 
 void AuthProtocol::onError  (Error err) {
-	LockGuard guard (mMutex);
 	mState = AUTH_ERROR;
 	mChannel->changed() = sf::VoidDelegate ();
 
@@ -191,7 +179,6 @@ void AuthProtocol::onError  (Error err) {
 }
 
 void AuthProtocol::onFinish (){
-	LockGuard guard (mMutex);
 	mState = FINISHED;
 	cancelTimer (mTimer);
 	mChannel->changed() = sf::VoidDelegate ();

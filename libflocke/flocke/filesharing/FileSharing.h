@@ -85,7 +85,6 @@ private:
 	};
 	typedef std::map<String, FileShareInfoImpl> InfoMapImpl;
 	InfoMapImpl mInfos;						///< Info about all shared files
-	mutable Mutex mMutex;					///< General Locking Mutex
 
 	/// Callback for outgoing transmissions
 	void onFileTransmissionUpdate (AsyncOpId id, const ds::TransmissionInfo & info, const weak_ptr<FileSharingPromise> & promise);

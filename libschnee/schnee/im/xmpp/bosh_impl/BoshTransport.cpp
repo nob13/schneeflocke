@@ -43,7 +43,6 @@ static int64_t randomRid () {
 }
 
 void BoshTransport::connect(const sf::Url & url, const StringMap & additionalArgs, int timeOutMs, const ResultCallback & callback){
-	LockGuard guard (mMutex);
 	if (mState != Unconnected) {
 		Log (LogError) << LOGID << "Wrong State " << toString (mState) << std::endl;
 		return xcall (abind (callback, error::WrongState));
@@ -72,7 +71,6 @@ void BoshTransport::connect(const sf::Url & url, const StringMap & additionalArg
 }
 
 void BoshTransport::restart () {
-	LockGuard guard (mMutex);
 	if (mState != Connected) {
 		Log (LogWarning) << LOGID << "Wrong state for restart " << toString (mState) << std::endl;
 		return;
@@ -84,7 +82,6 @@ void BoshTransport::restart () {
 }
 
 Error BoshTransport::write (const ByteArrayPtr& data, const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	if (mState != Connected)
 		return error::WrongState;
 	if (callback) {
@@ -97,7 +94,6 @@ Error BoshTransport::write (const ByteArrayPtr& data, const ResultCallback & cal
 }
 
 sf::ByteArrayPtr BoshTransport::read (long maxSize) {
-	LockGuard guard (mMutex);
 	ByteArrayPtr result = sf::createByteArrayPtr();
 	if (maxSize < 0 || maxSize >= (long) mInputBuffer.size()) {
 		result->swap (mInputBuffer);
@@ -109,7 +105,6 @@ sf::ByteArrayPtr BoshTransport::read (long maxSize) {
 }
 
 void BoshTransport::close (const ResultCallback & callback) {
-	LockGuard  guard (mMutex);
 	if (mState == Connected) {
 		StringMap map;
 		map["type"] = "terminate";
@@ -119,7 +114,6 @@ void BoshTransport::close (const ResultCallback & callback) {
 }
 
 Channel::ChannelInfo BoshTransport::info () const {
-	LockGuard guard (mMutex);
 	Channel::ChannelInfo info;
 	info.virtual_ = true;
 	if (mState == Connected){
@@ -137,7 +131,6 @@ static void asyncNotify (const ResultCallback & callback, Error e){
 }
 
 void BoshTransport::onConnectReply (Error result, const HttpResponsePtr & response, const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	if (mState != Connecting) {
 		Log (LogError) << LOGID << "Strange state " << toString (mState) << std::endl;
 		return;
@@ -206,7 +199,6 @@ void BoshTransport::failConnect_locked (Error result, const ResultCallback & cal
 }
 
 void BoshTransport::continueWorking () {
-	LockGuard guard (mMutex);
 	continueWorking_locked ();
 }
 void BoshTransport::continueWorking_locked(){
@@ -251,7 +243,6 @@ void BoshTransport::startNextRequest_locked (const StringMap & additionalArgs, c
 }
 
 void BoshTransport::onRequestReply (Error result, const HttpResponsePtr & response, int64_t rid, const ResultCallback & originalCallback) {
-	LockGuard guard (mMutex);
 	Log (LogInfo) << LOGID << "Reply of RID " << rid << ":" << toString (result) << " (" << (response ? response->resultCode : 0) << ")" << std::endl;
 	if (mState != Connected && mState != Closing){
 		if (mState != Unconnected)

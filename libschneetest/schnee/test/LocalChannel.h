@@ -38,7 +38,6 @@ private:
 	typedef std::pair<HostId, HostId> Connection;
 	typedef std::map<Connection, long> AmountMap;
 
-	mutable Mutex mMutex;
 	AmountMap mTransferred;
 	long mSum;
 
@@ -133,10 +132,6 @@ private:
 	HostId             mHostId;
 	LocalChannelUsageCollectorPtr mCollector;
 
-	// Locking
-	mutable sf::Mutex mMutex;
-	mutable sf::Mutex mOtherMutex;	///< Mutex for writing into mOther
-	
 	// Information
 	float mDelay;
 	float mBandwidth;

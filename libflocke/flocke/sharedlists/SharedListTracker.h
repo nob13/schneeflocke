@@ -54,8 +54,6 @@ private:
 	TrackingUpdateDelegate mTrackingUpdate;
 	
 	DataTracker * mTracker;
-	mutable Mutex mMutex;
-
 	SharedListMap mSharedLists;
 };
 

@@ -11,7 +11,6 @@ LocalChannelUsageCollector::LocalChannelUsageCollector () {
 }
 
 void LocalChannelUsageCollector::addTransferred (const HostId & from, const HostId & to, long fullData, int hops) {
-	LockGuard guard (mMutex);
 	Connection c (from, to);
 	mTransferred[c] += fullData;
 	mSum+=fullData;
@@ -19,17 +18,14 @@ void LocalChannelUsageCollector::addTransferred (const HostId & from, const Host
 }
 
 void LocalChannelUsageCollector::addPendingData (long data) {
-	LockGuard guard (mMutex);
 	mPendingData += data;
 }
 
 void LocalChannelUsageCollector::consumePendingData (long data) {
-	LockGuard guard (mMutex);
 	mPendingData -= data;
 }
 
 void LocalChannelUsageCollector::clear () {
-	LockGuard guard (mMutex);
 	mTransferred.clear();
 	mSum = 0;
 	mPhysicalSum = 0;
@@ -37,7 +33,6 @@ void LocalChannelUsageCollector::clear () {
 }
 
 void LocalChannelUsageCollector::print (std::ostream & stream) const {
-	mMutex.lock ();
 	stream << "LocalChannel Usage" << std::endl;
 	for (AmountMap::const_iterator i = mTransferred.begin(); i != mTransferred.end(); i++){
 		long amount (i->second);
@@ -45,21 +40,17 @@ void LocalChannelUsageCollector::print (std::ostream & stream) const {
 	}
 	stream << "Summarized transferred data:          " << mSum << std::endl;
 	stream << "Summarized physical transferred data: " << mPhysicalSum << std::endl;
-	mMutex.unlock ();
 }
 
 long LocalChannelUsageCollector::sum () const {
-	LockGuard guard (mMutex);
 	return mSum;
 }
 
 long LocalChannelUsageCollector::physicalSum() const {
-	LockGuard guard (mMutex);
 	return mPhysicalSum;
 }
 
 long LocalChannelUsageCollector::pendingData () const {
-	LockGuard guard (mMutex);
 	return mPendingData;
 }
 
@@ -119,7 +110,6 @@ Channel::State LocalChannel::state () const {
 }
 
 Error LocalChannel::write (const ByteArrayPtr& data, const ResultCallback & callback) {
-	LockGuard guard (mOtherMutex);
 	if (!mOther) return error::NotInitialized; // no target
 	mOther->incoming (data);
 	if (callback) xcall (abind (callback, NoError));
@@ -130,29 +120,26 @@ Error LocalChannel::write (const ByteArrayPtr& data, const ResultCallback & call
 sf::ByteArrayPtr LocalChannel::read (long maxSize){
 	// Also copy & pasted in IMChannel
 	sf::ByteArrayPtr result;
-	{
-		sf::LockGuard guard (mMutex);
-		if (maxSize < 0) {
-			result = sf::createByteArrayPtr();
-			result->swap (mInputBuffer);
-			if (mCollector) mCollector->consumePendingData(result->size());
-			return result;
-		}
-		size_t size = mInputBuffer.size();
-		if (maxSize <= 0 || size == 0) return result;
-		if (maxSize < (long) size){
-			// read up to maxSize
-			result = sf::ByteArrayPtr (new sf::ByteArray (mInputBuffer.c_array(), maxSize));
-			mInputBuffer.l_truncate (maxSize);
-			assert (mInputBuffer.size() == size - maxSize);
-		} else {
-			// read all
-			result = sf::ByteArrayPtr (new sf::ByteArray());
-			result->swap (mInputBuffer);
-			assert (mInputBuffer.size() == 0);
-		}
-		if (mCollector) mCollector->consumePendingData (result->size());
+	if (maxSize < 0) {
+		result = sf::createByteArrayPtr();
+		result->swap (mInputBuffer);
+		if (mCollector) mCollector->consumePendingData(result->size());
+		return result;
 	}
+	size_t size = mInputBuffer.size();
+	if (maxSize <= 0 || size == 0) return result;
+	if (maxSize < (long) size){
+		// read up to maxSize
+		result = sf::ByteArrayPtr (new sf::ByteArray (mInputBuffer.c_array(), maxSize));
+		mInputBuffer.l_truncate (maxSize);
+		assert (mInputBuffer.size() == size - maxSize);
+	} else {
+		// read all
+		result = sf::ByteArrayPtr (new sf::ByteArray());
+		result->swap (mInputBuffer);
+		assert (mInputBuffer.size() == 0);
+	}
+	if (mCollector) mCollector->consumePendingData (result->size());
 	return result;
 }
 
@@ -167,17 +154,12 @@ void LocalChannel::close (const ResultCallback & resultCallback) {
 }
 
 void LocalChannel::setOther (LocalChannel * channel){
-	mOtherMutex.lock();
 	mOther = channel;
-	mOtherMutex.unlock();
 }
 
 void LocalChannel::incoming (ByteArrayPtr data){
-	{
-		sf::LockGuard guard (mMutex);
-		if (mCollector) mCollector->addPendingData (data->size());
-		mInputBuffer.append(*data);
-	}
+	if (mCollector) mCollector->addPendingData (data->size());
+	mInputBuffer.append(*data);
 	if (mChanged) {
 		xcall (mChanged);
 	}

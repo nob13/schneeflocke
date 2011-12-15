@@ -20,13 +20,11 @@ public:
 	// Implementation of XMPPConnection
 	virtual State state () const;
 	virtual Error setConnectionString (const String & s) {
-		LockGuard guard (mMutex);
 		bool suc = mDetails.setTo(s);
 		return suc ? NoError : error::InvalidArgument;
 	};
 
 	virtual Error setPassword (const String & p){
-		LockGuard guard (mMutex);
 		mDetails.password = p;
 		return NoError;
 	}
@@ -64,7 +62,6 @@ private:
 
 	XMPPStreamPtr mStream;
 	State mState;
-	mutable Mutex mMutex;
 	XmppConnectDetails mDetails;
 	TCPSocketPtr  mTcpSocket;
 	TLSChannelPtr mTlsChannel;

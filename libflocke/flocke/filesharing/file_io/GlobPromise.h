@@ -14,7 +14,7 @@ public:
 	~GlobPromise ();
 
 	// Implementation of DataSharingPromise
-	virtual bool ready () const { LockGuard guard (mMutex); return mReady; }
+	virtual bool ready () const { return mReady; }
 	virtual sf::Error read (const ds::Range & range, ByteArray & dst);
 	virtual int64_t size () const;
 
@@ -27,7 +27,6 @@ private:
 	RecursiveDirectoryListingPtr mListing;
 	ByteArray mSerializedListing;
 	GlobberPtr  mGlobber;
-	mutable Mutex mMutex;
 };
 typedef shared_ptr<GlobPromise> GlobPromisePtr;
 

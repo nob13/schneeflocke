@@ -71,7 +71,6 @@ private:
 	/// The next ping id to use
 	AsyncOpId mNextPingId;
 
-	Mutex mMutex;
 	PongDelegate    mPongReceivedDelegate;
 	AsyncOpId		mNextId;
 };

@@ -7,7 +7,6 @@ namespace test {
 
 typedef std::map<HostId, NetworkDispatcher*> DispatcherMap;
 
-static Mutex gMutex;
 static DispatcherMap gDispatchers;
 
 NetworkDispatcher::NetworkDispatcher (Network & network, LocalChannelUsageCollectorPtr usageCollector) : mNetwork (network) {
@@ -33,7 +32,6 @@ sf::Error NetworkDispatcher::connect(const sf::String & connectionString, const 
 		Log (LogError) << LOGID << "Did not found host " << mHostId << std::endl;
 		return error::ConnectionError;
 	}
-	LockGuard guard (gMutex);
 	if (gDispatchers.find (mHostId) != gDispatchers.end()) {
 		return error::ExistsAlready;
 	}
@@ -54,7 +52,6 @@ sf::Error NetworkDispatcher::waitForConnected() {
 }
 
 void NetworkDispatcher::disconnect() {
-	LockGuard guard (gMutex);
 	gDispatchers.erase (mHostId);
 	for (DispatcherMap::const_iterator i = gDispatchers.begin(); i != gDispatchers.end(); i++){
 		xcall (dMemFun(i->second, &NetworkDispatcher::onPeersChanged));
@@ -85,19 +82,16 @@ NetworkDispatcher::UserInfoMap NetworkDispatcher::users () const {
 }
 
 NetworkDispatcher::HostInfoMap NetworkDispatcher::hosts () const {
-	gMutex.lock ();
 	HostInfoMap result;
 	for (DispatcherMap::const_iterator i = gDispatchers.begin(); i != gDispatchers.end(); i++){
 		const HostId & id = i->first;
 		result[id].hostId = id;
 		result[id].userId = id; // are the same here
 	}
-	gMutex.unlock();
 	return result;
 }
 
 NetworkDispatcher::HostInfoMap NetworkDispatcher::hosts(const UserId & user) const {
-	LockGuard guard (gMutex);
 	HostInfoMap result;
 	// user id is the same like host id here
 	if (gDispatchers.count(user) > 0){
@@ -110,7 +104,6 @@ NetworkDispatcher::HostInfoMap NetworkDispatcher::hosts(const UserId & user) con
 }
 
 NetworkDispatcher::HostInfo NetworkDispatcher::hostInfo (const HostId & host) const {
-	LockGuard guard (gMutex);
 	DispatcherMap::const_iterator i = gDispatchers.find (host); // host and user are the same here
 	if (i == gDispatchers.end()) return HostInfo ();
 	HostInfo result;
@@ -140,7 +133,6 @@ sf::Error NetworkDispatcher::createChannel (const HostId & target, const ResultC
 	
 	if (route.size() < 3) neighbor = true; // maximum one router
 
-	gMutex.lock();
 	NetworkDispatcher * dispatcher;
 	{
 		DispatcherMap::const_iterator i = gDispatchers.find (target);
@@ -148,7 +140,6 @@ sf::Error NetworkDispatcher::createChannel (const HostId & target, const ResultC
 		else dispatcher = i->second;
 	}
 	if (!dispatcher) {
-		gMutex.unlock ();
 		return error::CouldNotConnectHost;
 	}
 	LocalChannel * lca = new LocalChannel (mHostId, mUsageCollector);
@@ -168,7 +159,6 @@ sf::Error NetworkDispatcher::createChannel (const HostId & target, const ResultC
 	dispatcher->pushChannel (mHostId, ChannelPtr (lcb));
 	xcall (abind (mChannelCreated, target, ChannelPtr(lca), true));
 	if (callback) xcall (abind (callback, NoError));
-	gMutex.unlock();
 	return NoError;
 }
 

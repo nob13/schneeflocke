@@ -6,7 +6,6 @@ GlobPromise::GlobPromise (GlobberPtr globber, const String & dirName) {
 	SF_REGISTER_ME;
 	mError = NoError;
 	mReady = false;
-	LockGuard guard (mMutex);
 	Error result = globber->glob (dirName, dMemFun (this, &GlobPromise::onGlobResult));
 	if (result){
 		mReady = true;
@@ -19,7 +18,6 @@ GlobPromise::~GlobPromise (){
 }
 
 sf::Error GlobPromise::read (const ds::Range & range, ByteArray & dst) {
-	LockGuard guard (mMutex);
 	if (!mReady) {
 		assert (false);
 		return error::InvalidArgument;
@@ -38,13 +36,11 @@ sf::Error GlobPromise::read (const ds::Range & range, ByteArray & dst) {
 }
 
 int64_t GlobPromise::size () const {
-	LockGuard guard (mMutex);
 	if (!mReady || mError) return -1;
 	return mSerializedListing.size();
 }
 
 void GlobPromise::onGlobResult (Error result, const RecursiveDirectoryListingPtr & listing) {
-	LockGuard guard (mMutex);
 	mError   = result;
 	mReady   = true;
 	mListing = listing; 

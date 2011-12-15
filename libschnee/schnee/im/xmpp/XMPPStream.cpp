@@ -20,15 +20,12 @@ XMPPStream::XMPPStream() {
 
 XMPPStream::~XMPPStream() {
 	SF_UNREGISTER_ME;
-	mMutex.lock();
 	mOpenIqs.clear();
 	if (mChannel)
 		mChannel->changed().clear ();
-	mMutex.unlock();
 }
 
 XMPPStream::State XMPPStream::state() const {
-	LockGuard guard (mMutex);
 	return mState;
 }
 
@@ -38,27 +35,22 @@ void XMPPStream::setInfo (const String & own, const String & dst) {
 }
 
 String XMPPStream::ownJid () const {
-	LockGuard guard (mMutex);
 	return mOwnJid;
 }
 
 String XMPPStream::ownFullJid () const {
-	LockGuard guard (mMutex);
 	return mFullJid;
 }
 
 String XMPPStream::dstJid () const {
-	LockGuard guard (mMutex);
 	return mDstJid;
 }
 
 XMLChunk XMPPStream::features () const {
-	LockGuard guard (mMutex);
 	return mFeatures;
 }
 
 Error XMPPStream::startInit (ChannelPtr channel, const ResultCallback& callback) {
-	LockGuard guard (mMutex);
 	mSkipInit = false;
 	Error e = init_locked (channel, false);
 	if (e) return e;
@@ -70,7 +62,6 @@ Error XMPPStream::startInit (ChannelPtr channel, const ResultCallback& callback)
 }
 
 Error XMPPStream::respondInit (ChannelPtr channel, const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	Error e = init_locked (channel, false);
 	if (e) return e;
 	e = startOp_locked (XMO_RespondInitialize, callback);
@@ -81,7 +72,6 @@ Error XMPPStream::respondInit (ChannelPtr channel, const ResultCallback & callba
 }
 
 Error XMPPStream::startInitAfterHandshake (ChannelPtr channel) {
-	LockGuard guard (mMutex);
 	Error e = init_locked (channel, true);
 	if (e) return e;
 	mState = XMS_Initialized;
@@ -89,7 +79,6 @@ Error XMPPStream::startInitAfterHandshake (ChannelPtr channel) {
 }
 
 Error XMPPStream::close () {
-	LockGuard guard (mMutex);
 	Error e = NoError;
 	if (!mSkipInit){
 		e = send_locked ("</stream:stream>");
@@ -103,7 +92,6 @@ Error XMPPStream::close () {
 }
 
 Error XMPPStream::waitFeatures (const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	if (mReceivedFeatures) {
 		// we have it already.
 		if (callback) xcall (abind (callback, NoError));
@@ -145,7 +133,6 @@ static String plainSecret (const String & username, const String & password) {
 }
 
 Error XMPPStream::authenticate (const String & username, const String & password, const ResultCallback & result) {
-	LockGuard guard (mMutex);
 	if (!mReceivedFeatures){
 		Log (LogWarning) << LOGID << "Cannot authenticate, no stream features" << std::endl;
 		return error::WrongState;
@@ -166,7 +153,6 @@ Error XMPPStream::authenticate (const String & username, const String & password
 }
 
 Error XMPPStream::requestTls (const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	if (!mReceivedFeatures) {
 		Log (LogWarning) << LOGID << "Cannot request TLS, no stream features" << std::endl;
 		return error::WrongState;
@@ -185,7 +171,6 @@ Error XMPPStream::requestTls (const ResultCallback & callback) {
 }
 
 Error XMPPStream::requestIq (xmpp::Iq * iq, const IqResultCallback & callback) {
-	LockGuard guard (mMutex);
 	iq->id = generateIqId_locked ();
 	String req = iq->encode();
 	Error e = send_locked (req);
@@ -195,7 +180,6 @@ Error XMPPStream::requestIq (xmpp::Iq * iq, const IqResultCallback & callback) {
 }
 
 void XMPPStream::uncouple () {
-	LockGuard guard (mMutex);
 	mChannel->changed().clear ();
 	xcall (abind (dMemFun (this, &XMPPStream::throwAwayChannel), mChannel));
 	mChannel = ChannelPtr ();
@@ -230,13 +214,11 @@ Error XMPPStream::startSession (const ResultCallback & callback) {
 }
 
 Error XMPPStream::sendPresence (const xmpp::PresenceInfo & p) {
-	LockGuard guard (mMutex);
 	String dst = p.encode();
 	return send_locked (dst);
 }
 
 Error XMPPStream::sendMessage (const xmpp::Message & m) {
-	LockGuard guard (mMutex);
 	String dst;
 	m.encode(dst);
 	return send_locked (dst);
@@ -385,7 +367,6 @@ void XMPPStream::onChannelError_locked (Error e) {
 }
 
 void XMPPStream::onChannelChange   () {
-	LockGuard guard (mMutex);
 	ByteArrayPtr data = mChannel->read();
 	if (data && data->size() > 0){
 #ifndef NDEBUG
@@ -422,7 +403,6 @@ void XMPPStream::onResourceBind (Error e, const xmpp::Iq & iq, const XMLChunk & 
 		Log (LogWarning) << LOGID << "Could not bind, got no JID" << std::endl;
 	}
 	if (!e) {
-		LockGuard guard (mMutex);
 		Log (LogInfo) << LOGID << "Bound resource to " << mFullJid << std::endl;
 		mFullJid = jid;
 	}
@@ -481,7 +461,6 @@ void XMPPStream::finishOp_locked (CurrentOp op, Error result) {
 }
 
 void XMPPStream::throwAwayChannel (ChannelPtr channel) {
-	LockGuard guard (mMutex);
 	// intentionally nothing
 }
 

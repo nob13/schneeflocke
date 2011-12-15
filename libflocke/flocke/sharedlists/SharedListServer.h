@@ -47,7 +47,6 @@ private:
 	
 	bool mInitialized;
 	DataSharingServer * mServer;
-	mutable Mutex mMutex;
 	SharedList mList;
 };
 

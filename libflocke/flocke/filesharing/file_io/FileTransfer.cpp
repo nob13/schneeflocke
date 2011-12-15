@@ -23,9 +23,6 @@ FileTransfer::~FileTransfer () {
 }
 
 Error FileTransfer::start (DataSharingClient * client, const Uri & uri, const String & destinationFileName, int timeOutMs) {
-	LockGuard guard (mMutex);
-	
-	
 	ds::Request r;
 	r.path = uri.path();
 	r.mark = ds::Request::Transmission;
@@ -47,7 +44,6 @@ Error FileTransfer::start (DataSharingClient * client, const Uri & uri, const St
 }
 
 void FileTransfer::cancel (Error cause) {
-	LockGuard guard (mMutex);
 	if (mInfo.state == TransferInfo::FINISHED || mInfo.state == TransferInfo::ERROR) {
 		// too late..
 		return;
@@ -64,12 +60,9 @@ void FileTransfer::cancel (Error cause) {
 
 
 void FileTransfer::onRequestReply (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
-	{
-		LockGuard guad (mMutex);
-		handleRequestReply_locked (sender, reply, data);
-		if ((mInfo.state == TransferInfo::ERROR || mInfo.state == TransferInfo::CANCELED) && reply.mark != ds::RequestReply::TransmissionCancel) {
-			mClient->cancelTransmission(sender, reply.id, reply.path);
-		}
+	handleRequestReply_locked (sender, reply, data);
+	if ((mInfo.state == TransferInfo::ERROR || mInfo.state == TransferInfo::CANCELED) && reply.mark != ds::RequestReply::TransmissionCancel) {
+		mClient->cancelTransmission(sender, reply.id, reply.path);
 	}
 	notify (mStateChanged);
 }

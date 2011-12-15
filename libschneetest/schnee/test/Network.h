@@ -130,7 +130,6 @@ private:
 	typedef std::map<sf::String, Host> HostMap;		///< Type of our hostmap (name to Host)
 	HostMap mHosts;									///< A list of our hosts
 	ConId mNextConnectionId;							///< Our next connection id
-	mutable Mutex mMutex;
 
 	typedef std::pair<const Host*, const Host*> HostPair;
 	typedef std::map<HostPair, Route> RouteCache;

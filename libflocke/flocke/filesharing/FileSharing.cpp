@@ -20,13 +20,11 @@ FileSharing::~FileSharing () {
 }
 
 Error FileSharing::init () {
-	LockGuard guard (mMutex);
 	mInitialized = true;
 	return NoError;
 }
 
 Error FileSharing::share (const String & shareName, const String & fileName , bool forAll, const UserSet & whom){
-	LockGuard guard (mMutex);
 	if (!mInitialized) return error::NotInitialized;
 	if (mInfos.count (shareName) > 0) return error::ExistsAlready;
 
@@ -82,7 +80,6 @@ Error FileSharing::editShare (const String & shareName, const String & fileName,
 }
 
 Error FileSharing::unshare (const String & shareName) {
-	LockGuard guard (mMutex);
 	if (mInfos.count (shareName) == 0) return error::NotFound;
 
 	{
@@ -103,7 +100,6 @@ Error FileSharing::unshare (const String & shareName) {
 }
 
 Error FileSharing::putInfo (const String & shareName, FileShareInfo * dest) const {
-	LockGuard guard (mMutex);
 	InfoMapImpl::const_iterator i = mInfos.find (shareName);
 	if (i == mInfos.end()) return error::NotFound;
 	if (dest) *dest =  i->second;
@@ -111,7 +107,6 @@ Error FileSharing::putInfo (const String & shareName, FileShareInfo * dest) cons
 }
 
 Error FileSharing::cancelTransfer (AsyncOpId id) {
-	LockGuard guard (mMutex);
 	TransferInfoMap::iterator i = mTransfers.find(id);
 	if (i == mTransfers.end())
 		return error::NotFound;
@@ -121,7 +116,6 @@ Error FileSharing::cancelTransfer (AsyncOpId id) {
 }
 
 Error FileSharing::removeFinishedTransfers () {
-	LockGuard guard (mMutex);
 	TransferInfoMap::iterator i = mTransfers.begin();
 	while (i != mTransfers.end()){
 		TransferInfo::State s = i->second.state;
@@ -137,7 +131,6 @@ Error FileSharing::removeFinishedTransfers () {
 
 
 FileSharing::FileShareInfoVec FileSharing::shared() const {
-	LockGuard guard (mMutex);
 	FileShareInfoVec result;
 	for (InfoMapImpl::const_iterator i = mInfos.begin(); i != mInfos.end(); i++) {
 		result.push_back (i->second);
@@ -146,7 +139,6 @@ FileSharing::FileShareInfoVec FileSharing::shared() const {
 }
 
 Error FileSharing::checkPermissions(const UserId & user, const String & shareName) const {
-	LockGuard  guard (mMutex);
 	InfoMapImpl::const_iterator i = mInfos.find(shareName);
 	if (i == mInfos.end()) return error::NotFound;
 	const FileShareInfo & info (i->second);
@@ -156,7 +148,6 @@ Error FileSharing::checkPermissions(const UserId & user, const String & shareNam
 }
 
 FileSharing::TransferInfoMap FileSharing::transfers () const {
-	LockGuard guard (mMutex);
 	return mTransfers;
 }
 
@@ -193,49 +184,46 @@ Path FileSharing::createPath_locked (const String & shareName){
 void FileSharing::onFileTransmissionUpdate (AsyncOpId id, const ds::TransmissionInfo & info, const weak_ptr<FileSharingPromise> & promise) {
 	TransferInfo::TransferUpdateType change = TransferInfo::Changed;
 	TransferInfo result;
-	{
-		LockGuard guard (mMutex);
-		FileSharingPromisePtr realInstance = promise.lock();
-		// Interpreting data and order it in
-		if (mTransfers.count(id) == 0){
-			change = TransferInfo::Added;
-			// there is currently no 'removed', we always add to the list.
-		}
-		TransferInfo & t = mTransfers[id];
-		t.speed       = info.speed;
-		t.transferred = info.transferred;
-		t.type        = TransferInfo::FILE_TRANSFER;
-		switch (info.mark) {
-		case ds::RequestReply::Transmission: {
-			t.state = TransferInfo::TRANSFERRING;
-			break;
-		}
-		case ds::RequestReply::TransmissionStart: {
-			// only update expensive fileds through transmission start
-			if (realInstance) {
-				t.desc     = realInstance->dataDescription();
-				t.size     = realInstance->size();
-				t.filename = realInstance->fileName();
-			}
-			t.receiver = info.destination;
-			t.state = TransferInfo::STARTING;
-			t.uri   = Uri (HostId(), info.path);
-			break;
-		}
-		case ds::RequestReply::TransmissionFinish: {
-			t.state = TransferInfo::FINISHED;
-			break;
-		}
-		case ds::RequestReply::TransmissionCancel: {
-			t.state = TransferInfo::CANCELED;
-			break;
-		}
-		default:
-			assert (!"Unknown state");
-			break;
-		}
-		result = t;
+	FileSharingPromisePtr realInstance = promise.lock();
+	// Interpreting data and order it in
+	if (mTransfers.count(id) == 0){
+		change = TransferInfo::Added;
+		// there is currently no 'removed', we always add to the list.
 	}
+	TransferInfo & t = mTransfers[id];
+	t.speed       = info.speed;
+	t.transferred = info.transferred;
+	t.type        = TransferInfo::FILE_TRANSFER;
+	switch (info.mark) {
+	case ds::RequestReply::Transmission: {
+		t.state = TransferInfo::TRANSFERRING;
+		break;
+	}
+	case ds::RequestReply::TransmissionStart: {
+		// only update expensive fileds through transmission start
+		if (realInstance) {
+			t.desc     = realInstance->dataDescription();
+			t.size     = realInstance->size();
+			t.filename = realInstance->fileName();
+		}
+		t.receiver = info.destination;
+		t.state = TransferInfo::STARTING;
+		t.uri   = Uri (HostId(), info.path);
+		break;
+	}
+	case ds::RequestReply::TransmissionFinish: {
+		t.state = TransferInfo::FINISHED;
+		break;
+	}
+	case ds::RequestReply::TransmissionCancel: {
+		t.state = TransferInfo::CANCELED;
+		break;
+	}
+	default:
+		assert (!"Unknown state");
+		break;
+	}
+	result = t;
 	notify (mUpdatedTransfer, id, change, result);
 }
 

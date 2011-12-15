@@ -14,24 +14,20 @@ DirectXMPPConnection::~DirectXMPPConnection() {
 
 
 DirectXMPPConnection::State DirectXMPPConnection::state () const {
-	LockGuard guard (mMutex);
 	return mState;
 }
 
 Error DirectXMPPConnection::connect (const XMPPStreamPtr& stream, int timeOutMs, const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	mWithLogin = true;
 	return startConnectingProcess_locked (stream, timeOutMs, callback);
 }
 
 Error DirectXMPPConnection::pureConnect (const XMPPStreamPtr & stream, int timeOutMs, const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	mWithLogin = false;
 	return startConnectingProcess_locked (stream, timeOutMs, callback);
 }
 
 String DirectXMPPConnection::errorText () const {
-	LockGuard guard (mMutex);
 	return mErrorText;
 }
 
@@ -55,7 +51,6 @@ Error DirectXMPPConnection::startConnectingProcess_locked (const XMPPStreamPtr &
 }
 
 void DirectXMPPConnection::onTcpConnect (Error result) {
-	LockGuard guard (mMutex);
 	if (result) return onConnectError_locked (result);
 	if (!mConnecting) return;
 	mStream->setInfo ("", mDetails.server);
@@ -65,7 +60,6 @@ void DirectXMPPConnection::onTcpConnect (Error result) {
 }
 
 void DirectXMPPConnection::onBasicStreamInit (Error result) {
-	LockGuard guard (mMutex);
 	if (result) return onConnectError_locked (result);
 	if (!mConnecting) return;
 	Error e = mStream->waitFeatures(dMemFun (this, &DirectXMPPConnection::onBasicStreamFeatures));
@@ -74,7 +68,6 @@ void DirectXMPPConnection::onBasicStreamInit (Error result) {
 }
 
 void DirectXMPPConnection::onBasicStreamFeatures (Error result) {
-	LockGuard guard (mMutex);
 	if (result) return onConnectError_locked (result);
 	if (!mConnecting) return;
 	Error e = mStream->requestTls(dMemFun (this, &DirectXMPPConnection::onTlsRequestReply));
@@ -83,7 +76,6 @@ void DirectXMPPConnection::onBasicStreamFeatures (Error result) {
 }
 
 void DirectXMPPConnection::onTlsRequestReply (Error result) {
-	LockGuard guard (mMutex);
 	if (result) return onConnectError_locked (result);
 	if (!mConnecting) return;
 	mStream->uncouple();
@@ -96,7 +88,6 @@ void DirectXMPPConnection::onTlsRequestReply (Error result) {
 }
 
 void DirectXMPPConnection::onTlsHandshakeResult(Error result){
-	LockGuard guard (mMutex);
 	if (result) return onConnectError_locked (result);
 	if (!mConnecting) return;
 	Error e = mStream->startInit(mTlsChannel, dMemFun (this, &DirectXMPPConnection::onTlsStreamInit));
@@ -105,7 +96,6 @@ void DirectXMPPConnection::onTlsHandshakeResult(Error result){
 }
 
 void DirectXMPPConnection::onTlsStreamInit (Error result) {
-	LockGuard guard (mMutex);
 	if (result) return onConnectError_locked (result);
 	if (!mConnecting) return;
 	Error e = mStream->waitFeatures(dMemFun (this, &DirectXMPPConnection::onTlsStreamFeatures));
@@ -114,7 +104,6 @@ void DirectXMPPConnection::onTlsStreamInit (Error result) {
 }
 
 void DirectXMPPConnection::onTlsStreamFeatures (Error result) {
-	LockGuard guard (mMutex);
 	if (result) return onConnectError_locked (result);
 	if (!mConnecting) return;
 	if (!mWithLogin) {
@@ -131,7 +120,6 @@ void DirectXMPPConnection::onTlsStreamFeatures (Error result) {
 }
 
 void DirectXMPPConnection::onAuthenticate(Error result) {
-	LockGuard guard (mMutex);
 	if (result) return onConnectError_locked (result);
 	if (!mConnecting) return;
 	Error e = mStream->startInit(mTlsChannel, dMemFun (this, &DirectXMPPConnection::onFinalStreamInit));
@@ -140,7 +128,6 @@ void DirectXMPPConnection::onAuthenticate(Error result) {
 }
 
 void DirectXMPPConnection::onFinalStreamInit(Error result) {
-	LockGuard guard (mMutex);
 	if (result) return onConnectError_locked (result);
 	if (!mConnecting) return;
 	Error e = mStream->waitFeatures(dMemFun (this, &DirectXMPPConnection::onFinalStreamFeatures));
@@ -149,7 +136,6 @@ void DirectXMPPConnection::onFinalStreamInit(Error result) {
 }
 
 void DirectXMPPConnection::onFinalStreamFeatures (Error result) {
-	LockGuard guard (mMutex);
 	if (result) return onConnectError_locked (result);
 	if (!mConnecting) return;
 	Error e = mStream->bindResource(mDetails.resource, dMemFun (this, &DirectXMPPConnection::onFinalBind));
@@ -158,7 +144,6 @@ void DirectXMPPConnection::onFinalStreamFeatures (Error result) {
 }
 
 void DirectXMPPConnection::onFinalBind (Error result, const String & fullJid) {
-	LockGuard guard (mMutex);
 	if (result) return onConnectError_locked (result);
 	if (!mConnecting) return;
 	Error e = mStream->startSession (dMemFun (this, &DirectXMPPConnection::onSessionStart));
@@ -167,7 +152,6 @@ void DirectXMPPConnection::onFinalBind (Error result, const String & fullJid) {
 }
 
 void DirectXMPPConnection::onSessionStart (Error result) {
-	LockGuard guard (mMutex);
 	if (result) return onConnectError_locked (result);
 	// we are done!
 	mConnecting = false;
@@ -179,7 +163,6 @@ void DirectXMPPConnection::onSessionStart (Error result) {
 }
 
 void DirectXMPPConnection::onConnectTimeout () {
-	LockGuard guard (mMutex);
 	mTimeoutHandle = TimedCallHandle();
 	onConnectError_locked (error::TimeOut);
 }

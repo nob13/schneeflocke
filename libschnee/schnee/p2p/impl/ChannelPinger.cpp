@@ -23,14 +23,12 @@ void ChannelPinger::init (ChannelHolder * holder) {
 }
 
 void ChannelPinger::start () {
-	LockGuard guard (mMutex);
 	if (mIsPinging) return;
 	mIsPinging = true;
 	mPingDelayedCall = xcallTimed (dMemFun (this, &ChannelPinger::onDoPinging), regTimeOutMs (10000));
 }
 
 void ChannelPinger::stop  () {
-	LockGuard guard (mMutex);
 	if (mIsPinging) {
 		sf::cancelTimer(mPingDelayedCall);
 		mPingDelayedCall = TimedCallHandle();
@@ -39,7 +37,6 @@ void ChannelPinger::stop  () {
 }
 
 void ChannelPinger::onDoPinging () {
-	LockGuard guard (mMutex);
 	mPingDelayedCall = TimedCallHandle();
 	if (!mHolder) {
 		Log(LogError) << LOGID << "No holder!" << std::endl;
@@ -76,7 +73,6 @@ void ChannelPinger::onDoPinging () {
 }
 
 void ChannelPinger::onPong (ChannelId channelId, const PingProtocol::Pong & pong) {
-	LockGuard guard (mMutex);
 	PingKey key (std::make_pair(pong.id, channelId));
 	OpenPingMap::iterator i = mOpenPings.find (key);
 	if (i == mOpenPings.end()) {

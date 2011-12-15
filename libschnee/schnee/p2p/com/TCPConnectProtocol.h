@@ -70,8 +70,6 @@ private:
 	};
 
 	ConnectDetailsPtr mOwnDetails;
-	Mutex mMutex;
-
 };
 
 }

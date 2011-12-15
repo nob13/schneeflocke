@@ -96,8 +96,7 @@ private:
 	AsyncOpId nextId_locked () { return mNextId++; }
 
 	DataSharingClient * mClient;
-	mutable Mutex mMutex;
-	
+
 	UpdatedTransferDelegate mUpdatedTransfer;
 	GotListingDelegate mGotListing;
 	

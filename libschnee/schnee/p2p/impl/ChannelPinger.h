@@ -41,7 +41,6 @@ private:
 	typedef std::pair<ChannelId, AsyncOpId> PingKey;
 	typedef std::map<PingKey, Time> OpenPingMap; ///< yet not answered Pings
 	OpenPingMap mOpenPings;
-	Mutex mMutex;
 	MeasureDelegate mMeasure;
 };
 

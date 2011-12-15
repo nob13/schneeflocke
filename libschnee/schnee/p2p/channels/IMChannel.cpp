@@ -8,18 +8,15 @@
 namespace sf {
 
 IMChannel::IMChannel (IMDispatcher * dispatcher, const sf::String & id, OnlineState state){
-	mMutex.lock();
 	mDispatcher = dispatcher;
 	mId = id;
 	mState = state;
-	mMutex.unlock();
 }
 
 IMChannel::~IMChannel (){
 }
 
 sf::Error IMChannel::error () const {
-	LockGuard guard (mMutex);
 	if (!mDispatcher) return sf::error::Closed;
 	return sf::NoError;
 }
@@ -30,7 +27,6 @@ sf::String IMChannel::errorMessage () const {
 }
 
 Channel::State IMChannel::state () const {
-	LockGuard guard (mMutex);
 	if (!mDispatcher) return Channel::Unconnected;
 	return Channel::Connected;
 }
@@ -78,26 +74,23 @@ Error IMChannel::write (const ByteArrayPtr& data, const ResultCallback & callbac
 sf::ByteArrayPtr IMChannel::read (long maxSize) {
 	// Copy & Paste from LocalChannel
 	sf::ByteArrayPtr result;
-	{
-		sf::LockGuard guard (mMutex);
-		if (maxSize < 0) {
-			result = sf::createByteArrayPtr();
-			result->swap(mInputBuffer);
-			return result;
-		}
-		size_t size = mInputBuffer.size();
-		if (maxSize <= 0 || size == 0) return result;
-		if (maxSize < (long) size){
-			// read up to maxSize
-			result = sf::ByteArrayPtr (new sf::ByteArray (mInputBuffer.c_array(), maxSize));
-			mInputBuffer.l_truncate (maxSize);
-			assert (mInputBuffer.size() == size - maxSize);
-		} else {
-			// read all
-			result = sf::ByteArrayPtr (new sf::ByteArray());
-			result->swap (mInputBuffer);
-			assert (mInputBuffer.size() == 0);
-		}
+	if (maxSize < 0) {
+		result = sf::createByteArrayPtr();
+		result->swap(mInputBuffer);
+		return result;
+	}
+	size_t size = mInputBuffer.size();
+	if (maxSize <= 0 || size == 0) return result;
+	if (maxSize < (long) size){
+		// read up to maxSize
+		result = sf::ByteArrayPtr (new sf::ByteArray (mInputBuffer.c_array(), maxSize));
+		mInputBuffer.l_truncate (maxSize);
+		assert (mInputBuffer.size() == size - maxSize);
+	} else {
+		// read all
+		result = sf::ByteArrayPtr (new sf::ByteArray());
+		result->swap (mInputBuffer);
+		assert (mInputBuffer.size() == 0);
 	}
 	return result;
 }
@@ -108,10 +101,8 @@ void IMChannel::close (const ResultCallback & resultCallback) {
 }
 
 void IMChannel::invalidate () {
-	mMutex.lock();
 	mDispatcher = 0;
 	mState = OS_OFFLINE;
-	mMutex.unlock();
 	if (mChanged) xcall (mChanged);
 }
 
@@ -127,9 +118,7 @@ void IMChannel::pushMessage (const sf::IMClient::Message & m){
 		sf::ByteArray data;
 		sf::String rest = body.substr (4, body.length() - 4);
 		sf::Base64::decodeToArray(rest, data);
-		mMutex.lock();
 		mInputBuffer.append (data);
-		mMutex.unlock();
 		if (mChanged) mChanged();
 		return;
 	}
@@ -138,18 +127,14 @@ void IMChannel::pushMessage (const sf::IMClient::Message & m){
 	// re-encode it to get it right into the pipeline
 	ByteArrayPtr data = datagram.encode();
 	assert (data);
-	mMutex.lock();
 	mInputBuffer.append (*data);
-	mMutex.unlock();
 	if (mChanged) mChanged ();
 }
 
 void IMChannel::setState (OnlineState state){
 
 	if (state != mState){
-		mMutex.lock();
 		mState = state;
-		mMutex.unlock();
 		if (mChanged) mChanged ();
 	}
 }

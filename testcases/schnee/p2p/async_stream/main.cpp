@@ -14,7 +14,6 @@ public:
 
 	/// Eat something what was written
 	ByteArrayPtr consume (long maxSize = -1) {
-		LockGuard guard (mMutex);
 		if (mIngoingBuffer.empty()) return ByteArrayPtr();
 		ByteArrayPtr result = createByteArrayPtr();
 		if (maxSize < 0 || maxSize >= (int64_t) mIngoingBuffer.size()){
@@ -38,7 +37,6 @@ public:
 	virtual sf::Error error () const { return NoError; }
 	virtual State state () const { return Connected; }
 	virtual Error write (const ByteArrayPtr& data, const ResultCallback & callback = ResultCallback()){
-		LockGuard guard (mMutex);
 		mIngoingBuffer.append (*data);
 		notifyAsync (callback, NoError);
 		notifyAsync (mChanged);
@@ -46,7 +44,6 @@ public:
 	}
 	// Hack: return ByteArrayPtr () if there is nothing to read
 	virtual sf::ByteArrayPtr read (long maxSize = -1) {
-		LockGuard guard (mMutex);
 		if (mOutgoingBuffer.empty()){
 			return sf::ByteArrayPtr ();
 		}
@@ -71,7 +68,6 @@ public:
 		return mChanged;
 	}
 private:
-	Mutex mMutex;
 	VoidDelegate mChanged;
 	/// Stuff to be read
 	ByteArray mOutgoingBuffer;

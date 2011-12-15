@@ -7,7 +7,6 @@ namespace sf {
 namespace test {
 
 bool Network::addConnection(Connection c){
-	LockGuard guard (mMutex);
 	if (c.a.empty() || c.b.empty()){
 		sf::Log (LogError) << LOGID << "Connection may not have empty names" << std::endl;
 		return false;
@@ -115,7 +114,6 @@ void Network::exportGraphViz (std::ostream & stream, bool withAdditional, bool c
 }
 
 sf::String Network::routeString (const Route & r) const {
-	LockGuard guard (mMutex);
 	if (r.empty()) { return "[]"; }
 	std::ostringstream stream;
 	stream << "[";
@@ -132,7 +130,6 @@ sf::String Network::routeString (const Route & r) const {
 }
 
 bool Network::findRoute (const sf::String & start, const sf::String & end, Route & route) const {
-	LockGuard guard (mMutex);
 	HostMap::const_iterator ai = mHosts.find (start);
 	HostMap::const_iterator bi = mHosts.find (end);
 	if (ai == mHosts.end() || bi == mHosts.end()) {
@@ -154,12 +151,10 @@ const Host * Network::host (const sf::String & name) const {
 }
 
 const Connection * Network::connection (DiConId id, bool * reverse) const {
-	LockGuard guard (mMutex);
 	return connection_locked (id, reverse);
 }
 
 float Network::routeDelay (const Route & r) const {
-	LockGuard guard (mMutex);
 	float sum = 0.0f;
 	for (Route::const_iterator i = r.begin(); i != r.end(); i++){
 		const Connection * c = connection_locked (*i);
@@ -242,9 +237,6 @@ bool Network::dijkstraRouteFinder_locked (const Host & a, const Host & b, Route 
 
 
 Host & Network::findCreateHost_locked (const sf::String & name){
-#ifndef NDEBUG
-	assert (mMutex.try_lock() == false);
-#endif
 	HostMap::iterator i = mHosts.find (name);
 	if (i == mHosts.end()){
 		Host h;

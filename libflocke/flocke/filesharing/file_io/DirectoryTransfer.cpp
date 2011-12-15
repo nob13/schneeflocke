@@ -18,8 +18,6 @@ DirectoryTransfer::~DirectoryTransfer () {
 }
 
 Error DirectoryTransfer::start (DataSharingClient * client, const Uri & uri, const String & destinationDirName, int timeOutMs) {
-	LockGuard guard (mMutex);
-	
 	// creating destination directory
 	Error e = sf::createDirectory (destinationDirName);
 	if (e) return errorState_locked (e);
@@ -44,7 +42,6 @@ Error DirectoryTransfer::start (DataSharingClient * client, const Uri & uri, con
 
 Error DirectoryTransfer::nextTransfer (FileTransferTask * taskOut) {
 	// TODO: CLEANUP
-	LockGuard guard (mMutex);
 	if (mInfo.state == TransferInfo::FINISHED) return error::Eof;
 	if (mInfo.state == TransferInfo::TRANSFERRED_LISTING){
 		mInfo.state = TransferInfo::PENDING_FILES;
@@ -91,7 +88,6 @@ Error DirectoryTransfer::nextTransfer (FileTransferTask * taskOut) {
 }
 
 void DirectoryTransfer::cancel (Error e) {
-	LockGuard guard (mMutex);
 	if (e) {
 		mInfo.state = TransferInfo::ERROR;
 		mInfo.error = e;
@@ -102,12 +98,9 @@ void DirectoryTransfer::cancel (Error e) {
 }
 
 void DirectoryTransfer::onRequestReply (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
-	{
-		LockGuard guad (mMutex);
-		handleRequestReply_locked (sender, reply, data);
-		if ((mInfo.state == TransferInfo::ERROR || mInfo.state == TransferInfo::CANCELED) && reply.mark != ds::RequestReply::TransmissionCancel) {
-			mClient->cancelTransmission(sender, reply.id, reply.path);
-		}
+	handleRequestReply_locked (sender, reply, data);
+	if ((mInfo.state == TransferInfo::ERROR || mInfo.state == TransferInfo::CANCELED) && reply.mark != ds::RequestReply::TransmissionCancel) {
+		mClient->cancelTransmission(sender, reply.id, reply.path);
 	}
 	notify (mStateChanged);
 }

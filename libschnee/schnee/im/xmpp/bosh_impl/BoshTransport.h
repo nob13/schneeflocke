@@ -31,9 +31,9 @@ public:
 	void restart ();
 
 	// Implementation of Channel
-	virtual sf::Error error () const { LockGuard guard (mMutex); return mError; }
-	virtual sf::String errorMessage () const { LockGuard guard (mMutex); return mErrorMessage; }
-	virtual State state () const { LockGuard guard (mMutex); return mState;}
+	virtual sf::Error error () const { return mError; }
+	virtual sf::String errorMessage () const { return mErrorMessage; }
+	virtual State state () const { return mState;}
 	virtual Error write (const ByteArrayPtr& data, const ResultCallback & callback = ResultCallback());
 	virtual sf::ByteArrayPtr read (long maxSize = -1);
 	virtual void close (const ResultCallback & callback = ResultCallback ());
@@ -60,8 +60,6 @@ private:
 
 	/// Packs data into a POST request and sends it
 	void executeRequest_locked (const ByteArrayPtr & data, int timeOutMs, const HttpContext::RequestCallback & callback);
-
-	mutable Mutex mMutex;
 
 	std::deque<ByteArrayPtr> mOutputBuffer; // Output Buffer
 	ByteArray   mInputBuffer; // Input Buffer, in order

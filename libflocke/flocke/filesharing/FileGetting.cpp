@@ -24,7 +24,6 @@ sf::Error FileGetting::init () {
 
 Error FileGetting::listDirectory (const Uri & uri, AsyncOpId * opIdOut) {
 	if (!uri.valid()) return error::InvalidUri;
-	LockGuard guard (mMutex);
 	ds::Request r;
 	r.path = uri.path();
 	r.user = "list";
@@ -71,20 +70,16 @@ static bool generateName (const String & dstDir, const Uri & uri, String * resul
 }
 
 Error FileGetting::request (const Uri & uri, AsyncOpId * opIdOut) {
-	{
-		LockGuard guard (mMutex);
-		String dstFileName;
-		if (!generateName (mDestinationDirectory, uri, &dstFileName)){
-			return error::ExistsAlready;
-		}
-		Error err = requestFileTransfer_locked (uri, dstFileName, 0, opIdOut);
-		if (err) return err;
+	String dstFileName;
+	if (!generateName (mDestinationDirectory, uri, &dstFileName)){
+		return error::ExistsAlready;
 	}
+	Error err = requestFileTransfer_locked (uri, dstFileName, 0, opIdOut);
+	if (err) return err;
 	return NoError;
 }
 
 sf::Error FileGetting::requestDirectory (const Uri & uri, AsyncOpId * opIdOut) {
-	LockGuard guard (mMutex);
 	String dstFileName;
 	if (!generateName (mDestinationDirectory, uri, &dstFileName)){
 		return error::ExistsAlready;
@@ -109,7 +104,6 @@ sf::Error FileGetting::requestDirectory (const Uri & uri, AsyncOpId * opIdOut) {
 }
 
 Error FileGetting::cancelTransfer (AsyncOpId id) {
-	LockGuard guard (mMutex);
 	TransferMap::iterator i = mTransfers.find(id);
 	if (i == mTransfers.end()) {
 		Log (LogWarning) << LOGID << "Warning, transfer " << id << " not found" << std::endl;
@@ -120,7 +114,6 @@ Error FileGetting::cancelTransfer (AsyncOpId id) {
 }
 
 Error FileGetting::removeTransfer (AsyncOpId id) {
-	LockGuard guard (mMutex);
 	TransferMap::iterator i = mTransfers.find(id);
 	if (i == mTransfers.end()) {
 		return error::NotFound;
@@ -132,7 +125,6 @@ Error FileGetting::removeTransfer (AsyncOpId id) {
 }
 
 Error FileGetting::removeFinishedTransfers () {
-	LockGuard guard (mMutex);
 	TransferMap::iterator i = mTransfers.begin();
 	while (i != mTransfers.end()){
 		TransferInfo::State s = i->second->info().state;
@@ -147,7 +139,6 @@ Error FileGetting::removeFinishedTransfers () {
 }
 
 FileGetting::TransferInfoMap FileGetting::transfers () const {
-	LockGuard guard (mMutex);
 	TransferInfoMap dest;
 	for (TransferMap::const_iterator i = mTransfers.begin(); i != mTransfers.end(); i++){
 		dest.insert (std::make_pair (i->first, i->second->info()));
@@ -156,43 +147,38 @@ FileGetting::TransferInfoMap FileGetting::transfers () const {
 }
 
 String FileGetting::destinationDirectory() const {
-	LockGuard guard (mMutex);
 	return mDestinationDirectory;
 }
 
 void FileGetting::setDestinationDirectory (const String & dir) {
-	LockGuard guard (mMutex);
 	mDestinationDirectory = dir;
 }
 
 void FileGetting::onTransferChange (AsyncOpId id, TransferInfo::TransferUpdateType type) {
 	// TODO: Cleanup
 	TransferInfo info;
-	{
-		LockGuard guard (mMutex);
-		if (mTransfers.find (id) == mTransfers.end()){
-			Log (LogInfo) << LOGID << "Did not found Transfer (maybe deleted)! " << id << std::endl;
-			return;
-		}
+	if (mTransfers.find (id) == mTransfers.end()){
+		Log (LogInfo) << LOGID << "Did not found Transfer (maybe deleted)! " << id << std::endl;
+		return;
+	}
 		
-		TransferPtr transfer = mTransfers[id];
-		info = transfer->info();
-		
-		// DirectoryTransfer may just got its data
-		if (info.state == TransferInfo::TRANSFERRED_LISTING){
-			assert (info.type == TransferInfo::DIR_TRANSFER);
-			for (int i = 0; i < mFilesPerDirectory; i++){
-				Error e = startNextChildTransfer_locked (id);
-				if (e) break;
-			}
+	TransferPtr transfer = mTransfers[id];
+	info = transfer->info();
+
+	// DirectoryTransfer may just got its data
+	if (info.state == TransferInfo::TRANSFERRED_LISTING){
+		assert (info.type == TransferInfo::DIR_TRANSFER);
+		for (int i = 0; i < mFilesPerDirectory; i++){
+			Error e = startNextChildTransfer_locked (id);
+			if (e) break;
 		}
+	}
 		
-		// A subtransfer ended, lets begin a new one
-		if (info.state == TransferInfo::FINISHED && info.parent != 0){
-			assert (mTransfers.count (info.parent) > 0);
-			Error e = startNextChildTransfer_locked (info.parent);
-			(void)e;
-		}
+	// A subtransfer ended, lets begin a new one
+	if (info.state == TransferInfo::FINISHED && info.parent != 0){
+		assert (mTransfers.count (info.parent) > 0);
+		Error e = startNextChildTransfer_locked (info.parent);
+		(void)e;
 	}
 	if (mUpdatedTransfer) mUpdatedTransfer (id, type, info);
 }

@@ -45,7 +45,6 @@ private:
 	CommunicationMap mCommunicationMap;
 	ComponentSet mComponents;
 	CommunicationDelegate * mCommunicationDelegate;
-	mutable Mutex mComponentSetLock;
 };
 
 }
