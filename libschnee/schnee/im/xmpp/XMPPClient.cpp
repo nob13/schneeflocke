@@ -366,8 +366,9 @@ void XMPPClient::onIncomingRosterIq(const xmpp::RosterIq & rosterIq) {
 			const xmpp::RosterIq::Item & item = *i;
 
 			String bareJid = item.jid;
-
+			Log (LogInfo) << LOGID << "(RemoveMe) Item " << toJSON (item) << std::endl;
 			if (item.remove) {
+				Log (LogInfo) << LOGID << "Removing " << bareJid << std::endl;
 				mContacts.erase(bareJid);
 			} else {
 				ContactInfo & info = mContacts[bareJid];
@@ -478,13 +479,15 @@ void XMPPClient::onIncomingPresence(const xmpp::PresenceInfo & elem, const XMLCh
 		}
 
 		if (mContacts.find (bareJid) == mContacts.end()) {
-			if (elem.type == "error" || elem.state == PS_UNKNOWN){
+			if (elem.type == "error" || elem.state == PS_OFFLINE){
 				// don't care.
 				return;
 			}
 			Log (LogInfo) << LOGID << bareJid << " doesn't exist in roster so far, inserting it as hidden" << std::endl;
 			change = true;
-			mContacts[bareJid].hide = true;
+			ContactInfo & info (mContacts[bareJid]);
+			info.hide = true;
+			info.state = SS_NONE;
 		}
 		ContactInfo & info = mContacts[bareJid];
 		if (info.id.empty()){

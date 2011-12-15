@@ -54,7 +54,7 @@ public:
 	typedef sf::function <InterplexBeacon * ()> BeaconCreator;
 
 	/// Inits the Standardscenario using a given BeaconCreator
-	sf::Error initWithBeaconCreator (int nodeCount, bool withServer, const BeaconCreator & beaconCreator);
+	sf::Error initWithBeaconCreator (int nodeCount, bool withServer, const BeaconCreator & beaconCreator, bool simulated);
 
 	/// Connect the beacons to the service and waits that all peers see each other
 	/// (But does not connect peers to each other)

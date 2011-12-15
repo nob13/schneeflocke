@@ -2,7 +2,7 @@
 
 #include <schnee/tools/Log.h>
 #include <schnee/schnee.h>
-
+#include <flocke/hardcodedLogin.h>
 namespace sf {
 namespace test {
 
@@ -14,18 +14,17 @@ StandardScenario::~StandardScenario(){
 }
 
 sf::Error StandardScenario::init(int nodeCount, bool withServer, bool simulated) {
-	assert (simulated && "SLXMPP is not anymore, please fix this code");
-	this->mSimulated = simulated;
 	if (simulated) {
 		genDoubleStarNetwork (mNetwork, nodeCount, withServer, true);
-		return initWithBeaconCreator (nodeCount, withServer, sf::bind (&test::createNetworkInterplexBeacon, &mNetwork, mCollector));
+		return initWithBeaconCreator (nodeCount, withServer, sf::bind (&test::createNetworkInterplexBeacon, &mNetwork, mCollector), true);
 	} else {
-		return initWithBeaconCreator (nodeCount, withServer, &test::createGenericInterplexBeacon);
+		return initWithBeaconCreator (nodeCount, withServer, &test::createGenericInterplexBeacon, false);
 	}
 }
 
-sf::Error StandardScenario::initWithBeaconCreator (int nodeCount, bool withServer, const BeaconCreator & beaconCreator) {
+sf::Error StandardScenario::initWithBeaconCreator (int nodeCount, bool withServer, const BeaconCreator & beaconCreator, bool simulated) {
 	this->mNodeCount = nodeCount;
+	this->mSimulated = simulated;
 	for (int i = 0; i < nodeCount; i++){
 		Peer * p = createPeer (beaconCreator());
 		mPeers.push_back (p);
@@ -40,13 +39,22 @@ sf::Error StandardScenario::initWithBeaconCreator (int nodeCount, bool withServe
 
 
 sf::Error StandardScenario::connectThem (int timeOutMs) {
-	String prefix = mSimulated ? "" : "slxmpp://";
 	if (mServer){
-		sf::Error err = mServer->beacon->connect (prefix + serverName());
+		if (!mSimulated) {
+			assert (!"No server support in non simulated");
+			return error::NotSupported;
+		}
+		sf::Error err = mServer->beacon->connect (serverName());
 		if (err) return err;
 	}
 	for (int i = 0; i < mNodeCount; i++) {
-		sf::Error err = mPeers[i]->beacon->connect (prefix + testNames(i));
+		String connectionString = "";
+		if (!mSimulated){
+			connectionString = sf::hardcodedLogin(i);
+		} else {
+			connectionString = testNames (i);
+		}
+		sf::Error err = mPeers[i]->beacon->connect (connectionString);
 		if (err) return err;
 	}
 	// Connecting

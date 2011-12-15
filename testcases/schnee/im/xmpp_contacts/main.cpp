@@ -44,16 +44,17 @@ public:
 
 	bool canSee (const String & other) {
 		return mClient->contactRoster().count (other) > 0 &&
-			   mClient->contactRoster() [other].presences.size() > 0;
+			   mClient->contactRoster() [other].presences.size() > 0 &&
+			   !mClient->contactRoster()[other].hide;
 	}
 
 	bool canNotSee (const UserId & other) { return !canSee (other); }
 
-	bool waitForCanSee (const String & other, int timeOutMs = 1000) {
+	bool waitForCanSee (const String & other, int timeOutMs = 5000) {
 		return test::waitUntilTrueMs(sf::bind (&Peer::canSee, this, other), timeOutMs);
 	}
 
-	bool waitForCanNotSee (const String & other, int timeOutMs = 1000) {
+	bool waitForCanNotSee (const String & other, int timeOutMs = 5000) {
 		return test::waitUntilTrueMs(sf::bind (&Peer::canNotSee, this, other), timeOutMs);
 	}
 
@@ -79,6 +80,10 @@ public:
 		mAcceptContacts = v;
 	}
 
+	IMClient::Contacts contacts () {
+		return mClient->contactRoster();
+	}
+
 private:
 	void onContactAddRequest (const UserId & user) {
 		mClient->subscriptionRequestReply(user,mAcceptContacts, true);
@@ -100,15 +105,15 @@ int main (int argc, char * argv[]){
 
 	// wait for a that it sees b.
 	if (!a.waitForCanSee (b.userId())){
-		fprintf (stderr, "A cannot see b!");
-		fprintf (stderr, "Try to add it manually");
+		fprintf (stderr, "A cannot see b!\n");
+		fprintf (stderr, "Try to add it manually\n");
 		// Add b
 		b.acceptContacts(true);
 		a.addContact (b.userId());
 		bool suc = a.waitForCanSee (b.userId());
 		if (!suc) {
 			fprintf (stderr, "A cannot see b, even after adding it!");
-			printf ("Roster of A: %s\n", toJSONEx (a.client()->contactRoster(), INDENT).c_str());
+			printf ("Roster of A: %s\n", toJSONEx (a.contacts(), INDENT).c_str());
 			return 3;
 		}
 		b.acceptContacts(false);
@@ -120,13 +125,15 @@ int main (int argc, char * argv[]){
 
 	if (!a.waitForCanNotSee (b.userId())){
 		fprintf (stderr, "A can still see B, but has removed him from the contact?!\n");
+		fprintf (stderr, "A's contact list: %s\n", toJSONEx (a.contacts(), INDENT).c_str());
+		fprintf (stderr, "B's contact list: %s\n", toJSONEx (b.contacts(), INDENT).c_str());
 		return 4;
 	}
 	if (!b.waitForCanNotSee (a.userId())){
 		fprintf (stderr, "B can still see A, but should not have the right anymore?!\n");
 		return 5;
 	}
-	test::sleep (3);
+	test::sleep_locked (3);
 	printf ("**** A will subscribe B Again ****\n");
 	// ok, lets correct it again
 	b.acceptContacts();
@@ -135,6 +142,7 @@ int main (int argc, char * argv[]){
 	// did it work?
 	if (!a.waitForCanSee (b.userId())){
 		fprintf (stderr, "A cannot see B again\n");
+		fprintf (stderr, "As list: %s\n", toJSONEx (a.contacts(), INDENT).c_str());
 		return 6;
 	}
 	if (!b.waitForCanSee (a.userId())){

@@ -12,6 +12,7 @@
 
 int main (int argc, char * argv []){
 	sf::schnee::SchneeApp sapp (argc, argv);
+	SF_SCHNEE_LOCK;
 	if (argc < 2){
 		std::cout << "usage: im_cmdline_client <conncetion-string> [--enableLog] [--autoAuth]" << std::endl;
 		std::cout << "connection string of the form xmpp://username:password@server/resource" << std::endl;

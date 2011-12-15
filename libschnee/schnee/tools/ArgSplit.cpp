@@ -57,6 +57,7 @@ void argSplit (const std::string & input, ArgumentList * args) {
 }
 
 bool nextCommand (sf::ArgumentList * parts){
+	assert (schnee::mutex().try_lock() == false && "libschnee must be locked");
 	std::string line;
 #ifdef WIN32
 	// C++ Style line entering, not so nice
@@ -64,11 +65,15 @@ bool nextCommand (sf::ArgumentList * parts){
 	std::getline (std::cin, line);
 #else
 	if (schnee::settings().noLineNoise){
+		schnee::mutex().unlock();
 		std::cout << "> ";
 		std::getline (std::cin, line);
+		schnee::mutex().lock();
 	} else {
 	// More comfortable line entering
+		schnee::mutex().unlock();
 		char * cLine = ::linenoise ("> ");
+		schnee::mutex().lock();
 		if (!cLine) { return false; } // Ctrl+C
 		::linenoiseHistoryAdd (cLine);
 		line = cLine;

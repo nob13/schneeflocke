@@ -67,6 +67,11 @@ const char * testNames (int id) {
 }
 
 InterplexBeacon * createGenericInterplexBeacon () {
+	assert (!"TODO: Interplex with simulator && networkDispatcher");
+	/*
+	GenericInterplexBeacon * beacon = new GenericInterplexBeacon ();
+	shared_ptr<test::NetworkDispatcher> networkDispatcher = shared_ptr<test::NetworkDispatcher> (new test::NetworkDispatcher(*network));
+	*/
 	return InterplexBeacon::createIMInterplexBeacon();
 }
 
