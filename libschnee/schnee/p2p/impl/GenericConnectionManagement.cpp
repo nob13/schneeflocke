@@ -76,7 +76,6 @@ Error GenericConnectionManagement::addChannelProvider  (ChannelProviderPtr chann
 }
 
 GenericConnectionManagement::ConnectionInfos GenericConnectionManagement::connections() const {
-	// LockGuard guard (mMutex); // not necessary when working on subcomponents
 	return mChannels.connections();
 }
 

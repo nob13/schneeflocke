@@ -33,10 +33,12 @@ void WorkThread::start (const String & name) {
 }
 
 void WorkThread::stop () {
-	LockGuard guard (mMutex);
-	if (mState != Started) {
-		assert (!mIoService);
-		return;
+	{
+		LockGuard guard (mMutex);
+		if (mState != Started) {
+			assert (!mIoService);
+			return;
+		}
 	}
 	
 	mIoService->stop ();

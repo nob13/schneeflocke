@@ -46,6 +46,9 @@ protected:
 		void setTimeOut (const Time & t) {
 			mTimeOut = t;
 		}
+		const Time & getTimeOut () const {
+			return mTimeOut;
+		}
 
 		/// User defined type id
 		int type () const { return mType; }

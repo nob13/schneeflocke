@@ -15,11 +15,12 @@ Globber::Globber () {
 
 Globber::~Globber () {
 	SF_UNREGISTER_ME;
+	schnee::mutex().unlock();
 	mWorkThread.stop ();
+	schnee::mutex().lock();
 }
 
 Error Globber::glob (const String & directory, const GlobCallback & callback, int timeOutMs) {
-	LockGuard guard (mMutex);
 	if (!isDirectory (directory)){
 		Log (LogWarning) << LOGID << directory << " is not a directory." << std::endl;
 		return error::InvalidArgument;
@@ -36,9 +37,10 @@ Error Globber::glob (const String & directory, const GlobCallback & callback, in
 }
 
 void Globber::continueGlobbing (AsyncOpId id) {
-	LockGuard guard (mMutex);
 	GlobOp * op;
+	schnee::mutex().lock();
 	getReadyAsyncOp (id, GLOB, &op);
+	schnee::mutex().unlock();
 	if (!op) {
 		// probably timeouted
 		return;
@@ -47,7 +49,7 @@ void Globber::continueGlobbing (AsyncOpId id) {
 	Time stop  = sf::futureInMs (50);
 
 	if (op->begin) {
-		Error e = expand_locked (op, op->directory, op->listing->entries);
+		Error e = expand (op, op->directory, op->listing->entries);
 		if (e) return;
 		
 		op->begin = false;
@@ -55,30 +57,39 @@ void Globber::continueGlobbing (AsyncOpId id) {
 	
 	while (!op->workQueue.empty()){
 		if(sf::currentTime() > stop) {
+			SF_SCHNEE_LOCK;
 			addAsyncOp (op);
 			addGlobbingWork_locked (id);
+			return;
+		}
+		if (sf::currentTime() > op->getTimeOut()) {
+			SF_SCHNEE_LOCK;
+			op->callback (error::TimeOut, op->listing);
+			delete op;
 			return;
 		}
 
 		WorkPoint wp = op->workQueue.front();
 		op->workQueue.pop_front();
 		
-		Error e = expand_locked (op, wp.second, wp.first->entries);
-		if (e) return;
+		Error e = expand (op, wp.second, wp.first->entries);
+		if (e) {
+			return;
+		}
 	}
 	{
 		SF_SCHNEE_LOCK;
 		op->callback (NoError, op->listing);
 		delete op;
 	}
-	return;	
 }
 
-Error Globber::expand_locked (GlobOp * op, const String& directory, RecursiveEntryVec & target) {
+Error Globber::expand (GlobOp * op, const String& directory, RecursiveEntryVec & target) {
 	Log (LogInfo) << LOGID << "Expanding " << directory << " for op " << op->id() << std::endl;
 	DirectoryListing list;
 	Error e = sf::listDirectory (directory, &list);
 	if (e) {
+		SF_SCHNEE_LOCK;
 		op->callback (e, op->listing);
 		delete op;
 		return e;
@@ -102,9 +113,14 @@ Error Globber::expand_locked (GlobOp * op, const String& directory, RecursiveEnt
 
 
 void Globber::addGlobbingWork_locked (AsyncOpId id) {
-	Error e = mWorkThread.add (abind (dMemFun (this, &Globber::continueGlobbing), id));
+	Error e = mWorkThread.add (abind (memFun (this, &Globber::continueGlobbing), id));
 	assert (!e && "Workthread doesn't run?!");
 }
+
+void Globber::onReady (AsyncOpId id) {
+
+}
+
 
 
 

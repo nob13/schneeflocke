@@ -51,10 +51,11 @@ private:
 	/// Expand one working point
 	/// Adds new work to the workqueue
 	/// if an error is returned the operation will be already deleted
-	Error expand_locked (GlobOp * op, const String& directory, RecursiveEntryVec & target);
+	Error expand (GlobOp * op, const String& directory, RecursiveEntryVec & target);
 	
 	/// Add more globbing work (pushed continueGlobbing to the workThread)
 	void addGlobbingWork_locked (AsyncOpId id);
+	void onReady (AsyncOpId id);
 	
 	enum GlobOperations { GLOB = 1 };
 	
@@ -79,7 +80,6 @@ private:
 	};
 	WorkThread mWorkThread;
 	int        mDefaultTimeOutMs;
-	mutable Mutex mMutex;
 };
 
 typedef shared_ptr<Globber> GlobberPtr;

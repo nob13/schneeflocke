@@ -113,7 +113,7 @@ int main (int argc, char * argv[]){
 		printf ("Proper Timeout\n");
 		sf::Globber globber;
 		RecursiveDirectoryListingPtr listing;
-		sf::Error e = globSync (globber, "/usr", &listing, 5);
+		sf::Error e = globSync (globber, "/usr", &listing, 2);
 		tassert (e == error::TimeOut, "Shall time out");
 	}
 	{
