@@ -14,19 +14,19 @@ namespace test {
 
 
 #ifndef WIN32
-void sleep (unsigned int seconds) { ::sleep(seconds); }
+void _sleep (unsigned int seconds) { ::sleep(seconds); }
 #else
-void sleep (unsigned int seconds) { Sleep (seconds * 1000); }
+void _sleep (unsigned int seconds) { Sleep (seconds * 1000); }
 #endif
 
 void sleep_locked (unsigned int seconds) {
 	schnee::mutex().unlock();
-	sleep (seconds);
+	_sleep (seconds);
 	schnee::mutex().lock();
 }
 
 
-void millisleep (unsigned int ms) {
+void _millisleep (unsigned int ms) {
 #ifdef WIN32
 	::Sleep (ms);
 #else
@@ -36,7 +36,7 @@ void millisleep (unsigned int ms) {
 
 void millisleep_locked (unsigned int ms) {
 	schnee::mutex().unlock();
-	millisleep(ms);
+	_millisleep(ms);
 	schnee::mutex().lock();
 }
 

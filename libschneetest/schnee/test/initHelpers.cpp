@@ -12,9 +12,7 @@ namespace test {
 bool waitUntilTrue (const sf::function<bool ()>& testFunction, int maxSeconds){
 	int seconds = 0;
 	for (; seconds < maxSeconds && !testFunction (); seconds++){
-		schnee::mutex().unlock();
-		sf::test::sleep (1);
-		schnee::mutex().lock();
+		sf::test::sleep_locked (1);
 	}
 	return seconds < maxSeconds;
 }
@@ -22,9 +20,7 @@ bool waitUntilTrue (const sf::function<bool ()>& testFunction, int maxSeconds){
 bool waitUntilTrueMs (const sf::function<bool ()>& testFunction, int maxMilliSeconds) {
 	int milliSeconds = 0;
 	for (; milliSeconds < maxMilliSeconds && !testFunction(); milliSeconds+=10){
-		schnee::mutex().unlock();
-		sf::test::millisleep(10);
-		schnee::mutex().lock();
+		sf::test::millisleep_locked(10);
 	}
 	return milliSeconds < maxMilliSeconds;
 }

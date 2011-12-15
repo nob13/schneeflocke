@@ -166,7 +166,7 @@ int testTransmissionCancellation () {
 	tcheck1 (scenario.waitForNoPendingData());    // should receive communication
 	
 	scenario.peer(0)->releaseOutstandingData();
-	test::millisleep (250);
+	test::millisleep_locked (250);
 
 	// Should have received cancellation of data
 	tcheck1 (scenario.peer(1)->transmissionState == BasicDataSharingPeer::Started);
@@ -191,9 +191,7 @@ int testAsyncTransmission () {
 	tcheck1 (scenario.peer(1)->transmissionState == BasicDataSharingPeer::Started);
 	
 	scenario.peer(0)->releaseOutstandingData();
-	schnee::mutex().unlock();
-	test::millisleep (250);
-	schnee::mutex().lock();
+	test::millisleep_locked (250);
 
 	// Should have received all data now
 	tcheck1 (scenario.peer(1)->transmissionState == BasicDataSharingPeer::Finished);

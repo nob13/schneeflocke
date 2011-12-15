@@ -68,7 +68,7 @@ int main (int argc, char * argv[]) {
 	testcase_start();
 	testcase (leveling(&createUdtInterplex, true));  // Network + UDT
 	testcase (leveling(&createTcpInterplex, true));  // Network + TCP
-	test::millisleep (1000);
+	test::millisleep_locked (1000);
 	testcase (leveling(&InterplexBeacon::createIMInterplexBeacon, false)); // production Interplex
 	testcase_end();
 }
