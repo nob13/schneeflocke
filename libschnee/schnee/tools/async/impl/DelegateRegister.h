@@ -64,11 +64,6 @@ public:
 	/// Shortcut to unlock()
 	static void sunlock (KeyType key) { instance().unlock (key); }
 
-	/// Locks a cross call (from someone else) - used in xcall (..., DelegateBase*)
-	bool crossLock (KeyType key);
-	/// Unlocks a cross call (from someone else) - used in xcall (..., DelegateBase*)
-	void crossUnlock (KeyType key);
-
 	/// Pushes a cross call to the service (so that we can wait for them all at the end)
 	void pushCrossCall ();
 
@@ -88,11 +83,10 @@ private:
 	~DelegateRegister ();
 
 	struct Info {
-		Info () : locked (0), crossLock (false), calls (0), desc (0), base (0) {}
+		Info () : locked (0), calls (0), desc (0), base (0) {}
 
 		int 		   		locked;	// lock level
 		ThreadId   			locker;	// thread who locked
-		bool 				crossLock;	// locked by xcall
 		int64_t 	   		calls;
 		const char *   		desc;
 		DelegateBase * 		base;

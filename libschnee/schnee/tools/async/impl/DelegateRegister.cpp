@@ -25,7 +25,7 @@ void DelegateRegister::unregisterMe (DelegateBase * base) {
 		assert (false && "Not registered");
 	} else {
 		Info & info (i->second);
-		while (info.locked || (info.crossLock && info.locker != tid)) {
+		while (info.locked) {
 			mCondition.wait (mMutex);
 		}
 		assert (i->second.base == base);
@@ -85,45 +85,6 @@ void DelegateRegister::unlock (KeyType key) {
 		info.calls++;
 	}
 	mCondition.notify_all();
-}
-
-bool DelegateRegister::crossLock (KeyType key) {
-	sf::LockGuard guard (mMutex);
-	ThreadId tid = currentThreadId ();
-
-	while (true){
-		InfoMap::iterator i = mInfos.find (key);
-		if (i == mInfos.end()) {
-			return false;
-		}
-		Info & info (i->second);
-		if (!info.crossLock && info.locked == 0){
-			info.crossLock = true;
-			info.locker = tid;
-			break;
-		}
-		mCondition.wait (mMutex);
-	}
-	return true;
-}
-
-void DelegateRegister::crossUnlock (KeyType key) {
-	{
-		sf::LockGuard guard (mMutex);
-
-		InfoMap::iterator i = mInfos.find (key);
-		if (i == mInfos.end()){
-			return; // may happen - can delete object during cross lock
-		}
-		Info & info (i->second);
-#ifndef NDEBUG
-		assert (info.crossLock);
-		ThreadId tid = currentThreadId ();
-		assert (info.locker == tid);
-#endif
-		info.crossLock = false;
-	}
-	mCondition.notify_all ();
 }
 
 void DelegateRegister::pushCrossCall () {
