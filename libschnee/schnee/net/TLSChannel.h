@@ -22,6 +22,12 @@ public:
 	Error clientHandshake (Mode mode, const ResultCallback & callback = ResultCallback());
 	Error serverHandshake (Mode mode, const ResultCallback & callback = ResultCallback());
 
+	/// Simple x509 authentication; validating the certificate
+	Error authenticate (const x509::Certificate * trusted, const String & hostName);
+
+	/// Returns the main peer certificate
+	x509::CertificatePtr peerCertificate () const;
+
 	// Implementation of Channel
 	virtual sf::Error error () const;
 	virtual sf::String errorMessage () const;

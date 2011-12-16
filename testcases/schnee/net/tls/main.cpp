@@ -1,8 +1,10 @@
 #include <schnee/schnee.h>
 
 #include <schnee/net/TLSChannel.h>
+#include <schnee/net/TCPSocket.h>
 #include <schnee/test/LocalChannel.h>
 #include <schnee/tools/Log.h>
+#include <schnee/tools/ResultCallbackHelper.h>
 
 #include <schnee/test/test.h>
 #include <gnutls/gnutls.h>
@@ -27,7 +29,7 @@ typedef test::LocalChannelPtr LocalChannelPtr;
 	Log (LogWarning) << LOGID << #X << "failed: " << gnutls_strerror_name (r) << std::endl; ret++; }\
 }
 
-int createSelfSignedCertificate (x509::PrivateKey * key, x509::Certificate * cert) {
+int createSelfSignedCertificate (x509::PrivateKey * key, x509::Certificate * cert, const char * name = 0) {
 	int ret = 0;
 	key->generate();
 	std::string keyText;
@@ -39,11 +41,17 @@ int createSelfSignedCertificate (x509::PrivateKey * key, x509::Certificate * cer
 	CHECK (cert->setActivationTime());
 	CHECK (cert->setExpirationDays(365));
 	CHECK (cert->setSerial(1));
+	if (name) {
+		CHECK (cert->setCommonName(name));
+	}
 	CHECK (cert->sign(cert, key)); // self sign
 
 	std::string cacertText;
 	CHECK (cert->textExport (&cacertText));
-	printf ("Cert Text: %s\n", cacertText.c_str());
+	std::string cacertDnText;
+	CHECK (cert->dnTextExport(&cacertDnText));
+	printf ("Cert Text:    %s\n", cacertText.c_str());
+	printf ("Cert DN Text: %s\n", cacertDnText.c_str());
 	return ret;
 }
 
@@ -93,6 +101,50 @@ int x509Comtest () {
 
 	test::millisleep_locked (100);
 	return comTest (sa, sb);
+}
+
+int x509AuthTest () {
+	x509::PrivateKeyPtr   key = x509::PrivateKeyPtr (new x509::PrivateKey());
+	x509::CertificatePtr  cert = x509::CertificatePtr (new x509::Certificate());
+	createSelfSignedCertificate (key.get(), cert.get(), "bummi");
+
+	LocalChannelPtr a = LocalChannelPtr (new test::LocalChannel());
+	LocalChannelPtr b = LocalChannelPtr (new test::LocalChannel());
+	test::LocalChannel::bindChannels(*a,*b);
+
+	TLSChannel sa (a);
+	TLSChannel sb (b);
+
+	sb.setKey (cert, key);
+	ResultCallbackHelper helperA;
+	ResultCallbackHelper helperB;
+	sa.clientHandshake(TLSChannel::X509, helperA.onResultFunc());
+	sb.serverHandshake(TLSChannel::X509, helperB.onResultFunc());
+
+	tcheck1 (helperA.wait() == NoError);
+	tcheck1 (helperB.wait() == NoError);
+
+	tcheck (sa.authenticate(cert.get(), "other") != NoError, "Should detect wrong hostname"); // wrong host name
+	tcheck (sa.authenticate(cert.get(), "bummi") == NoError, "Should accept self signed if provided");
+	return 0;
+}
+
+int x509AuthTest2 () {
+	TCPSocketPtr tcpSocket (new TCPSocket());
+	ResultCallbackHelper helper;
+	// google.de doesn't work; as it comes back with COMMON NAME google.com
+	tcpSocket->connectToHost("www.google.com", 443, 30000, helper.onResultFunc());
+	tcheck1 (helper.wait() == NoError);
+	TLSChannel tls (tcpSocket);
+	tls.clientHandshake (TLSChannel::X509, helper.onResultFunc());
+	tcheck1 (helper.wait() == NoError);
+	x509::CertificatePtr cert = tls.peerCertificate();
+	String dn;
+	tcheck1 (cert->dnTextExport(&dn) == 0);
+	printf ("Google DN: %s\n", dn.c_str());
+	tcheck1 (tls.authenticate(cert.get(), "www.google.com") == NoError);
+	tcheck1 (tls.authenticate(cert.get(), "www.sflx.net") == error::AuthError);
+	return 0;
 }
 
 // create private key and a certificate request
@@ -154,6 +206,8 @@ int main (int argc, char * argv[]){
 	testcase_start();
 	testcase (diffieHellmanTest());
 	testcase (x509Comtest());
+	testcase (x509AuthTest());
+	testcase (x509AuthTest2());
 	testcase (createCertificateRequestTest());
 	testcase (signCertificateTest());
 	testcase_end();

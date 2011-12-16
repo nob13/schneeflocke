@@ -128,6 +128,9 @@ struct Certificate {
 	int setCommonName (const char * name) {
 		return setDN (GNUTLS_OID_X520_COMMON_NAME, name);
 	}
+	int setName (const char * name){
+		return setDN (GNUTLS_OID_X520_NAME, name);
+	}
 
 	// necessary?
 	int setUid (const char * name) {
@@ -154,7 +157,23 @@ struct Certificate {
 		return r;
 	}
 
-	bool verify (Certificate * trusted);
+	int dnTextExport (std::string * dst) {
+		char buffer [10 * 1024];
+		size_t bufferSize = sizeof (buffer);
+		int r = gnutls_x509_crt_get_dn (data, buffer, &bufferSize);
+		if (!r) *dst = buffer;
+		return r;
+	}
+
+	int binaryImport (const gnutls_datum_t* buffer) {
+		return gnutls_x509_crt_import (data, buffer, GNUTLS_X509_FMT_DER);
+	}
+
+	bool checkHostname (const std::string & hostname) {
+		return gnutls_x509_crt_check_hostname (data, hostname.c_str()) != 0;
+	}
+
+	bool verify (const Certificate * trusted);
 
 	gnutls_x509_crt_t data;
 };

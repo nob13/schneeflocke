@@ -143,6 +143,40 @@ Error TLSChannel::serverHandshake (Mode mode, const ResultCallback & callback) {
 	return startHandshake (mode, callback, true, prios);
 }
 
+Error TLSChannel::authenticate (const x509::Certificate*  trusted, const String & hostName) {
+	x509::CertificatePtr peerCert = peerCertificate();
+	if (!peerCert) return error::AuthError;
+	String dn;
+	if (!peerCert->dnTextExport(&dn)){
+		Log (LogInfo) << LOGID << "Peer DN: " << dn << std::endl;
+	}
+	if (!peerCert->checkHostname(hostName)){
+		return error::AuthError;
+	}
+	if (!peerCert->verify(trusted)){
+		return error::AuthError;
+	}
+	return NoError;
+}
+
+x509::CertificatePtr TLSChannel::peerCertificate () const {
+	if (!mSecured) return x509::CertificatePtr();
+	if (mMode != X509) return x509::CertificatePtr();
+	if (gnutls_certificate_type_get(mSession) != GNUTLS_CRT_X509){
+		assert (!"?");
+		return x509::CertificatePtr ();
+	}
+	const gnutls_datum_t * cert_list;
+	unsigned int cert_list_size;
+	cert_list = gnutls_certificate_get_peers (mSession, &cert_list_size);
+	x509::CertificatePtr result (new x509::Certificate());
+	if (result->binaryImport (&cert_list[0])) {
+		Log (LogWarning) << LOGID << "Could not decode peer certificate" << std::endl;
+		return x509::CertificatePtr();
+	}
+	return result;
+}
+
 sf::Error TLSChannel::error () const {
 	if (mHandshakeError) return mHandshakeError;
 	return mNext->error();
