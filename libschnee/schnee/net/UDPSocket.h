@@ -46,6 +46,10 @@ public:
 	///@}
 private:
 	UDPSocketPrivate * d;
+
+	// forbidden
+	UDPSocket (UDPSocket & );
+	UDPSocket & operator= (const UDPSocket & );
 };
 
 }

@@ -3,6 +3,7 @@
 #include "IOBase.h"
 #include "IOService.h"
 #include <schnee/tools/async/MemFun.h>
+#include <schnee/tools/async/Notify.h>
 #include <schnee/tools/Log.h>
 #include <schnee/schnee.h>
 
@@ -47,6 +48,7 @@ public:
 		mInputBuffer.clear ();
 		mInputBufferSize = 0;
 		mOutputBufferSize = 0;
+		Log (LogInfo) << LOGID << "(RemoveMe) New output buffer size: " << mOutputBufferSize << std::endl;
 		mReadyRead.clear ();
 		mErrored.clear ();
 		IOBase::onDeleteItSelf ();
@@ -109,6 +111,7 @@ public:
 		elem.data = data;
 		mOutputBuffer.push_back (elem);
 		mOutputBufferSize += data->size();
+		Log (LogInfo) << LOGID << "(RemoveMe) New output buffer size: " << mOutputBufferSize << std::endl;
 		startAsyncWriting_locked ();
 		return NoError;
 	}
@@ -139,6 +142,7 @@ public:
 			assert (bytes_transferred == mOutputBuffer.front().size());
 			mOutputBuffer.pop_front();
 			mOutputBufferSize-= bytes_transferred;
+			Log (LogInfo) << LOGID << "(RemoveMe) New output buffer size: " << mOutputBufferSize << std::endl;
 			startAsyncWriting_locked ();
 		} else {
 			setError_locked (error::WriteError, ec.message());
@@ -146,6 +150,7 @@ public:
 			// (on udp we will not found out what has failed)
 			mOutputBuffer.clear();
 			mOutputBufferSize = 0;
+			Log (LogInfo) << LOGID << "(RemoveMe) New output buffer size: " << mOutputBufferSize << std::endl;
 		}
 		if (ec && mErrored) mErrored ();
 	}
@@ -213,8 +218,8 @@ public:
 
 			startAsyncReading_locked ();
 		}
-		if (ec && mErrored)    mErrored ();
-		if (!ec && mReadyRead) mReadyRead ();
+		if (ec) notify (mErrored);
+		else notify (mReadyRead);
 	}
 
 	int datagramsAvailable () {

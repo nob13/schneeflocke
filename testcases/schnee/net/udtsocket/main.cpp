@@ -152,9 +152,12 @@ int testUDTServer () {
 	printf ("Listening on %d\n", port);
 
 	UDTSocket socket;
-	tassert (socket.connect ("localhost", port) == error::InvalidArgument, "Should not accept DNS names");
-	e = socket.connect ("127.0.0.1", port); // localhost won't work!
-	tassert (!e, "Should connect");
+	ResultCallbackHelper helper;
+	socket.connectAsync ("localhost", port, helper.onResultFunc());
+	helper.wait(2000);
+	tassert (helper.ready() && helper.result() == error::InvalidArgument, "Should not accept DNS names");
+	socket.connectAsync ("127.0.0.1", port, helper.onResultFunc()); // localhost won't work!
+	tassert (helper.waitReadyAndNoError(2000), "Should connect");
 
 	test::millisleep_locked (100);
 	tassert (server.pendingConnections() == 1, "Should have one pending connection");
@@ -173,28 +176,6 @@ int testUDTServer () {
 	return 0;
 }
 
-/// Test UDT Rendezvous mode
-int testRendezvous () {
-	UDTSocket a;
-	UDTSocket b;
-	Error e = a.bind();
-	tassert (!e, "socket shall bind");
-	e = b.bind();
-	tassert (!e, "socket shall bind");
-	printf ("A bound to %d, B bound to %d\n", a.port(), b.port());
-	xcall (abind (memFun (&b, &UDTSocket::connectRendezvous), String ("127.0.0.1"), a.port())); // b connecting in IOService thread back
-	schnee::mutex().unlock();
-	e = a.connectRendezvous("127.0.0.1", b.port());
-	schnee::mutex().lock();
-	tassert (!e, "Shall connect");
-
-	test::millisleep_locked (100); // giving IOService thread enough time to connectRendezvous
-	tassert (testSockets (&a, &b) == 0, "Sockets shall support this test");
-	return 0;
-}
-
-typedef ResultCallbackHelper AsyncConnectHelper;
-
 /// Test async rendezvous
 int testAsyncRendezvous () {
 	UDTSocket a;
@@ -203,8 +184,8 @@ int testAsyncRendezvous () {
 	tassert1 (!e);
 	e = b.bind();
 	tassert1 (!e);
-	AsyncConnectHelper helperA;
-	AsyncConnectHelper helperB;
+	ResultCallbackHelper helperA;
+	ResultCallbackHelper helperB;
 	a.connectRendezvousAsync("127.0.0.1", b.port(), helperA.onResultFunc());
 	b.connectRendezvousAsync("127.0.0.1", a.port(), helperB.onResultFunc());
 	bool suc = helperA.waitUntilReady (2000);
@@ -237,8 +218,9 @@ int testReusage () {
 	e = base2.sendTo ("127.0.0.1", aPort, sf::createByteArrayPtr ("You too!"));
 	tcheck (!e, "Shall send");
 
-	tassert1 (test::waitUntilTrueMs(sf::bind (&UDPSocket::datagramsAvailable, base1), 2000));
-	tassert1 (test::waitUntilTrueMs(sf::bind (&UDPSocket::datagramsAvailable, base2), 2000));
+	test::millisleep_locked (1000);
+	tassert1 (base1.datagramsAvailable());
+	tassert1 (base2.datagramsAvailable());
 
 	// Checking data
 	String from;
@@ -263,9 +245,12 @@ int testReusage () {
 	printf ("Ports now A: %d B: %d\n", a.port(), b.port());
 
 	// Let's connect them...
-	xcall (abind (memFun (&b, &UDTSocket::connectRendezvous), String ("127.0.0.1"), a.port()));
-	e = a.connectRendezvous("127.0.0.1", b.port());
-	tcheck (!e, "Shall be no problem to connect now");
+	ResultCallbackHelper helperA;
+	ResultCallbackHelper helperB;
+	b.connectRendezvousAsync("127.0.0.1", a.port(), helperB.onResultFunc());
+	a.connectRendezvousAsync("127.0.0.1", b.port(), helperA.onResultFunc());
+	tcheck1 (helperA.waitReadyAndNoError(1000));
+	tcheck1 (helperB.waitReadyAndNoError(1000));
 
 	test::millisleep_locked (100); // giving IOService thread enough time to connectRendezvous
 
@@ -281,8 +266,7 @@ int main (int argc, char * argv[]){
 	testcase_start();
 	testcase (testUDTMainLoopRunning());
  	testcase (testUDTServer());
-	// testcase (testRendezvous());
 	testcase (testAsyncRendezvous());
-	// testcase (testReusage());
+	testcase (testReusage());
 	testcase_end();
 }

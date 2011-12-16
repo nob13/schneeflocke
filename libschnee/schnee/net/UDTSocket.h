@@ -16,16 +16,11 @@ public:
 	virtual ~UDTSocket ();
 	
 	/// Tries to connect another host
-	/// Note: connect is BLOCKING in UDT
-	Error connect (const String & host, int port);
-
-	/// Tries to connect another host (rendezvous mode)
-	/// Note: also blocking
-	Error connectRendezvous (const String & host, int port);
+	void connectAsync (const String & host, int port, const ResultCallback & callback);
 
 	/// Tries to connect another host (rendezvous mode)
 	/// Note: non blocking, using a temporary thread.
-	void connectRendezvousAsync (const String & host, int port, const function <void (Error)> & callback);
+	void connectRendezvousAsync (const String & host, int port, const ResultCallback & callback);
 
 	/// Binds the UDTSocket to a specific port (make it possible to connect to each other in rendezvous mode)
 	Error bind (int port = 0);

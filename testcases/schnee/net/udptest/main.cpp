@@ -34,12 +34,13 @@ int testSimpleSendAndReceive () {
 	ByteArrayPtr content = b.recvFrom(&sender, &senderPort);
 	tassert1 (content && (*content == ByteArray("Hello") || *content == ByteArray ("World")));
 	tassert1 (senderPort == a.port());
-
-	helperB.reset();
-	suc = (b.datagramsAvailable() > 0) || (helperB.wait(2000));
-	if (!suc) {
-		fprintf (stderr, "B must reiceive both messsages, but has only: %d\n", b.datagramsAvailable());
-		return 1;
+	if (b.datagramsAvailable() == 0) {
+		helperB.reset();
+		bool suc = helperB.waitUntilReady(1000);
+		if (!suc) {
+			fprintf (stderr, "B must reiceive both messsages, but has only: %d\n", b.datagramsAvailable());
+			return 1;
+		}
 	}
 	ByteArrayPtr content2 = b.recvFrom (&sender, &senderPort);
 	tcheck (content2 && (*content2 == ByteArray ("Hello") || *content2 == ByteArray ("World")), "data mismatch");

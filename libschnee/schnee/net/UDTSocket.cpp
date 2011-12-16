@@ -37,27 +37,12 @@ UDTSocket::~UDTSocket () {
 	UDT::close (mSocket);
 }
 
-Error UDTSocket::connect (const String & host, int port) {
-	LockGuard guard (mMutex);
-	return connect_locked (host, port);
+void UDTSocket::connectAsync (const String & host, int port, const ResultCallback & callback) {
+	LockGuard gaurd (mMutex);
+	boost::thread t (abind (dMemFun (this, &UDTSocket::connectInOtherThread), host, port, false, callback));
 }
 
-Error UDTSocket::connectRendezvous (const String & host, int port) {
-	{
-		LockGuard guard (mMutex);
-		bool yes = true;
-		UDT::setsockopt (mSocket, 0, UDT_RENDEZVOUS, &yes, sizeof(yes));
-	}
-	Error e = connect (host, port);
-	{
-		LockGuard guard (mMutex);
-		bool no = false;
-		UDT::setsockopt (mSocket, 0, UDT_RENDEZVOUS, &no, sizeof(no));
-	}
-	return e;
-}
-
-void UDTSocket::connectRendezvousAsync (const String & host, int port, const function <void (Error)> & callback) {
+void UDTSocket::connectRendezvousAsync (const String & host, int port, const ResultCallback & callback) {
 	LockGuard guard (mMutex);
 	boost::thread t (abind (dMemFun (this, &UDTSocket::connectInOtherThread), host, port, true, callback));
 }

@@ -89,6 +89,10 @@ public:
 	virtual sf::VoidDelegate & changed () = 0;
 	
 	///@}
+private:
+	// forbidden
+	Channel (Channel & other);
+	Channel & operator= (const Channel & other);
 };
 
 SF_AUTOREFLECT_ENUM (Channel::State);
