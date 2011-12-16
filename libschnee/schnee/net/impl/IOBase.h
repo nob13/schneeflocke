@@ -27,21 +27,15 @@ public:
 public:
 	
 	void setError (Error error, const String & msg){
-		{
-			LockGuard lock (mStateMutex);
-			setError_locked (error, msg);
-		}
-		mStateChange.notify_all ();
+		setError_locked (error, msg);
 	}
 	
 
 	Error error () const {
-		LockGuard lock (mStateMutex);
 		return mError;
 	}
 	
 	String errorMessage () const {
-		LockGuard guard (mStateMutex);
 		return mErrorMessage;
 	}
 	
@@ -53,10 +47,7 @@ protected:
 
 	/// Calls a result callback with appropriate locking
 	/// Note: do not call this function on user callls, only on IOService calls!
-	void notifyCallback_locked (ResultCallback * cb, Error result);
-
-	/// Notifies a delegate (does NOT clears it)
-	void notifyDelegate_locked (const VoidCallback & del);
+	void notifyCallback (ResultCallback * cb, Error result);
 
 	/// Causes the IOBase to delete it self.
 	/// Make sure that you overwrite it in order to cancel pending connections (and afterwards call this method!)
@@ -69,15 +60,11 @@ protected:
 	String mErrorMessage;
 	bool mToDelete;										///< Object is to delete
 	
-	// internal state locking
-	mutable Mutex mStateMutex;							///< Some internal data changed
-	Condition mStateChange;						///< Condition for waiting that something changes
-	
 	int mPendingOperations;
 private:
 
 	/// Is called from deleteItSelf at the end and really deletes the object (or waits until no more calls)
-	void realDelete ();
+	void handleRealDelete ();
 
 	int mDeletionTries;									///< How many tries where to delete the object?
 };

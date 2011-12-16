@@ -40,16 +40,13 @@ public:
 	}
 
 	virtual void onDeleteItSelf () {
-		{
-			sf::LockGuard guard (mStateMutex);
-			boost::system::error_code ec; // we do not want any exceptions here..
-			mSocket.cancel (ec);
-			mSocket.close(ec);
-			mOutputBuffer.clear ();
-			mInputBuffer.clear ();
-			mInputBufferSize = 0;
-			mOutputBufferSize = 0;
-		}
+		boost::system::error_code ec; // we do not want any exceptions here..
+		mSocket.cancel (ec);
+		mSocket.close(ec);
+		mOutputBuffer.clear ();
+		mInputBuffer.clear ();
+		mInputBufferSize = 0;
+		mOutputBufferSize = 0;
 		mReadyRead.clear ();
 		mErrored.clear ();
 		IOBase::onDeleteItSelf ();
@@ -57,7 +54,6 @@ public:
 
 
 	int port () const {
-		LockGuard guard (mStateMutex);
 		boost::system::error_code ec;
 		udp::endpoint e = mSocket.local_endpoint(ec);
 		if (ec) return -1;
@@ -78,7 +74,6 @@ public:
 	}
 
 	Error bind (int port, const String & address) {
-		LockGuard guard (mStateMutex);
 		udp::endpoint ep;
 		Error e = translate (ep, address, port);
 		if (e) return e;
@@ -101,7 +96,6 @@ public:
 	}
 
 	Error close () {
-		LockGuard guard (mStateMutex);
 		error_code ec;
 		mSocket.close(ec);
 		if (ec) return error::Other;
@@ -109,7 +103,6 @@ public:
 	}
 
 	Error sendTo (const String & receiver, int receiverPort, const ByteArrayPtr & data) {
-		LockGuard  guard (mStateMutex);
 		OutputElement elem;
 		Error e = translate (elem.dst, receiver, receiverPort);
 		if (e) return e;
@@ -138,47 +131,38 @@ public:
 
 	void writeHandler (const error_code & ec, std::size_t bytes_transferred) {
 		SF_SCHNEE_LOCK;
-		{
-			LockGuard guard (mStateMutex);
-			Log (LogInfo) << LOGID << "Sent " << bytes_transferred << " bytes" << std::endl;
-			mPendingOperations--;
-			mWriting = false;
-			if (!ec) {
-				assert (!mOutputBuffer.empty());
-				assert (bytes_transferred == mOutputBuffer.front().size());
-				mOutputBuffer.pop_front();
-				mOutputBufferSize-= bytes_transferred;
-
-				startAsyncWriting_locked ();
-			} else {
-				setError_locked (error::WriteError, ec.message());
-				// Flushing output buffer
-				// (on udp we will not found out what has failed)
-				mOutputBuffer.clear();
-				mOutputBufferSize = 0;
-			}
+		Log (LogInfo) << LOGID << "Sent " << bytes_transferred << " bytes" << std::endl;
+		mPendingOperations--;
+		mWriting = false;
+		if (!ec) {
+			assert (!mOutputBuffer.empty());
+			assert (bytes_transferred == mOutputBuffer.front().size());
+			mOutputBuffer.pop_front();
+			mOutputBufferSize-= bytes_transferred;
+			startAsyncWriting_locked ();
+		} else {
+			setError_locked (error::WriteError, ec.message());
+			// Flushing output buffer
+			// (on udp we will not found out what has failed)
+			mOutputBuffer.clear();
+			mOutputBufferSize = 0;
 		}
-		mStateChange.notify_all();
 		if (ec && mErrored) mErrored ();
 	}
 
 	ByteArrayPtr recvFrom (String * from = 0, int * fromPort = 0) {
 		ByteArrayPtr result;
-		{
-			LockGuard guard (mStateMutex);
-			startAsyncReading_locked();
-			if (mInputBuffer.empty()) {
-				return ByteArrayPtr ();
-			}
-			InputElement elem = mInputBuffer.front();
-			mInputBuffer.pop_front();
-			mInputBufferSize-=elem.size();
-			error_code ec;
-			if (from)     *from     = elem.src.address().to_string(ec);
-			if (fromPort) *fromPort = elem.src.port();
-			result = elem.data;
+		startAsyncReading_locked();
+		if (mInputBuffer.empty()) {
+			return ByteArrayPtr ();
 		}
-		mStateChange.notify_all ();
+		InputElement elem = mInputBuffer.front();
+		mInputBuffer.pop_front();
+		mInputBufferSize-=elem.size();
+		error_code ec;
+		if (from)     *from     = elem.src.address().to_string(ec);
+		if (fromPort) *fromPort = elem.src.port();
+		result = elem.data;
 		return result;
 	}
 
@@ -200,45 +184,40 @@ public:
 
 	void readHandler (const error_code & ec, std::size_t bytes_transferred) {
 		SF_SCHNEE_LOCK;
-		{
-			LockGuard guard (mStateMutex);
-			Log (LogInfo) << LOGID << "Read " << bytes_transferred << " bytes" << std::endl;
-			mPendingOperations--;
-			mReading = false;
+		Log (LogInfo) << LOGID << "Read " << bytes_transferred << " bytes" << std::endl;
+		mPendingOperations--;
+		mReading = false;
 #ifdef WIN32
-			if (ec.value() == 10061){
-				// No connection  could be made because the target machine actively refused it
-				// just ignoring: this happens if we send udp packets to machines which do not 
-				// like them: http://permalink.gmane.org/gmane.comp.lib.boost.asio.user/1444
-				Log (LogInfo) << LOGID << "Ignoring error " << ec.message () << std::endl;
-				startAsyncReading_locked ();
-				return;
-			}
-#endif
-			if (ec) {
-				setError_locked (error::ReadError, ec.message());
-				Log (LogInfo) << LOGID << "Error on reading: " << ec.message () << std::endl;
-			} else {
-				// add to buffer
-				mTransferBuffer.data->resize(bytes_transferred);
-				mInputBuffer.push_back (mTransferBuffer);
-				mInputBufferSize += bytes_transferred;
-
-				// clear transfer buffer
-				mTransferBuffer.src = udp::endpoint ();
-				mTransferBuffer.data = createByteArrayPtr();
-				mTransferBuffer.data->resize (mTransferBufferSize);
-
-				startAsyncReading_locked ();
-			}
+		if (ec.value() == 10061){
+			// No connection  could be made because the target machine actively refused it
+			// just ignoring: this happens if we send udp packets to machines which do not
+			// like them: http://permalink.gmane.org/gmane.comp.lib.boost.asio.user/1444
+			Log (LogInfo) << LOGID << "Ignoring error " << ec.message () << std::endl;
+			startAsyncReading_locked ();
+			return;
 		}
-		mStateChange.notify_all();
+#endif
+		if (ec) {
+			setError_locked (error::ReadError, ec.message());
+			Log (LogInfo) << LOGID << "Error on reading: " << ec.message () << std::endl;
+		} else {
+			// add to buffer
+			mTransferBuffer.data->resize(bytes_transferred);
+			mInputBuffer.push_back (mTransferBuffer);
+			mInputBufferSize += bytes_transferred;
+
+			// clear transfer buffer
+			mTransferBuffer.src = udp::endpoint ();
+			mTransferBuffer.data = createByteArrayPtr();
+			mTransferBuffer.data->resize (mTransferBufferSize);
+
+			startAsyncReading_locked ();
+		}
 		if (ec && mErrored)    mErrored ();
 		if (!ec && mReadyRead) mReadyRead ();
 	}
 
 	int datagramsAvailable () {
-		LockGuard guard (mStateMutex);
 		return mInputBuffer.size();
 	}
 

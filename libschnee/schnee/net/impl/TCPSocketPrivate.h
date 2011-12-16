@@ -57,13 +57,10 @@ protected:
 	}
 
 	virtual void onDeleteItSelf () {
-		{
-			sf::LockGuard guard (mStateMutex);
-			boost::system::error_code ec; // we do not want any exceptions here..
-			mSocket.cancel (ec);
-			mResolver.cancel();
-			mSocket.close(ec);
-		}
+		boost::system::error_code ec; // we do not want any exceptions here..
+		mSocket.cancel (ec);
+		mResolver.cancel();
+		mSocket.close(ec);
 		mDisconnectedDelegate.clear ();
 		BufferedReader::onDeleteItSelf ();
 	}
@@ -109,7 +106,6 @@ public:
 	bool mAsyncWriting;
 
 	Channel::State state () const {
-		LockGuard guard (mStateMutex);
 		if (mConnected)  return Channel::Connected;
 		if (mWaitForConnect || mWaitForResolve) return Channel::Connecting;
 		return Channel::Unconnected;
@@ -120,7 +116,6 @@ public:
 //#ifdef WIN32
 		assert (IOService::isCurrentThreadService (mService));
 //#endif
-		assert (mStateMutex.try_lock() == false); // works only with non-recursive mutexes
 		if (mSocket.is_open()){
 			mPendingOperations++;
 			mAsyncReading = true;
@@ -136,14 +131,12 @@ public:
 	// Implementation of BufferedReader::stopAsyncOps
 	virtual void stopAsyncRead_locked (){
 		assert (IOService::isCurrentThreadService (mService));
-		assert (mStateMutex.try_lock() == false); // works only with non-recursive mutexes
 		if (mSocket.is_open()){ // otherwise there is already no connection anymore
 			mSocket.cancel();
 		}
 	}
 
 	Error connectToHost(const String & host, int port, int timeOut, const ResultCallback & resultCallback){
-		LockGuard lock (mStateMutex);
 		mError = NoError;
 		if (mConnecting) {
 			Log (LogError) << LOGID << "BAD! Already connecting..." << std::endl;
@@ -176,41 +169,33 @@ public:
 	/// Handler after resolving (not necessary successfull)
 	void resolveHandler (const boost::system::error_code& error, tcp::resolver::iterator i){
 		SF_SCHNEE_LOCK
-		{
-			LockGuard guard (mStateMutex);
-			mPendingOperations--;
-			mWaitForResolve = false;
-			Log (LogInfo) << LOGID << "Resolve returned " << error.message().c_str() << std::endl;
-			for (tcp::resolver::iterator j = i; j != tcp::resolver::iterator (); j++){
-				Log (LogInfo) << "    " << " Endpoint: " << j->host_name () << ":" << j->service_name () << " <--> " << j->endpoint().address().to_string() << std::endl;
-			}
-			// connectNextEndpoint will fail for itself if there was an error
-			mNextEndpoint = i;
-			connectNextEndpoint_locked (boost::asio::error::host_not_found);
+		mPendingOperations--;
+		mWaitForResolve = false;
+		Log (LogInfo) << LOGID << "Resolve returned " << error.message().c_str() << std::endl;
+		for (tcp::resolver::iterator j = i; j != tcp::resolver::iterator (); j++){
+			Log (LogInfo) << "    " << " Endpoint: " << j->host_name () << ":" << j->service_name () << " <--> " << j->endpoint().address().to_string() << std::endl;
 		}
+		// connectNextEndpoint will fail for itself if there was an error
+		mNextEndpoint = i;
+		connectNextEndpoint_locked (boost::asio::error::host_not_found);
 	}
 
 	void timerHandler (const boost::system::error_code& error) {
 		SF_SCHNEE_LOCK
-		{
-			LockGuard guard (mStateMutex);
-			mWaitForTimer = false;
-			mPendingOperations--;
-			if (!(error == boost::asio::error::operation_aborted)){
-				Log (LogInfo) << LOGID << "Received time out" << std::endl;
-				setError_locked (error::TimeOut, "timed out");
-				{
-					mSocket.close();
-					mConnected = false;
-				}
-				mConnecting = false;
-				notifyDelegate_locked (mDisconnectedDelegate);
-				notifyDelegate_locked (mChangedDelegate);
-				notifyCallback_locked (&mConnectResultCallback, error::TimeOut);
+		mWaitForTimer = false;
+		mPendingOperations--;
+		if (!(error == boost::asio::error::operation_aborted)){
+			Log (LogInfo) << LOGID << "Received time out" << std::endl;
+			setError_locked (error::TimeOut, "timed out");
+			{
+				mSocket.close();
+				mConnected = false;
 			}
-		// timer was cancelled; is Ok.
+			mConnecting = false;
+			notify (mDisconnectedDelegate);
+			notify (mChangedDelegate);
+			notifyCallback (&mConnectResultCallback, error::TimeOut);
 		}
-		mStateChange.notify_all ();
 	}
 
 	/// Connect the next available endpoint, if no endpoint there, cancel the timer and set error
@@ -218,7 +203,6 @@ public:
 		tcp::resolver::iterator end;
 		if (mNextEndpoint == end){
 			setError_locked (error::CouldNotConnectHost, lastError.message());
-			mStateChange.notify_all ();
 			mTimer->cancel();
 			Log (LogInfo) << LOGID << "Canceling timer, there are no next ones" << std::endl;
 			mPendingOperations++;
@@ -237,79 +221,58 @@ public:
 
 	void connectFailedHandler () {
 		SF_SCHNEE_LOCK
-		{
-			LockGuard guard (mStateMutex);
-			notifyDelegate_locked (mChangedDelegate);
-			notifyCallback_locked (&mConnectResultCallback, error::CouldNotConnectHost);
-			mPendingOperations--;
-		}
-		mStateChange.notify_all();
+		notify (mChangedDelegate);
+		notifyCallback (&mConnectResultCallback, error::CouldNotConnectHost);
+		mPendingOperations--;
 	}
 
 	void connectResultHandler (const boost::system::error_code& cerror) {
 		SF_SCHNEE_LOCK;
 		bool informDelegate = false;
-		{
-			LockGuard guard (mStateMutex);
-			mWaitForConnect = false;
-			mPendingOperations--;
-			if (!cerror){
-				// we have it
-				Log (LogInfo) << LOGID << "Connection established" << std::endl;
-				informDelegate = true;
-				mPendingOutputBuffer = 0;
-				mOutputBuffer.clear();
-				mTimer->cancel ();
-				mConnecting = false;
-				mConnected  = true;
-				checkAndContinueReading_locked ();
-			} else {
-				mNextEndpoint++;
-				connectNextEndpoint_locked (cerror);
-			}
+		mWaitForConnect = false;
+		mPendingOperations--;
+		if (!cerror){
+			// we have it
+			Log (LogInfo) << LOGID << "Connection established" << std::endl;
+			informDelegate = true;
+			mPendingOutputBuffer = 0;
+			mOutputBuffer.clear();
+			mTimer->cancel ();
+			mConnecting = false;
+			mConnected  = true;
+			checkAndContinueReading_locked ();
+		} else {
+			mNextEndpoint++;
+			connectNextEndpoint_locked (cerror);
 		}
 		if (informDelegate){
-			LockGuard guard (mStateMutex);
-			notifyCallback_locked (&mConnectResultCallback, NoError);
-			notifyDelegate_locked (mChangedDelegate);
+			notifyCallback (&mConnectResultCallback, NoError);
+			notify (mChangedDelegate);
 		}
-		mStateChange.notify_all ();
 	}
 
 	bool isConnected() const {
-		LockGuard lock (mStateMutex);
-		// if this fails, someone did not change mConnected
-		// assert ((mConnected && mSocket.is_open ()) || !mConnected); // may fail, socket can do what it wants
 		return mConnected;
 	}
 	
 	bool isConnected_locked() const {
-		// no need for locking, can change suddenly anyway
 		return mConnected;
 	}
 
 	void disconnectFromHost (){
-		{
-			LockGuard lock (mStateMutex);
-			bool wasOpen = isConnected_locked ();
-			mConnected = false;
-			mSocket.close ();
-			if (wasOpen && mDisconnectedDelegate) {
-				mPendingOperations++;
-				mService.post (memFun (this, &TCPSocketPrivate::callDisconnectedDelegate));
-			}
+		bool wasOpen = isConnected_locked ();
+		mConnected = false;
+		mSocket.close ();
+		if (wasOpen && mDisconnectedDelegate) {
+			mPendingOperations++;
+			mService.post (memFun (this, &TCPSocketPrivate::callDisconnectedDelegate));
 		}
-		mStateChange.notify_all ();
 	}
 	
 	void callDisconnectedDelegate () {
-		 {
-			 LockGuard guard (mStateMutex);
-			 notifyDelegate_locked (mDisconnectedDelegate);
-			 notifyDelegate_locked (mChangedDelegate);
-			 mPendingOperations--;
-		 }
-		mStateChange.notify_all();
+		 notify (mDisconnectedDelegate);
+		 notify (mChangedDelegate);
+		 mPendingOperations--;
 	}
 
 	virtual void close (const ResultCallback & callback) {
@@ -318,7 +281,6 @@ public:
 	}
 
 	Channel::ChannelInfo info () const {
-		LockGuard lock (mStateMutex);
 		Channel::ChannelInfo result;
 		boost::system::error_code ec;
 		tcp::endpoint le = mSocket.local_endpoint(ec);
@@ -333,8 +295,6 @@ public:
 	}
 
 	bool keepAlive () const {
-		LockGuard lock (mStateMutex);
-		
 		tcp::socket::keep_alive option;
 		boost::system::error_code ec;
 		mSocket.get_option (option, ec);
@@ -343,8 +303,6 @@ public:
 	}
 	
 	bool setKeepAlive (bool v) {
-		LockGuard lock (mStateMutex);
-
 		tcp::socket::keep_alive option (v);
 		boost::system::error_code ec;
 		mSocket.set_option (option, ec);	
@@ -359,7 +317,6 @@ public:
 			sf::Log (LogError) << LOGID << "Invalid data" << std::endl;
 			return error::InvalidArgument;
 		}
-		LockGuard guard (mStateMutex);
 		if (!isConnected_locked()) {
 			return error::ConnectionError;
 		}
@@ -387,43 +344,37 @@ public:
 		SF_SCHNEE_LOCK
 		ResultCallback callback; // call write Handler if not null
 		Error callbackResult = NoError;
-		{
-			LockGuard guard (mStateMutex);
-			mWaitForWrite = false;
-			mAsyncWriting = false;
-			if (mOutputBuffer.empty()){
-				Log (LogWarning) << LOGID << "Someone deleted output buffer" << std::endl;
-				assert (mPendingOutputBuffer == 0);
+		mWaitForWrite = false;
+		mAsyncWriting = false;
+		if (mOutputBuffer.empty()){
+			Log (LogWarning) << LOGID << "Someone deleted output buffer" << std::endl;
+			assert (mPendingOutputBuffer == 0);
+		} else {
+			OutputElement & elem = mOutputBuffer.front();
+			ByteArrayPtr & data = elem.data;
+			mPendingOutputBuffer -= bytesTransferred;
+			mBytesTransferred    += bytesTransferred;
+			assert (bytesTransferred <= data->size());
+			if (bytesTransferred != data->size()){
+				data->l_truncate (bytesTransferred);
 			} else {
-				OutputElement & elem = mOutputBuffer.front();
-				ByteArrayPtr & data = elem.data;
-				mPendingOutputBuffer -= bytesTransferred;
-				mBytesTransferred    += bytesTransferred;
-				assert (bytesTransferred <= data->size());
-				if (bytesTransferred != data->size()){
-					data->l_truncate (bytesTransferred);
-				} else {
-					if (elem.callback){
-						callback = elem.callback;
-						callbackResult = NoError;
-					}
-					mOutputBuffer.pop_front();
+				if (elem.callback){
+					callback = elem.callback;
+					callbackResult = NoError;
 				}
-				if (werror) {
-					Log (LogInfo) << LOGID << "There was an error during writing " << werror.message() << std::endl;
-					setError_locked (error::WriteError, werror.message());
-				} else {
-					continueWriting_locked ();
-				}
+				mOutputBuffer.pop_front();
+			}
+			if (werror) {
+				Log (LogInfo) << LOGID << "There was an error during writing " << werror.message() << std::endl;
+				setError_locked (error::WriteError, werror.message());
+			} else {
+				continueWriting_locked ();
 			}
 		}
 		if (callback) {
 			callback (callbackResult);
 		}
-		mStateMutex.lock();
 		mPendingOperations--;
-		mStateMutex.unlock();
-		mStateChange.notify_all();
 	}
 
 };

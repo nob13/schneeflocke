@@ -2,6 +2,8 @@
 
 #include <schnee/net/impl/IOService.h>
 #include <schnee/tools/async/MemFun.h>
+#include <schnee/schnee.h>
+
 namespace sf {
 
 IOBase::IOBase (boost::asio::io_service & service) :
@@ -15,55 +17,36 @@ IOBase::IOBase (boost::asio::io_service & service) :
 
 void IOBase::requestDelete () {
 	onDeleteItSelf();
-	mService.post (memFun (this, &IOBase::realDelete));
+	mService.post (memFun (this, &IOBase::handleRealDelete));
 }
 
-void IOBase::notifyCallback_locked (ResultCallback * cb, Error result) {
+void IOBase::notifyCallback (ResultCallback * cb, Error result) {
 	assert (IOService::isCurrentThread());
 	if (*cb) {
 		ResultCallback copy (*cb);
 		cb->clear(); // must done before calling the callback, as it could come back
 		mPendingOperations++;
-		mStateMutex.unlock();
 		copy (result);
-		mStateMutex.lock();
 		mPendingOperations--;
 	}
 }
-
-void IOBase::notifyDelegate_locked (const VoidCallback & del) {
-	assert (IOService::isCurrentThread());
-	if (del) {
-		mPendingOperations++;
-		mStateMutex.unlock();
-		del();
-		mStateMutex.lock();
-		mPendingOperations--;
-	}
-}
-
 
 void IOBase::onDeleteItSelf (){
-	mStateMutex.lock ();
 	mToDelete = true;
-	mStateMutex.unlock ();
-	mStateChange.notify_all();
 }
 
 IOBase::~IOBase (){
 	assert (mPendingOperations == 0);
 }
 
-void IOBase::realDelete () {
+void IOBase::handleRealDelete () {
+	SF_SCHNEE_LOCK;
 	assert (sf::IOService::isCurrentThreadService (mService));
-	{
-		sf::LockGuard guard (mStateMutex);
-		if (mPendingOperations > 0) {
-			mDeletionTries++;
-			// wait longer
-			mService.post  (memFun (this, &IOBase::realDelete));
-			return;
-		}
+	if (mPendingOperations > 0) {
+		mDeletionTries++;
+		// wait longer
+		mService.post  (memFun (this, &IOBase::handleRealDelete));
+		return;
 	}
 	delete this;
 }
