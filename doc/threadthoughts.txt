@@ -41,17 +41,22 @@ Thread Safety
 -------------
 The current thread safety is done with two levels. The main problem is that delegates may
 not be called anymore if the target object is gone. This can be circumvented using the Delegate
-Register. Now this still doesn't affect services of type (2). They are secured as they always
-have to live within an object inside the DelegateObject. (E.G. TCPSocket lives inside TCPChannel).
-If TCP Channel destructs it won't accept any signals anymore. The TCPSocket uses a pending 
-signal scheme to discouple itself. So it is maybe destroyed after DelegateRegister, but before
-IOService goes away.
+Register (targets derive from DelegateBsae).  Now this still doesn't affect services of type (2).
+ They are secured as they always have to live within an object inside the DelegateObject. 
+(E.G. TCPSocket lives inside TCPChannel). If TCP Channel destructs it won't accept any signals anymore. 
+The TCPSocket uses a pending  signal scheme to discouple itself. So it is maybe destroyed after DelegateRegister, 
+but before IOService goes away.
 
 IOBase objects: 
-- pending calls counted. May signal until full destruction (done in IOService thread).
+- pending calls counted. May re-post-itself until full destruction (done in IOService thread).
 - destruction is fully decoupled (d-pointer scheme)
 
 DelegateBase objects
 - have a safe delegate way. Won't get called after being destructed. (SF_UNREGISTER_ME)
 
- 
+Locks:
+-----
+There is generally one lock for all, the schnee lock (sf::schnee::mutex()). Who has this lock, can
+call libschnee operations. Synchronous testcases generally lock it all the times and automatically
+unlock during their wait operations (sf::time::sleep_locked). Asynchronous clients genereally just
+lock before they call libschnee functions.
