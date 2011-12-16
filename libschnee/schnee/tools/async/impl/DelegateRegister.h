@@ -2,6 +2,7 @@
 #include <schnee/tools/Singleton.h>
 #include <schnee/sftypes.h>
 #include <boost/type_traits/remove_reference.hpp>
+#include <boost/unordered_map.hpp>
 
 #ifdef WIN32
 // Also tested in Linux, but seems bloaty
@@ -36,7 +37,8 @@ class DelegateBase;
  * registered object of the member function still exist. For that functionality
  * you have to derive from DelegateBase.
  *
- *
+ * DelegateRegister needs its own lock, as it shall be save also from other
+ * threads outside of libschnee.
  */
 class DelegateRegister : public sf::Singleton<DelegateRegister> {
 public:
@@ -91,7 +93,7 @@ private:
 		const char *   		desc;
 		DelegateBase * 		base;
 	};
-	typedef std::map<KeyType, Info> InfoMap;
+	typedef boost::unordered_map<KeyType, Info> InfoMap;
 
 	InfoMap mInfos;
 	KeyType mNextKey;
