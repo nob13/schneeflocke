@@ -70,9 +70,6 @@ private:
 	XMPPClient (const XMPPClient&);
 	XMPPClient & operator= (const XMPPClient&);
 	
-	Error subscribeContact_locked (const sf::UserId & user);
-	Error removeContact_locked (const UserId & id);
-
 	// Callback for XMPPConnection::connect
 	void onConnect (Error result, const XMPPConnectionPtr& connector, const ResultCallback & originalCallback);
 	void onConnectionStateChanged (ConnectionState state);

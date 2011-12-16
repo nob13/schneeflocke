@@ -67,17 +67,6 @@ std::set<const CommunicationComponent *> CommunicationMultiplex::components () c
 
 Error CommunicationMultiplex::dispatch (const HostId & sender, const String & cmd, const sf::Deserialization & ds, const ByteArray & data){
 	if (!mCommunicationDelegate) return error::NotInitialized;
-	return dispatch_locked (sender, cmd, ds, data);
-}
-
-void CommunicationMultiplex::distChannelChange (const HostId & host) {
-	if (!mCommunicationDelegate) return; // do not distribute, its maybe about to close
-	for (ComponentSet::const_iterator i = mComponents.begin(); i != mComponents.end(); i++){
-		(*i)->onChannelChange (host);
-	}
-}
-
-sf::Error CommunicationMultiplex::dispatch_locked (const HostId & sender, const String & cmd, const sf::Deserialization & ds, const ByteArray & data) {
 	if (ds.error()) {
 		Log (LogError) << LOGID << "Could not dispatch header" << std::endl;
 		return sf::error::InvalidArgument;
@@ -95,5 +84,11 @@ sf::Error CommunicationMultiplex::dispatch_locked (const HostId & sender, const 
 	return NoError;
 }
 
+void CommunicationMultiplex::distChannelChange (const HostId & host) {
+	if (!mCommunicationDelegate) return; // do not distribute, its maybe about to close
+	for (ComponentSet::const_iterator i = mComponents.begin(); i != mComponents.end(); i++){
+		(*i)->onChannelChange (host);
+	}
+}
 
 }

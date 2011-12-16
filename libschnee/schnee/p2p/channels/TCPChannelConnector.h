@@ -71,22 +71,22 @@ private:
 	///@{
 
 	/// Start the connection process
-	void startConnecting_locked (CreateChannelOp * op);
+	void startConnecting (CreateChannelOp * op);
 
 	/// Callback for TCPConnectProtocol
-	void onTcpConnectResult_locked (CreateChannelOp * op, Error result, const ConnectDetails& details);
+	void onTcpConnectResult (CreateChannelOp * op, Error result, const ConnectDetails& details);
 
 	/// Connect next possible address
-	void connectNext_locked (CreateChannelOp * op);
+	void connectNext (CreateChannelOp * op);
 
 	/// Callback for TCPSocket::conect (Op must be in state Connecting)
-	void onConnect_locked (CreateChannelOp * op, Error result);
+	void onConnect (CreateChannelOp * op, Error result);
 
 	/// Callback for TLSChannel::handshake
-	void onTlsHandshake_locked (CreateChannelOp * op, Error result);
+	void onTlsHandshake (CreateChannelOp * op, Error result);
 
 	// Callback for Auth protocol
-	void onAuthProtocolFinished_locked (CreateChannelOp * op, Error result);
+	void onAuthProtocolFinished (CreateChannelOp * op, Error result);
 
 	///@}
 
@@ -96,9 +96,9 @@ private:
 	/// There is a new connection attempt
 	void onNewConnection ();
 	/// TLSChannel encryption finished
-	void onAcceptTlsHandshake_locked (AcceptConnectionOp * op, Error result);
+	void onAcceptTlsHandshake (AcceptConnectionOp * op, Error result);
 	/// Authentication finished
-	void onAcceptAuthFinished_locked (AcceptConnectionOp * op, Error result);
+	void onAcceptAuthFinished (AcceptConnectionOp * op, Error result);
 
 	///@}
 

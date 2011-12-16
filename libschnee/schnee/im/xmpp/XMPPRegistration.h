@@ -25,7 +25,7 @@ private:
 
 	void onTimeout ();
 
-	void end_locked (Error result);
+	void end (Error result);
 	/// Shutdown connection (uncoupled)
 	void onShutdown ();
 

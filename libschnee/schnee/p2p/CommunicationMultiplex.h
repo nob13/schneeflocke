@@ -36,10 +36,6 @@ public:
 	void distChannelChange (const HostId & host);
 	
 private:
-	// Part implementation of CommunicationDelegate
-	virtual sf::Error dispatch_locked (const HostId & sender, const String & cmd, const sf::Deserialization & ds, const ByteArray & data);
-	
-	
 	typedef std::map<sf::String, CommunicationComponent*> CommunicationMap; ///< Maps Command to different CommunicationComponents
 	typedef std::set<CommunicationComponent*> ComponentSet;
 	CommunicationMap mCommunicationMap;

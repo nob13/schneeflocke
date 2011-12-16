@@ -45,15 +45,15 @@ public:
 
 private:
 	/// Start handshake, once encryption data is set
-	Error startHandshake_locked (Mode m, const ResultCallback & callback, bool server, const char * type);
+	Error startHandshake (Mode m, const ResultCallback & callback, bool server, const char * type);
 
-	void freeTlsData_locked ();
+	void freeTlsData ();
 	/// Set Transport (Functions) to GnuTLS
-	void setTransport_locked();
+	void setTransport();
 	/// Continue a handshaking process
 	void continueHandshake ();
 	/// Continue reading process
-	void continueReading_locked ();
+	void continueReading ();
 
 	void onChanged ();
 	VoidDelegate mChanged;
@@ -72,12 +72,10 @@ private:
 	ResultCallback  mCurrentWriteCallback;
 	Error           mHandshakeError;
 
-	mutable Mutex   mMutex;
-
 	// Adapters for GnuTLS
 	static ssize_t c_push     (gnutls_transport_ptr instance, const void * data, size_t size);
 	static ssize_t c_pull     (gnutls_transport_ptr instance, void * data, size_t size);
-	const char *    func_locked () { return mServer ? "Server" : "Client"; }
+	const char *    functionalityName () { return mServer ? "Server" : "Client"; }
 };
 
 typedef shared_ptr<TLSChannel> TLSChannelPtr;

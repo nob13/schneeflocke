@@ -78,7 +78,7 @@ public:
 
 private:
 	/// Creates an unique path for that shareName
-	Path createPath_locked (const String & shreName);
+	Path createPath (const String & shreName);
 
 	struct FileShareInfoImpl : public FileShareInfo {
 		DataSharingServer::SharingPromisePtr promise;

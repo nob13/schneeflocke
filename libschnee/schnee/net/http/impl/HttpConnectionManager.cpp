@@ -78,18 +78,16 @@ void HttpConnectionManager::giveBack (Error lastResult, const HttpConnectionPtr 
 	op->connection = connection;
 	op->boss = this;
 	op->connection->channel->changed() = abind (dMemFun (this, &HttpConnectionManager::onChannelChange), id);
-	addToPendingConnections_locked (op);
+	addToPendingConnections (op);
 	Log (LogInfo) << LOGID << "Storing pending connection to " << connection->host <<  " id=" << id << std::endl;
 	addAsyncOp (op);
 }
 
 void HttpConnectionManager::PendingConnectionOp::onCancel (sf::Error reason) {
 	Log (LogInfo) << LOGID << "Closing connection to " << connection->host << " due " << toString (reason) << std::endl;
-	// Removing indirekt
-	// As asyncop mutex is locked
-	// if we would lock boss->mMutex here this would lead to a deadlock
-	// As a consequence mPendingConnections can always hold more ids than available.
-	xcall (abind (dMemFun (boss, &HttpConnectionManager::removeFromPendingConnections), ConId (connection->protocol, connection->host), id()));
+	// NOTE: Strange behaviour is from pre-general-lock-times.
+	// TODO: Cleanup
+	xcall (abind (dMemFun (boss, &HttpConnectionManager::removeFromPendingConnectionsExplicit), ConId (connection->protocol, connection->host), id()));
 }
 
 void HttpConnectionManager::onTcpConnect (Error result, AsyncOpId id) {
@@ -98,7 +96,7 @@ void HttpConnectionManager::onTcpConnect (Error result, AsyncOpId id) {
 	if (!op) return;
 
 	if (result) {
-		return doFinish_locked (result, op);
+		return doFinish (result, op);
 	}
 
 	if (op->connection->protocol == "https") {
@@ -111,17 +109,17 @@ void HttpConnectionManager::onTcpConnect (Error result, AsyncOpId id) {
 		return;
 	}
 	// plain http, can finish now..
-	doFinish_locked (result, op);
+	doFinish (result, op);
 }
 
 void HttpConnectionManager::onTlsHandshake (Error result, AsyncOpId id) {
 	EstablishConnectionOp * op;
 	getReadyAsyncOpInState (id, EstablishConnection, EstablishConnectionOp::WaitTls, &op);
 	if (!op) return;
-	doFinish_locked (result, op);
+	doFinish (result, op);
 }
 
-void HttpConnectionManager::doFinish_locked (Error result, EstablishConnectionOp * op) {
+void HttpConnectionManager::doFinish (Error result, EstablishConnectionOp * op) {
 	RequestConnectionCallback cb = op->callback;
 	HttpConnectionPtr con = result ? HttpConnectionPtr() : op->connection;
 	if (!result) {
@@ -150,7 +148,7 @@ void HttpConnectionManager::onChannelChange (AsyncOpId id) {
 		// adieu
 		Log (LogInfo) << LOGID << "Closing channel to " << op->connection->host << " as channel reported error: " << toString (e) << std::endl;
 		xcall (abind (&throwAway, op->connection));
-		removeFromPendingConnections_locked (op);
+		removeFromPendingConnections (op);
 		delete op;
 		return;
 	}
@@ -158,21 +156,17 @@ void HttpConnectionManager::onChannelChange (AsyncOpId id) {
 	addAsyncOp (op);
 }
 
-void HttpConnectionManager::addToPendingConnections_locked (PendingConnectionOp * op) {
+void HttpConnectionManager::addToPendingConnections (PendingConnectionOp * op) {
 	mPendingConnections[std::make_pair(op->connection->protocol, op->connection->host)].push_back(op->id());
 	mPendingConnectionsCount++;
 
 }
 
-void HttpConnectionManager::removeFromPendingConnections (ConId c, AsyncOpId id) {
-	removeFromPendingConnections_locked (c,id);
+void HttpConnectionManager::removeFromPendingConnections (PendingConnectionOp * op) {
+	return removeFromPendingConnectionsExplicit (ConId (op->connection->protocol, op->connection->host), op->id());
 }
 
-void HttpConnectionManager::removeFromPendingConnections_locked (PendingConnectionOp * op) {
-	return removeFromPendingConnections_locked (ConId (op->connection->protocol, op->connection->host), op->id());
-}
-
-void HttpConnectionManager::removeFromPendingConnections_locked (ConId c, AsyncOpId id) {
+void HttpConnectionManager::removeFromPendingConnectionsExplicit (ConId c, AsyncOpId id) {
 	PendingConnectionMap::iterator i = mPendingConnections.find (c);
 	if (i != mPendingConnections.end()){
 		for (PendingConnectionList::iterator j = i->second.begin(); j != i->second.end(); j++) {

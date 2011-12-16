@@ -29,7 +29,7 @@ Error FileSharing::share (const String & shareName, const String & fileName , bo
 	if (mInfos.count (shareName) > 0) return error::ExistsAlready;
 
 	// 1. selecting uri
-	Path path = createPath_locked (shareName);
+	Path path = createPath (shareName);
 
 	// 2. Loading Promise
 	bool dir = sf::isDirectory(fileName);
@@ -159,7 +159,7 @@ static String replace (const String & src, char c, char r){
 	return result;
 }
 
-Path FileSharing::createPath_locked (const String & shareName){
+Path FileSharing::createPath (const String & shareName){
 	// replacing notallowed characters '/' and ':'
 	String fit = replace (replace (shareName, '/', '_'), ':', '_');
 	// checking for non-existance, adding numbers

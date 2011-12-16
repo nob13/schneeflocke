@@ -46,10 +46,10 @@ private:
 	
 	/// Callback for listing request reply
 	void onRequestReply (const HostId & source, const ds::RequestReply & reply, const ByteArrayPtr & data);
-	void handleRequestReply_locked (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data); 
+	void handleRequestReply (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data); 
 	// Handlers for the different states
-	void handleTransmissionStarting_locked     (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data);
-	void handleTransmissionTransferring_locked (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data);
+	void handleTransmissionStarting     (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data);
+	void handleTransmissionTransferring (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data);
 	
 	Uri    mUri;							///< Uri to be transferred
 	ByteArray mListingData;					///< Collected listing data

@@ -41,15 +41,13 @@ protected:
 	 * Implemented by ancestors; start async read operation and give result to the handler
 	 * Will be started in ioservice thead in Win32
 	 * 
-	 * Lock is already set.
 	 */
-	virtual void asyncRead_locked (const boost::asio::mutable_buffers_1 & buffer, const ReadHandler & handler) = 0;
+	virtual void asyncRead (const boost::asio::mutable_buffers_1 & buffer, const ReadHandler & handler) = 0;
 
 	/// Stop async operations, implemented by ancestors
 	/// Will be  started in ioservice thread in Win32
 	/// 
-	/// Must not lock.
-	virtual void stopAsyncRead_locked () = 0; 
+	virtual void stopAsyncRead () = 0; 
 	
 	/// Closes channel, may lock. Get's called if there are errors on reading detected.
 	virtual void close(const ResultCallback & resultCallback = ResultCallback()) = 0;
@@ -60,7 +58,7 @@ protected:
 	void checkAndContinueReadingHandler ();
 	
 	/// Checks current buffer size and continues reading, internal data already locked.
-	void checkAndContinueReading_locked();
+	void checkAndContinueReading();
 	
 	/// Comes back in async Reading
 	void readHandler (const boost::system::error_code & ec, std::size_t bytesRead);

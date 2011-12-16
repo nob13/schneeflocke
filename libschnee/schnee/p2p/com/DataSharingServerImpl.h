@@ -47,7 +47,7 @@ private:
 
 	/// Send out a notification about the given path
 	/// if sendIfStream is true, then send out the last revision
-	virtual Error notify_locked (const Path & path);
+	virtual Error notifySubscriber (const Path & path);
 
 	/// Continue sending a transmission
 	void continueTransmission (Error lastError, AsyncOpId id);
@@ -100,7 +100,7 @@ private:
 			info.mark  = RequestReply::TransmissionCancel;
 			info.error = reason;
 			if (promise)
-				promise->onTransmissionUpdate_locked(id(), info);
+				promise->onTransmissionUpdate(id(), info);
 		}
 	};
 	

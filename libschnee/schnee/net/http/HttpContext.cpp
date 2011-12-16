@@ -86,7 +86,7 @@ void HttpContext::onConnect (Error result, HttpConnectionPtr con, AsyncOpId id) 
 		if (result) break;
 	} while (false);
 	if (result) {
-		finish_locked (result, op);
+		finish (result, op);
 		return;
 	}
 	addAsyncOp (op);
@@ -109,21 +109,21 @@ void HttpContext::onChanged (AsyncOpId id) {
 			Log (LogInfo) << LOGID << "Result of parser: " << toString (op->parser.result()) << std::endl;
 			if (op->response->data)
 				Log (LogInfo) << LOGID << "Bytes Read: " << op->response->data->size() << std::endl;
-			finish_locked (op->parser.result(), op);
+			finish (op->parser.result(), op);
 			return;
 		}
 	} else {
 		Error e = op->con->channel->error();
 		if (e) {
 			Log (LogWarning) << LOGID << "Got error " << toString (e) << " during data transfer on socket!" << std::endl;
-			finish_locked (e, op);
+			finish (e, op);
 			return;
 		}
 	}
 	addAsyncOp (op);
 }
 
-void HttpContext::finish_locked (Error result, HttpGetOperation * op) {
+void HttpContext::finish (Error result, HttpGetOperation * op) {
 	xcall (abind(op->callback, result, op->response));
 	if (op->con)
 		op->parser.inputBuffer().swap(op->con->inputBuffer);

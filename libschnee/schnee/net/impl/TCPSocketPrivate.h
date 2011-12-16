@@ -112,7 +112,7 @@ public:
 	}
 
 	// Implementation of BufferedReader::asyncRead 
-	virtual void asyncRead_locked (const boost::asio::mutable_buffers_1 & buffer, const ReadHandler & handler){
+	virtual void asyncRead (const boost::asio::mutable_buffers_1 & buffer, const ReadHandler & handler){
 //#ifdef WIN32
 		assert (IOService::isCurrentThreadService (mService));
 //#endif
@@ -129,7 +129,7 @@ public:
 	}
 	
 	// Implementation of BufferedReader::stopAsyncOps
-	virtual void stopAsyncRead_locked (){
+	virtual void stopAsyncRead (){
 		assert (IOService::isCurrentThreadService (mService));
 		if (mSocket.is_open()){ // otherwise there is already no connection anymore
 			mSocket.cancel();
@@ -177,7 +177,7 @@ public:
 		}
 		// connectNextEndpoint will fail for itself if there was an error
 		mNextEndpoint = i;
-		connectNextEndpoint_locked (boost::asio::error::host_not_found);
+		connectNextEndpoint (boost::asio::error::host_not_found);
 	}
 
 	void timerHandler (const boost::system::error_code& error) {
@@ -186,7 +186,7 @@ public:
 		mPendingOperations--;
 		if (!(error == boost::asio::error::operation_aborted)){
 			Log (LogInfo) << LOGID << "Received time out" << std::endl;
-			setError_locked (error::TimeOut, "timed out");
+			setError (error::TimeOut, "timed out");
 			{
 				mSocket.close();
 				mConnected = false;
@@ -199,10 +199,10 @@ public:
 	}
 
 	/// Connect the next available endpoint, if no endpoint there, cancel the timer and set error
-	void connectNextEndpoint_locked (const boost::system::error_code & lastError) {
+	void connectNextEndpoint (const boost::system::error_code & lastError) {
 		tcp::resolver::iterator end;
 		if (mNextEndpoint == end){
-			setError_locked (error::CouldNotConnectHost, lastError.message());
+			setError (error::CouldNotConnectHost, lastError.message());
 			mTimer->cancel();
 			Log (LogInfo) << LOGID << "Canceling timer, there are no next ones" << std::endl;
 			mPendingOperations++;
@@ -240,10 +240,10 @@ public:
 			mTimer->cancel ();
 			mConnecting = false;
 			mConnected  = true;
-			checkAndContinueReading_locked ();
+			checkAndContinueReading ();
 		} else {
 			mNextEndpoint++;
-			connectNextEndpoint_locked (cerror);
+			connectNextEndpoint (cerror);
 		}
 		if (informDelegate){
 			notifyCallback (&mConnectResultCallback, NoError);
@@ -255,12 +255,8 @@ public:
 		return mConnected;
 	}
 	
-	bool isConnected_locked() const {
-		return mConnected;
-	}
-
 	void disconnectFromHost (){
-		bool wasOpen = isConnected_locked ();
+		bool wasOpen = isConnected ();
 		mConnected = false;
 		mSocket.close ();
 		if (wasOpen && mDisconnectedDelegate) {
@@ -317,17 +313,17 @@ public:
 			sf::Log (LogError) << LOGID << "Invalid data" << std::endl;
 			return error::InvalidArgument;
 		}
-		if (!isConnected_locked()) {
+		if (!isConnected()) {
 			return error::ConnectionError;
 		}
 		mPendingOutputBuffer += data->size();
 		mOutputBuffer.push_back (OutputElement (data, callback));
 		if (!mAsyncWriting)
-			continueWriting_locked ();
+			continueWriting ();
 		return NoError;
 	}
 
-	virtual void continueWriting_locked () {
+	virtual void continueWriting () {
 		if (mPendingOutputBuffer == 0) {
 			mAsyncWriting = false;
 			return;
@@ -366,9 +362,9 @@ public:
 			}
 			if (werror) {
 				Log (LogInfo) << LOGID << "There was an error during writing " << werror.message() << std::endl;
-				setError_locked (error::WriteError, werror.message());
+				setError (error::WriteError, werror.message());
 			} else {
-				continueWriting_locked ();
+				continueWriting ();
 			}
 		}
 		if (callback) {

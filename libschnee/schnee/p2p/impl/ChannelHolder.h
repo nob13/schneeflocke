@@ -90,9 +90,6 @@ public:
 private:
 	struct ChannelReceiver;
 
-	/// Close an existing channel.
-	Error close_locked (ChannelId id);
-
 	/// A channel changed
 	void onChannelChange (ChannelId id);
 
@@ -144,13 +141,13 @@ private:
 	void onCheckForTimeoutedChannels ();
 
 	/// Finally removes channel from all lists
-	Error removeChannelPeerConnection_locked (const HostId & host, ChannelId id, int level);
-	Error removeChannel_locked (ChannelId id);
+	Error removeChannelPeerConnection (const HostId & host, ChannelId id, int level);
+	Error removeChannel (ChannelId id);
 	/// some channels (TLSChannel) do not like to be kicked while delegating
 	/// so we do it asyncrhonous with this function
 	void throwAwayChannel (ChannelPtr channel);
 	/// Log all channels (debug)
-	void logChannels_locked () const;
+	void logChannels () const;
 
 	typedef std::map<ChannelId, ChannelReceiver> ChannelMap;
 	ChannelMap mChannels;

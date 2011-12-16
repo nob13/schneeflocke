@@ -52,17 +52,17 @@ private:
 		BoshTransportPtr transport; //< Bosh Transport (HTTP core!)
 	};
 
-	Error startConnect_locked (bool withLogin, const XMPPStreamPtr & stream, int timeOutMs, const ResultCallback & callback);
+	Error startConnect (bool withLogin, const XMPPStreamPtr & stream, int timeOutMs, const ResultCallback & callback);
 	void onBoshConnect (Error result, AsyncOpId id);
-	void onFeatures_locked (ConnectingOp * op, Error result);
-	void onLogin_locked (ConnectingOp * op, Error result);
-	void onFeatures2_locked (ConnectingOp * op, Error result);
-	void onResourceBind_locked (ConnectingOp * op, Error result, const String& fullJid);
-	void onStartSession_locked (ConnectingOp * op, Error result);
+	void onFeatures (ConnectingOp * op, Error result);
+	void onLogin (ConnectingOp * op, Error result);
+	void onFeatures2 (ConnectingOp * op, Error result);
+	void onResourceBind (ConnectingOp * op, Error result, const String& fullJid);
+	void onStartSession (ConnectingOp * op, Error result);
 	// Stops operation, if e == NoError it is assumed to be ready.
 	// Note: op will be deleted
-	void finalize_locked (Error e, ConnectingOp * op, const char * errorText = 0);
-	void setState_locked (State s);
+	void finalize (Error e, ConnectingOp * op, const char * errorText = 0);
+	void setState (State s);
 
 
 	XmppConnectDetails mDetails; //< Connection details

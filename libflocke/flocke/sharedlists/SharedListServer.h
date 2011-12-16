@@ -39,11 +39,8 @@ public:
 	Path path () const;
 
 private:
-	/// Uninitializes the server
-	Error uninit_locked ();
-	
 	/// Updates the shared list
-	Error update_locked ();
+	Error update ();
 	
 	bool mInitialized;
 	DataSharingServer * mServer;

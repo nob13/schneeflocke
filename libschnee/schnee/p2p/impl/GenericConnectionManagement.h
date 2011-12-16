@@ -89,10 +89,10 @@ private:
 	///@{
 
 	/// Does trying to create an initial channel (op is not yet added!)
-	void startLifting_locked (LiftConnectionOp * op);
+	void startLifting (LiftConnectionOp * op);
 
 	/// Does acutal lifting (op is not yet added!)
-	void lift_locked (LiftConnectionOp * op);
+	void lift (LiftConnectionOp * op);
 
 	/// Callback for channel creation on Lifting operation
 	void onChannelCreate (Error error, bool wasInitial, AsyncOpId id);
@@ -113,7 +113,7 @@ private:
 	/// if initial is true it returns only providers who can give initial channels
 	/// returns ChannelProviderPtr() if no such provider is found
 	/// level will be set to the provider level if given
-	ChannelProviderPtr bestProvider_locked (int maxLevel, bool initial, int * level = 0);
+	ChannelProviderPtr bestProvider (int maxLevel, bool initial, int * level = 0);
 
 	typedef std::map<int, ChannelProviderPtr> ChannelProviderMap;
 	ChannelProviderMap  mChannelProviders; ///< Channel Providers associated with their Priority

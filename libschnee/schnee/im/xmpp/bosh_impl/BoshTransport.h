@@ -45,21 +45,20 @@ public:
 private:
 	/// First reply on connect
 	void onConnectReply (Error result, const HttpResponsePtr & response, const ResultCallback & callback);
-	void failConnect_locked (Error result, const ResultCallback & callback, const String & msg);
+	void failConnect (Error result, const ResultCallback & callback, const String & msg);
 
 	/// Issues new requests
 	void continueWorking ();
-	void continueWorking_locked ();
 
 	/// Gets called periodically in order to get new data
-	void startNextRequest_locked (const StringMap & additionalArgs = StringMap (), const ResultCallback & callback = ResultCallback());
+	void startNextRequest (const StringMap & additionalArgs = StringMap (), const ResultCallback & callback = ResultCallback());
 	void onRequestReply (Error result, const HttpResponsePtr & response, int64_t rid, const ResultCallback & originalCallback);
 	/// Insert data which had to be hold until earlier data arrived
-	void insertWaitingInputData_locked ();
-	void failRequest_locked (Error result, int64_t rid, const String & msg, const ResultCallback & originalCallback);
+	void insertWaitingInputData ();
+	void failRequest (Error result, int64_t rid, const String & msg, const ResultCallback & originalCallback);
 
 	/// Packs data into a POST request and sends it
-	void executeRequest_locked (const ByteArrayPtr & data, int timeOutMs, const HttpContext::RequestCallback & callback);
+	void executeRequest (const ByteArrayPtr & data, int timeOutMs, const HttpContext::RequestCallback & callback);
 
 	std::deque<ByteArrayPtr> mOutputBuffer; // Output Buffer
 	ByteArray   mInputBuffer; // Input Buffer, in order

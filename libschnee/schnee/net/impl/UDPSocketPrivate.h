@@ -93,7 +93,7 @@ public:
 			Log (LogInfo) << LOGID << "Could not bind socket: " << ec.message() << std::endl;
 			return error::Other;
 		}
-		startAsyncReading_locked ();
+		startAsyncReading ();
 		return NoError;
 	}
 
@@ -112,11 +112,11 @@ public:
 		mOutputBuffer.push_back (elem);
 		mOutputBufferSize += data->size();
 		Log (LogInfo) << LOGID << "(RemoveMe) New output buffer size: " << mOutputBufferSize << std::endl;
-		startAsyncWriting_locked ();
+		startAsyncWriting ();
 		return NoError;
 	}
 
-	void startAsyncWriting_locked () {
+	void startAsyncWriting () {
 		if (mWriting) return; // alredy writing
 		if (mOutputBuffer.empty()) {
 			return;
@@ -143,9 +143,9 @@ public:
 			mOutputBuffer.pop_front();
 			mOutputBufferSize-= bytes_transferred;
 			Log (LogInfo) << LOGID << "(RemoveMe) New output buffer size: " << mOutputBufferSize << std::endl;
-			startAsyncWriting_locked ();
+			startAsyncWriting ();
 		} else {
-			setError_locked (error::WriteError, ec.message());
+			setError (error::WriteError, ec.message());
 			// Flushing output buffer
 			// (on udp we will not found out what has failed)
 			mOutputBuffer.clear();
@@ -157,7 +157,7 @@ public:
 
 	ByteArrayPtr recvFrom (String * from = 0, int * fromPort = 0) {
 		ByteArrayPtr result;
-		startAsyncReading_locked();
+		startAsyncReading();
 		if (mInputBuffer.empty()) {
 			return ByteArrayPtr ();
 		}
@@ -171,7 +171,7 @@ public:
 		return result;
 	}
 
-	void startAsyncReading_locked () {
+	void startAsyncReading () {
 		if (mInputBufferSize > maxInputBufferSize) {
 			mReading = false;
 			return; // no space
@@ -198,12 +198,12 @@ public:
 			// just ignoring: this happens if we send udp packets to machines which do not
 			// like them: http://permalink.gmane.org/gmane.comp.lib.boost.asio.user/1444
 			Log (LogInfo) << LOGID << "Ignoring error " << ec.message () << std::endl;
-			startAsyncReading_locked ();
+			startAsyncReading ();
 			return;
 		}
 #endif
 		if (ec) {
-			setError_locked (error::ReadError, ec.message());
+			setError (error::ReadError, ec.message());
 			Log (LogInfo) << LOGID << "Error on reading: " << ec.message () << std::endl;
 		} else {
 			// add to buffer
@@ -216,7 +216,7 @@ public:
 			mTransferBuffer.data = createByteArrayPtr();
 			mTransferBuffer.data->resize (mTransferBufferSize);
 
-			startAsyncReading_locked ();
+			startAsyncReading ();
 		}
 		if (ec) notify (mErrored);
 		else notify (mReadyRead);

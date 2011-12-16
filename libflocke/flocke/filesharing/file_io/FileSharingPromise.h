@@ -23,7 +23,7 @@ public:
 	TransmissionUpdateDelegate& transmissionUpdated () { return mTransmissionUpdated; }
 
 	/// @override
-	virtual void onTransmissionUpdate_locked (AsyncOpId id, const ds::TransmissionInfo & info) {
+	virtual void onTransmissionUpdate (AsyncOpId id, const ds::TransmissionInfo & info) {
 		// uncouple, because DataSharingServer is locked
 		notifyAsync (mTransmissionUpdated, id, info);
 	}

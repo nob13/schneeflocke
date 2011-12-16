@@ -19,7 +19,7 @@ FileTransfer::FileTransfer (AsyncOpId parent) {
 
 FileTransfer::~FileTransfer () {
 	SF_UNREGISTER_ME;
-	cleanup_locked (); 
+	cleanup ();
 }
 
 Error FileTransfer::start (DataSharingClient * client, const Uri & uri, const String & destinationFileName, int timeOutMs) {
@@ -31,7 +31,7 @@ Error FileTransfer::start (DataSharingClient * client, const Uri & uri, const St
 	if (fileExists (destinationFileName)) return error::ExistsAlready;
 	
 	Error err = client->request (uri.host(), r, dMemFun (this, &FileTransfer::onRequestReply), timeOutMs);
-	if (err) return errorState_locked (err);
+	if (err) return errorState (err);
 	
 	mClient = client;
 	mInfo.state = TransferInfo::STARTING;
@@ -52,7 +52,7 @@ void FileTransfer::cancel (Error cause) {
 		mClient->cancelTransmission(mInfo.uri.host(), mId);
 	}
 	if (cause) {
-		errorState_locked (cause);
+		errorState (cause);
 	} else
 		mInfo.state = TransferInfo::CANCELED;
 	notifyAsync (mStateChanged);
@@ -60,20 +60,20 @@ void FileTransfer::cancel (Error cause) {
 
 
 void FileTransfer::onRequestReply (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
-	handleRequestReply_locked (sender, reply, data);
+	handleRequestReply (sender, reply, data);
 	if ((mInfo.state == TransferInfo::ERROR || mInfo.state == TransferInfo::CANCELED) && reply.mark != ds::RequestReply::TransmissionCancel) {
 		mClient->cancelTransmission(sender, reply.id, reply.path);
 	}
 	notify (mStateChanged);
 }
 
-void FileTransfer::handleRequestReply_locked (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
+void FileTransfer::handleRequestReply (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
 	if (reply.err){
 		if (mInfo.state != TransferInfo::CANCELED){
 			mInfo.error = reply.err;
 			mInfo.state = TransferInfo::ERROR;
 		}
-		cleanup_locked ();
+		cleanup ();
 		return;
 	}
 	if (reply.mark == ds::RequestReply::TransmissionCancel) {
@@ -83,11 +83,11 @@ void FileTransfer::handleRequestReply_locked (const HostId & sender, const ds::R
 	
 	switch (mInfo.state) {
 		case TransferInfo::STARTING:{
-			handleTransmissionStarting_locked (sender, reply, data);
+			handleTransmissionStarting (sender, reply, data);
 			break;
 		}
 		case TransferInfo::TRANSFERRING:{
-			handleTransmissionTransferring_locked (sender, reply, data);
+			handleTransmissionTransferring (sender, reply, data);
 			break;
 		}
 		case TransferInfo::CANCELED:{
@@ -101,11 +101,11 @@ void FileTransfer::handleRequestReply_locked (const HostId & sender, const ds::R
 	if (mInfo.state == TransferInfo::CANCELED || 
 		mInfo.state == TransferInfo::ERROR || 
 		mInfo.state == TransferInfo::FINISHED){
-		cleanup_locked();
+		cleanup();
 	}
 }
 
-void FileTransfer::handleTransmissionStarting_locked (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
+void FileTransfer::handleTransmissionStarting (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
 	assert (mInfo.transferred == 0);
 	if (reply.mark != ds::RequestReply::TransmissionStart || reply.range.from != 0){
 		Log (LogWarning) << LOGID << "Strange protocol" << std::endl;
@@ -123,10 +123,10 @@ void FileTransfer::handleTransmissionStarting_locked (const HostId & sender, con
 	}
 	mInfo.state = TransferInfo::TRANSFERRING;
 	// Forwarding to Transferring State
-	handleTransmissionTransferring_locked (sender, reply, data);
+	handleTransmissionTransferring (sender, reply, data);
 }
 
-void FileTransfer::handleTransmissionTransferring_locked (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
+void FileTransfer::handleTransmissionTransferring (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
 	if (reply.mark != ds::RequestReply::TransmissionStart
 		&& reply.mark != ds::RequestReply::TransmissionFinish
 		&& reply.mark != ds::RequestReply::Transmission){
@@ -157,7 +157,7 @@ void FileTransfer::handleTransmissionTransferring_locked (const HostId & sender,
 	}
 }
 
-void FileTransfer::cleanup_locked () {
+void FileTransfer::cleanup () {
 	if (mDestination){
 		fclose (mDestination);
 		mDestination = 0;

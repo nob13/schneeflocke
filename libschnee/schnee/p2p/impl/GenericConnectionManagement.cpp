@@ -93,7 +93,7 @@ Error GenericConnectionManagement::liftToAtLeast  (int level, const HostId & hos
 	op->callback = callback;
 	op->minLevel = level;
 
-	startLifting_locked (op);
+	startLifting (op);
 	return NoError;
 }
 
@@ -125,14 +125,14 @@ int GenericConnectionManagement::channelLevel (const HostId & receiver) {
 	return mChannels.findBestChannelLevel(receiver);
 }
 
-void GenericConnectionManagement::startLifting_locked (LiftConnectionOp * op){
+void GenericConnectionManagement::startLifting (LiftConnectionOp * op){
 	// do we have a channel?
 	int level = mChannels.findBestChannelLevel(op->target);
 	if (level == 0) {
 		// create initial channel
 		op->setState (LiftConnectionOp::CreateInitial);
 		while (true) {
-			ChannelProviderPtr provider = bestProvider_locked (op->lastLevelTried - 1, true, &op->lastLevelTried);
+			ChannelProviderPtr provider = bestProvider (op->lastLevelTried - 1, true, &op->lastLevelTried);
 			if (!provider)
 				break;
 			Error e = provider->createChannel(op->target, abind (dMemFun (this, &GenericConnectionManagement::onChannelCreate), true, op->id()), op->lastingTimeMs (0.66));
@@ -147,10 +147,10 @@ void GenericConnectionManagement::startLifting_locked (LiftConnectionOp * op){
 	}
 	// there is already a channel
 	// start lifting
-	lift_locked (op);
+	lift (op);
 }
 
-void GenericConnectionManagement::lift_locked (LiftConnectionOp * op) {
+void GenericConnectionManagement::lift (LiftConnectionOp * op) {
 	int level = mChannels.findBestChannelLevel(op->target);
 	if (level == 0) {
 		Log (LogWarning) << LOGID << "Channel disappeared during lift" << std::endl;
@@ -162,7 +162,7 @@ void GenericConnectionManagement::lift_locked (LiftConnectionOp * op) {
 	Log (LogInfo) << LOGID << mHostId << " continue lift to " << op->target << " current=" << level << " restMs=" << op->lastingTimeMs() << std::endl;
 	op->setState (LiftConnectionOp::Lift);
 	while (true) {
-		ChannelProviderPtr provider = bestProvider_locked (op->lastLevelTried - 1, false, &op->lastLevelTried);
+		ChannelProviderPtr provider = bestProvider (op->lastLevelTried - 1, false, &op->lastLevelTried);
 		if (!provider)
 			break; // no provider anymore
 		if (op->lastLevelTried <= level)
@@ -200,9 +200,9 @@ void GenericConnectionManagement::onChannelCreate (Error result, bool wasInitial
 	if (result) {
 		if (wasInitial){
 			op->setState (LiftConnectionOp::Start);
-			startLifting_locked (op);
+			startLifting (op);
 		} else {
-			lift_locked (op);
+			lift (op);
 		}
 		return; // lift operations do error handling
 	}
@@ -211,7 +211,7 @@ void GenericConnectionManagement::onChannelCreate (Error result, bool wasInitial
 		op->lastLevelTried = -1;
 	}
 	// begin again, does also error and result handling
-	lift_locked (op);
+	lift (op);
 }
 
 void GenericConnectionManagement::onChannelCreated (const HostId & target, ChannelPtr channel, bool requested, int level) {
@@ -233,7 +233,7 @@ void GenericConnectionManagement::onChannelChanged (ChannelId id, const HostId &
 	notify (mConDetailsChanged);
 }
 
-GenericConnectionManagement::ChannelProviderPtr GenericConnectionManagement::bestProvider_locked (int maxLevel, bool initial, int * level) {
+GenericConnectionManagement::ChannelProviderPtr GenericConnectionManagement::bestProvider (int maxLevel, bool initial, int * level) {
 	for (ChannelProviderMap::reverse_iterator i = mChannelProviders.rbegin(); i != mChannelProviders.rend(); i++){
 		if (initial && !i->second->providesInitialChannels()) continue;
 		if (maxLevel >= 0 && i->first > maxLevel) continue;

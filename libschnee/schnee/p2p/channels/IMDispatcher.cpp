@@ -38,7 +38,7 @@ sf::Error IMDispatcher::createChannel (const HostId & target, const ResultCallba
 	op->setId (id);
 	op->target   = target;
 	op->callback = callback;
-	op->channel  = IMChannelPtr (new IMChannel (this, target, onlineState_locked (target)));
+	op->channel  = IMChannelPtr (new IMChannel (this, target, onlineState (target)));
 	op->auth.finished() = abind (dMemFun (this, &IMDispatcher::onAuthFinishedCreatingChannel), id);
 	op->auth.init (op->channel, mClient->ownId());
 	op->auth.connect (target, timeOutMs);
@@ -112,7 +112,9 @@ OnlineState IMDispatcher::onlineState () const {
 }
 
 OnlineState IMDispatcher::onlineState (const HostId & user) const {
-	return onlineState_locked (user);
+	HostInfoMap::const_iterator i = mHosts.find (user);
+	if (i == mHosts.end()) return OS_OFFLINE;
+	return OS_ONLINE;
 }
 
 IMDispatcher::HostInfoMap IMDispatcher::hosts(const UserId & user) const {
@@ -227,14 +229,6 @@ void IMDispatcher::onAuthFinishedRespondingChannel (Error err, AsyncOpId id) {
 	delete op;
 }
 
-
-
-sf::OnlineState IMDispatcher::onlineState_locked (const sf::String & id) const {
-	HostInfoMap::const_iterator i = mHosts.find (id);
-	if (i == mHosts.end()) return OS_OFFLINE;
-	return OS_ONLINE;
-}
-
 void IMDispatcher::onSubscribeRequest (const sf::UserId & from) {
 	if (mSubscribeRequest) {
 		mSubscribeRequest (from);
@@ -332,7 +326,7 @@ void IMDispatcher::onContactRosterChanged (){
 
 	// Updating all Channels...
 	for (ChannelMap::iterator i = mChannels.begin(); i != mChannels.end(); i++){
-		OnlineState s = onlineState_locked (i->first);
+		OnlineState s = onlineState (i->first);
 		i->second->setState (s);
 	}
 	if (mPeersChanged) mPeersChanged ();
@@ -371,7 +365,7 @@ void IMDispatcher::onMessageReceived (const sf::IMClient::Message & message){
 
 		op->source   = source;
 		op->state    = RespondChannelOp::AwaitAuth;
-		op->channel  = IMChannelPtr (new IMChannel (this, source, onlineState_locked (source)));
+		op->channel  = IMChannelPtr (new IMChannel (this, source, onlineState (source)));
 		op->cancelOp = abind (dMemFun (this, &IMDispatcher::onOpCanceled), source, op->channel);
 		op->auth.init     (op->channel, mClient->ownId());
 		op->auth.finished() = abind (dMemFun (this, &IMDispatcher::onAuthFinishedRespondingChannel), id);

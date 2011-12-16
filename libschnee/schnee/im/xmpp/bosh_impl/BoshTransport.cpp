@@ -67,7 +67,7 @@ void BoshTransport::connect(const sf::Url & url, const StringMap & additionalArg
 
 	// Send it out...
 	mState = Connecting;
-	executeRequest_locked (sf::createByteArrayPtr(builder.toString()), timeOutMs, abind (dMemFun (this, &BoshTransport::onConnectReply), callback));
+	executeRequest (sf::createByteArrayPtr(builder.toString()), timeOutMs, abind (dMemFun (this, &BoshTransport::onConnectReply), callback));
 }
 
 void BoshTransport::restart () {
@@ -78,7 +78,7 @@ void BoshTransport::restart () {
 	StringMap args;
 	args["xmpp:restart"] = "true";
 	args["xmlns:xmpp"] = "urn:xmpp:xbosh";
-	startNextRequest_locked (args);
+	startNextRequest (args);
 }
 
 Error BoshTransport::write (const ByteArrayPtr& data, const ResultCallback & callback) {
@@ -108,7 +108,7 @@ void BoshTransport::close (const ResultCallback & callback) {
 	if (mState == Connected) {
 		StringMap map;
 		map["type"] = "terminate";
-		startNextRequest_locked(map, callback);
+		startNextRequest(map, callback);
 		mState = Closing;
 	}
 }
@@ -136,20 +136,20 @@ void BoshTransport::onConnectReply (Error result, const HttpResponsePtr & respon
 		return;
 	}
 	if (result) {
-		return failConnect_locked (result, callback, "error on http connect");
+		return failConnect (result, callback, "error on http connect");
 	}
 	if (!(response->resultCode == 200))
-		return failConnect_locked (error::ConnectionError, callback, String ("bad http result=" + toString (response->resultCode)).c_str());
+		return failConnect (error::ConnectionError, callback, String ("bad http result=" + toString (response->resultCode)).c_str());
 
 	BoshNodeParser parser;
 	Error e = parser.parse(response->data->const_c_array(), response->data->size());
 	if (e) {
-		return failConnect_locked (e, callback, "parse");
+		return failConnect (e, callback, "parse");
 	}
 
 	mSid = parser.attribute("sid");
 	if (mSid.empty()){
-		return failConnect_locked (error::BadProtocol, callback, "parse");
+		return failConnect (error::BadProtocol, callback, "parse");
 	}
 
 	String wait = parser.attribute("wait");
@@ -158,19 +158,18 @@ void BoshTransport::onConnectReply (Error result, const HttpResponsePtr & respon
 
 		// workaround. wait is mandatory, but at least the local Prosody instance does not send it
 		// http://code.google.com/p/lxmppd/issues/detail?id=219
-		// return failConnect_locked (error::BadProtocol, callback, "no wait response");
 		mLongPollTimeoutMs = 60000;
 	} else {
 		try {
 			mLongPollTimeoutMs = boost::lexical_cast<int> (wait) * 1000;
 		} catch (boost::bad_lexical_cast & e){
-			return failConnect_locked (error::BadProtocol, callback, "bad wait response");
+			return failConnect (error::BadProtocol, callback, "bad wait response");
 		}
 	}
 
 	String type = parser.attribute ("type");
 	if (!type.empty()) { // error or terminate
-		return failConnect_locked (error::CouldNotConnectHost, callback, String ("opponent sent type=" + type).c_str());
+		return failConnect (error::CouldNotConnectHost, callback, String ("opponent sent type=" + type).c_str());
 	}
 	mState = Connected;
 
@@ -183,13 +182,13 @@ void BoshTransport::onConnectReply (Error result, const HttpResponsePtr & respon
 
 	asyncNotify (callback, NoError);
 	// initial pending request
-	continueWorking_locked ();
+	continueWorking ();
 	if (mChanged) {
 		xcall (mChanged);
 	}
 }
 
-void BoshTransport::failConnect_locked (Error result, const ResultCallback & callback, const String & msg) {
+void BoshTransport::failConnect (Error result, const ResultCallback & callback, const String & msg) {
 	Log(LogWarning) << LOGID << "Connect failed: " << toString(result) << " " <<  msg << std::endl;
 	asyncNotify (callback, result);
 	if (mChanged) xcall (mChanged);
@@ -199,9 +198,6 @@ void BoshTransport::failConnect_locked (Error result, const ResultCallback & cal
 }
 
 void BoshTransport::continueWorking () {
-	continueWorking_locked ();
-}
-void BoshTransport::continueWorking_locked(){
 	if (mOpenRidCount >= 2) {
 		Log (LogInfo) << LOGID << "Not continuing " << mOpenRidCount << "(>=2) connections are open..." << std::endl;
 		return;
@@ -210,10 +206,10 @@ void BoshTransport::continueWorking_locked(){
 		Log (LogInfo) << LOGID << "Not continuing, pending connection and no data to be sent" << std::endl;
 		return;
 	}
-	startNextRequest_locked ();
+	startNextRequest ();
 }
 
-void BoshTransport::startNextRequest_locked (const StringMap & additionalArgs, const ResultCallback & callback) {
+void BoshTransport::startNextRequest (const StringMap & additionalArgs, const ResultCallback & callback) {
 	if (mState != Connected && mState != Closing){
 		Log (LogWarning) << LOGID << "Strange state" << std::endl;
 		notifyAsync (callback, error::WrongState);
@@ -239,7 +235,7 @@ void BoshTransport::startNextRequest_locked (const StringMap & additionalArgs, c
 	sf::ByteArrayPtr data = sf::createByteArrayPtr (builder.toString());
 	mOpenRids[mRid] = data;
 	mOpenRidCount++;
-	executeRequest_locked (data, mLongPollTimeoutMs, abind (dMemFun (this, &BoshTransport::onRequestReply), mRid, callback));
+	executeRequest (data, mLongPollTimeoutMs, abind (dMemFun (this, &BoshTransport::onRequestReply), mRid, callback));
 }
 
 void BoshTransport::onRequestReply (Error result, const HttpResponsePtr & response, int64_t rid, const ResultCallback & originalCallback) {
@@ -258,20 +254,20 @@ void BoshTransport::onRequestReply (Error result, const HttpResponsePtr & respon
 		mErrorCount++;
 		mSumErrorCount++;
 		if (mErrorCount > mMaxErrorCount) {
-			return failRequest_locked (result, rid, "To many HTTP errors", originalCallback);
+			return failRequest (result, rid, "To many HTTP errors", originalCallback);
 		}
 		// Try it again
 		sf::ByteArrayPtr data = mOpenRids[rid];
 		assert (data);
 		Log (LogInfo) << LOGID << "Try to recover (ErrCnt=" << mErrorCount << " SucCnt=" << mSuccessCount << ")" << std::endl;
-		return executeRequest_locked (data, mLongPollTimeoutMs, abind (dMemFun (this, &BoshTransport::onRequestReply), rid, originalCallback));
+		return executeRequest (data, mLongPollTimeoutMs, abind (dMemFun (this, &BoshTransport::onRequestReply), rid, originalCallback));
 	}
 	mSuccessCount++;
 	if (mErrorCount > 0) mErrorCount--; // so we can recover from errors
 	BoshNodeParser parser;
 	Error e = parser.parse(response->data->const_c_array(), response->data->size());
 	if (e) {
-		return failRequest_locked (e, rid, "Parse error", originalCallback);
+		return failRequest (e, rid, "Parse error", originalCallback);
 	}
 	mOpenRids.erase(rid);
 	mOpenRidCount--;
@@ -279,11 +275,11 @@ void BoshTransport::onRequestReply (Error result, const HttpResponsePtr & respon
 	mInWaitingRids[rid] = sf::createByteArrayPtr (parser.content());
 	if (!parser.attribute ("type").empty()){
 		// server sent terminate or something
-		failRequest_locked (error::Eof, rid, String ("Server sent type=" ) + parser.attribute ("type"), originalCallback);
+		failRequest (error::Eof, rid, String ("Server sent type=" ) + parser.attribute ("type"), originalCallback);
 	} else {
 		notifyAsync (originalCallback, NoError);
 	}
-	insertWaitingInputData_locked ();
+	insertWaitingInputData ();
 
 	/// some braking
 	sf::xcallTimed(dMemFun (this, &BoshTransport::continueWorking), sf::futureInMs(mReconnectWaitMs));
@@ -291,7 +287,7 @@ void BoshTransport::onRequestReply (Error result, const HttpResponsePtr & respon
 		xcall (mChanged);
 }
 
-void BoshTransport::insertWaitingInputData_locked () {
+void BoshTransport::insertWaitingInputData () {
 	RidDataMap::iterator i = mInWaitingRids.begin();
 	while (i != mInWaitingRids.end()){
 		if (i->first < mRidRecv) {
@@ -310,9 +306,8 @@ void BoshTransport::insertWaitingInputData_locked () {
 	}
 }
 
-void BoshTransport::failRequest_locked (Error result, int64_t rid, const String & msg, const ResultCallback & originalCallback) {
-	if (mChanged)
-		xcall (mChanged);
+void BoshTransport::failRequest (Error result, int64_t rid, const String & msg, const ResultCallback & originalCallback) {
+	notifyAsync (mChanged);
 	Log (LogWarning) << LOGID << "Terminating connection with " << toString (result) << " " << msg << std::endl;
 	Log (LogWarning) << LOGID << "Open Output data: " << mOutputBuffer.size() << " parts" << std::endl;
 	Log (LogWarning) << LOGID << "Open Connections: " << mOpenRidCount << std::endl;
@@ -331,7 +326,7 @@ void BoshTransport::failRequest_locked (Error result, int64_t rid, const String 
 }
 
 
-void BoshTransport::executeRequest_locked (const ByteArrayPtr & data, int timeOutMs, const HttpContext::RequestCallback & callback) {
+void BoshTransport::executeRequest (const ByteArrayPtr & data, int timeOutMs, const HttpContext::RequestCallback & callback) {
 	HttpRequest req;
 	req.start("POST", mUrl);
 	req.addHeader("Content-Type", "text/xml; charset=utf-8");

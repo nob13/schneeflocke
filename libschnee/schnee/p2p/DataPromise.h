@@ -65,9 +65,8 @@ struct DataPromise {
 	virtual Error error () const { return NoError; }
 
 	/// Continuous information update about a served transmission
-	/// Note: DataSharing updates this in it's locked mode
 	/// Do not call DataSharingServer upon it.
-	virtual void onTransmissionUpdate_locked (AsyncOpId id, const ds::TransmissionInfo & info) {}
+	virtual void onTransmissionUpdate (AsyncOpId id, const ds::TransmissionInfo & info) {}
 };
 
 typedef sf::shared_ptr<DataPromise> DataPromisePtr;

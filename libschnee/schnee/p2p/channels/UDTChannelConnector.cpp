@@ -20,7 +20,7 @@ sf::Error UDTChannelConnector::createChannel (const HostId & target, const Resul
 	op->setId(genFreeId ());
 	op->target = target;
 	op->connector = true;
-	startConnecting_locked (op);
+	startConnecting (op);
 	return NoError;
 }
 
@@ -32,7 +32,7 @@ void UDTChannelConnector::setHostId (const sf::HostId & id) {
 	mHostId = id;
 }
 
-void UDTChannelConnector::startConnecting_locked (CreateChannelOp * op) {
+void UDTChannelConnector::startConnecting (CreateChannelOp * op) {
 	// Binding to own address
 	op->udpSocket.bind();
 
@@ -162,19 +162,19 @@ void UDTChannelConnector::onUdpReadyRead (AsyncOpId id) {
 			PunchUDP punch;
 			bool suc = punch.deserialize (d);
 			if (suc)
-				onUdpRecvPunch_locked (sender, op, punch);
+				onUdpRecvPunch (sender, op, punch);
 		} else
 		if (cmd == PunchUDPReply::getCmdName()){
 			PunchUDPReply reply;
 			bool suc = reply.deserialize (d);
 			if (suc)
-				onUdpRecvPunchReply_locked (sender, op, reply);
+				onUdpRecvPunchReply (sender, op, reply);
 		} else
 		if (cmd == AckUDP::getCmdName()) {
 			AckUDP ack;
 			bool suc = ack.deserialize (d);
 			if (suc)
-				onUdpRecvAck_locked (sender, op, ack);
+				onUdpRecvAck (sender, op, ack);
 		} else
 			Log (LogInfo) << LOGID << "Strange protocol, recv=" << *data << std::endl;
 	}
@@ -182,7 +182,7 @@ void UDTChannelConnector::onUdpReadyRead (AsyncOpId id) {
 	addAsyncOp (op);
 }
 
-void UDTChannelConnector::onUdpRecvPunch_locked (const NetEndpoint & from, CreateChannelOp * op, const PunchUDP & punch) {
+void UDTChannelConnector::onUdpRecvPunch (const NetEndpoint & from, CreateChannelOp * op, const PunchUDP & punch) {
 	if (punch.remote != mHostId || punch.local != op->target) {
 		Log (LogInfo) << LOGID << "Discarding noise from other clients " << toJSONCmd (punch) << std::endl;
 		return;
@@ -198,7 +198,7 @@ void UDTChannelConnector::onUdpRecvPunch_locked (const NetEndpoint & from, Creat
 	Log (LogInfo) << LOGID << "Sent " << toJSONCmd(reply) << " to " << toJSON (from) << std::endl;
 }
 
-void UDTChannelConnector::onUdpRecvPunchReply_locked (const NetEndpoint & from, CreateChannelOp * op, const PunchUDPReply & reply) {
+void UDTChannelConnector::onUdpRecvPunchReply (const NetEndpoint & from, CreateChannelOp * op, const PunchUDPReply & reply) {
 	if (reply.remote != mHostId || reply.local  != op->target) {
 		Log (LogInfo) << LOGID << "Discarding noise from other clients " << toJSONCmd (reply) << std::endl;
 		return;
@@ -220,7 +220,7 @@ void UDTChannelConnector::onUdpRecvPunchReply_locked (const NetEndpoint & from, 
 	op->sentAck = true;
 }
 
-void UDTChannelConnector::onUdpRecvAck_locked (const NetEndpoint & from, CreateChannelOp * op, const AckUDP & ack) {
+void UDTChannelConnector::onUdpRecvAck (const NetEndpoint & from, CreateChannelOp * op, const AckUDP & ack) {
 	if (ack.remote != mHostId || ack.local != op->target) {
 		Log (LogInfo) << LOGID << "Discarding noise from other clients " << toJSONCmd (ack) << std::endl;
 		addAsyncOp (op);
@@ -241,10 +241,10 @@ void UDTChannelConnector::onUdpRecvAck_locked (const NetEndpoint & from, CreateC
 	op->setState (CreateChannelOp::ConnectingUDT);
 	op->udtSocket = UDTSocketPtr (new UDTSocket());
 	op->udtSocket->rebind(&op->udpSocket);
-	op->udtSocket->connectRendezvousAsync(from.address, from.port, aOpMemFun (op, &UDTChannelConnector::onUdtConnectResult_locked));
+	op->udtSocket->connectRendezvousAsync(from.address, from.port, aOpMemFun (op, &UDTChannelConnector::onUdtConnectResult));
 }
 
-void UDTChannelConnector::onUdtConnectResult_locked (CreateChannelOp * op, Error result) {
+void UDTChannelConnector::onUdtConnectResult (CreateChannelOp * op, Error result) {
 	Log (LogInfo) << LOGID << mHostId << " UDT connect to " << op->target << " Result: " << toString (result) << std::endl;
 	if (result) {
 		Log (LogWarning) << LOGID << "Connecting " << op->target << "(" << op->id() << ") with UDT failed, cause: " << toString (result) << std::endl;
@@ -257,9 +257,9 @@ void UDTChannelConnector::onUdtConnectResult_locked (CreateChannelOp * op, Error
 	op->tlsChannel = TLSChannelPtr (new TLSChannel (op->udtSocket));
 	Error e;
 	if (op->connector) {
-		e = op->tlsChannel->clientHandshake(TLSChannel::DH, aOpMemFun (op, &UDTChannelConnector::onTlsHandshake_locked));
+		e = op->tlsChannel->clientHandshake(TLSChannel::DH, aOpMemFun (op, &UDTChannelConnector::onTlsHandshake));
 	} else {
-		e = op->tlsChannel->serverHandshake(TLSChannel::DH, aOpMemFun (op, &UDTChannelConnector::onTlsHandshake_locked));
+		e = op->tlsChannel->serverHandshake(TLSChannel::DH, aOpMemFun (op, &UDTChannelConnector::onTlsHandshake));
 	}
 	if (e) {
 		Log (LogWarning) << LOGID << "Warning TLS failed at the early beginning " << toString (e) << std::endl;
@@ -272,7 +272,7 @@ void UDTChannelConnector::onUdtConnectResult_locked (CreateChannelOp * op, Error
 	addAsyncOp (op);
 }
 
-void UDTChannelConnector::onTlsHandshake_locked (CreateChannelOp * op, Error result) {
+void UDTChannelConnector::onTlsHandshake (CreateChannelOp * op, Error result) {
 	Log (LogInfo) << LOGID << "TLS Handshake result to " << op->target << " Result: " << toString (result) << std::endl;
 	if (result) {
 		Log (LogWarning) << LOGID << "TLS Handshake to " << op->target << "(" << op->id() << ") failed, cause: " << toString (result) << std::endl;
@@ -283,7 +283,7 @@ void UDTChannelConnector::onTlsHandshake_locked (CreateChannelOp * op, Error res
 		return;
 	}
 	op->setState (CreateChannelOp::Authenticating);
-	op->authProtocol.finished() = aOpMemFun (op, &UDTChannelConnector::onAuthResult_locked);
+	op->authProtocol.finished() = aOpMemFun (op, &UDTChannelConnector::onAuthResult);
 	op->authProtocol.init(op->tlsChannel, mHostId);
 	if (op->connector){
 		op->authProtocol.connect(op->target, op->lastingTimeMs());
@@ -293,7 +293,7 @@ void UDTChannelConnector::onTlsHandshake_locked (CreateChannelOp * op, Error res
 	addAsyncOp (op);
 }
 
-void UDTChannelConnector::onAuthResult_locked (CreateChannelOp * op, Error result) {
+void UDTChannelConnector::onAuthResult (CreateChannelOp * op, Error result) {
 	if (result) {
 		Log (LogInfo) << LOGID << "Authenticating UDT channel failed: " << toString (result) << std::endl;
 		if (op->callback)
@@ -317,9 +317,9 @@ void UDTChannelConnector::onRpc (const HostId & sender, const RequestUDTConnect 
 	op->remoteInternAddresses  = request.intern;
 	if (request.extern_.valid())
 		op->remoteExternAddresses.push_back (request.extern_);
-	guessSomeExternAddresses_locked (op);
+	guessSomeExternAddresses (op);
 	op->target = sender;
-	startConnecting_locked (op);
+	startConnecting (op);
 }
 
 void UDTChannelConnector::onRpc (const HostId & sender, const RequestUDTConnectReply & reply, const ByteArray & data) {
@@ -329,14 +329,14 @@ void UDTChannelConnector::onRpc (const HostId & sender, const RequestUDTConnectR
 	op->remoteInternAddresses  = reply.intern;
 	if (reply.extern_.valid())
 		op->remoteExternAddresses.push_back (reply.extern_);
-	guessSomeExternAddresses_locked (op);
+	guessSomeExternAddresses (op);
 	op->remoteId              = reply.localId;
 	op->setState (CreateChannelOp::Connecting);
 	addAsyncOp (op);
 	xcall (abind (dMemFun (this, &UDTChannelConnector::udpConnect), reply.id));
 }
 
-void UDTChannelConnector::guessSomeExternAddresses_locked (CreateChannelOp * op) {
+void UDTChannelConnector::guessSomeExternAddresses (CreateChannelOp * op) {
 	if (op->remoteExternAddresses.empty()) return;
 	NetEndpoint ep = op->remoteExternAddresses[0];
 	if (!ep.valid()) return;

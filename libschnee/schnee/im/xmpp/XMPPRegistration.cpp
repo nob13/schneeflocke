@@ -136,18 +136,18 @@ Error XMPPRegistration::start (const String & server, const Credentials & creden
 
 void XMPPRegistration::onConnect (Error result) {
 	if (!mProcessing) return;
-	if (result) return end_locked (result);
+	if (result) return end (result);
 
 	RegisterGetIq iq;
 	Error e = mStream->requestIq (&iq, abind (&registerGetIqHandler, dMemFun(this, &XMPPRegistration::onRegisterGet)));
-	if (e) end_locked (e);
+	if (e) end (e);
 }
 
 void XMPPRegistration::onRegisterGet (Error result, const String & instructions, const std::vector<String> & fields) {
 	Log (LogProfile) << LOGID << "RegisterGet result: " << toString(result) << std::endl;
 	Log (LogProfile) << LOGID << "Instructions: " << instructions << std::endl;
 	Log (LogProfile) << LOGID << "Fields: " << toString (fields) << std::endl;
-	if (result) return end_locked (result);
+	if (result) return end (result);
 	if (!mProcessing) return;
 
 	RegisterSetIq iq;
@@ -155,13 +155,13 @@ void XMPPRegistration::onRegisterGet (Error result, const String & instructions,
 	iq.password = mCredentials.password;
 	iq.email    = mCredentials.email;
 	Error e = mStream->requestIq (&iq, abind (&registerSetIqHandler, dMemFun (this, &XMPPRegistration::onRegisterSet)));
-	if (e) end_locked (result);
+	if (e) end (result);
 }
 
 void XMPPRegistration::onRegisterSet (Error result) {
 	Log (LogProfile) << LOGID << "RegisterSet result: " << toString (result) << std::endl;
-	if (result) end_locked (result);
-	end_locked (NoError);
+	if (result) end (result);
+	end (NoError);
 }
 
 void XMPPRegistration::onTimeout () {
@@ -169,7 +169,7 @@ void XMPPRegistration::onTimeout () {
 	if (mResultCallback) xcall (abind (mResultCallback, error::TimeOut));
 }
 
-void XMPPRegistration::end_locked (Error result) {
+void XMPPRegistration::end (Error result) {
 	if (!mProcessing) return;
 	mProcessing = false;
 	sf::cancelTimer (mTimeoutHandle);

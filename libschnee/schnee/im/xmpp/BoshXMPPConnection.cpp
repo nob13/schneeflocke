@@ -32,18 +32,18 @@ Error BoshXMPPConnection::setPassword (const String & p) {
 }
 
 Error BoshXMPPConnection::connect (const XMPPStreamPtr& stream, int timeOutMs, const ResultCallback & callback) {
-	return startConnect_locked (true, stream, timeOutMs, callback);
+	return startConnect (true, stream, timeOutMs, callback);
 }
 
 Error BoshXMPPConnection::pureConnect (const XMPPStreamPtr & stream, int timeOutMs, const ResultCallback & callback) {
-	return startConnect_locked (false, stream, timeOutMs, callback);
+	return startConnect (false, stream, timeOutMs, callback);
 }
 
 String BoshXMPPConnection::errorText () const {
 	return String();
 }
 
-Error BoshXMPPConnection::startConnect_locked (bool withLogin, const XMPPStreamPtr & stream, int timeOutMs, const ResultCallback & callback) {
+Error BoshXMPPConnection::startConnect (bool withLogin, const XMPPStreamPtr & stream, int timeOutMs, const ResultCallback & callback) {
 	if (mConnecting){
 		Log (LogError) << LOGID << "There is already a connection process" << std::endl;
 		return error::ExistsAlready;
@@ -65,7 +65,7 @@ Error BoshXMPPConnection::startConnect_locked (bool withLogin, const XMPPStreamP
 
 	op->transport->connect(url, addArgs, op->lastingTimeMs(), abind (dMemFun (this, &BoshXMPPConnection::onBoshConnect), op->id()));
 	op->setState (ConnectingOp::WAIT_BOSH_CONNECT);
-	setState_locked (IMClient::CS_CONNECTING);
+	setState (IMClient::CS_CONNECTING);
 	addAsyncOp (op);
 	return NoError;
 }
@@ -76,92 +76,92 @@ void BoshXMPPConnection::onBoshConnect (Error result, AsyncOpId id) {
 	if (!op) return;
 
 	if (result) {
-		return finalize_locked (result, op);
+		return finalize (result, op);
 	}
 
 	op->stream->startInitAfterHandshake(op->transport);
 	op->setState (ConnectingOp::WAIT_FEATURE);
 	LOG_STATE ("WAIT_FEATURE");
-	op->stream->waitFeatures(aOpMemFun (op, &BoshXMPPConnection::onFeatures_locked));
+	op->stream->waitFeatures(aOpMemFun (op, &BoshXMPPConnection::onFeatures));
 	addAsyncOp (op);
 }
 
-void BoshXMPPConnection::onFeatures_locked (ConnectingOp * op, Error result) {
+void BoshXMPPConnection::onFeatures (ConnectingOp * op, Error result) {
 	if (result) {
-		return finalize_locked (result, op);
+		return finalize (result, op);
 	}
 	if (!op->withLogin) {
 		// Yeah
-		return finalize_locked (NoError, op);
+		return finalize (NoError, op);
 	}
 	op->setState (ConnectingOp::WAIT_LOGIN);
 	LOG_STATE ("WAIT_LOGIN");
-	op->stream->authenticate(mDetails.username, mDetails.password, aOpMemFun (op, &BoshXMPPConnection::onLogin_locked));
+	op->stream->authenticate(mDetails.username, mDetails.password, aOpMemFun (op, &BoshXMPPConnection::onLogin));
 	addAsyncOp (op);
 }
 
-void BoshXMPPConnection::onLogin_locked (ConnectingOp * op, Error result) {
+void BoshXMPPConnection::onLogin (ConnectingOp * op, Error result) {
 	if (result) {
-		return finalize_locked (result, op);
+		return finalize (result, op);
 	}
 	op->setState (ConnectingOp::WAIT_FEATURE2);
 	op->transport->restart();
 	op->stream->startInitAfterHandshake(op->transport);
-	op->stream->waitFeatures(aOpMemFun (op, &BoshXMPPConnection::onFeatures2_locked));
+	op->stream->waitFeatures(aOpMemFun (op, &BoshXMPPConnection::onFeatures2));
 	LOG_STATE ("WAIT_FEATURE2"); // Note: Internal state, not external state
-	setState_locked (IMClient::CS_AUTHENTICATING);
+	setState (IMClient::CS_AUTHENTICATING);
 
 	addAsyncOp (op);
 }
 
-void BoshXMPPConnection::onFeatures2_locked (ConnectingOp * op, Error result) {
+void BoshXMPPConnection::onFeatures2 (ConnectingOp * op, Error result) {
 	if (result) {
-		return finalize_locked (result, op);
+		return finalize (result, op);
 	}
 	op->setState (ConnectingOp::WAIT_BIND);
 	LOG_STATE ("WAIT_BIND");
 
-	function <void (Error, const String &)> xx = aOpMemFun (op, &BoshXMPPConnection::onResourceBind_locked);
+	function <void (Error, const String &)> xx = aOpMemFun (op, &BoshXMPPConnection::onResourceBind);
 
-	op->stream->bindResource(mDetails.resource, aOpMemFun (op, &BoshXMPPConnection::onResourceBind_locked));
+	op->stream->bindResource(mDetails.resource, aOpMemFun (op, &BoshXMPPConnection::onResourceBind));
 	addAsyncOp (op);
 }
 
-void BoshXMPPConnection::onResourceBind_locked (ConnectingOp * op, Error result, const String& fullJid) {
+void BoshXMPPConnection::onResourceBind (ConnectingOp * op, Error result, const String& fullJid) {
 	if (result) {
-		return finalize_locked (result, op);
+		return finalize (result, op);
 	}
 	op->setState (ConnectingOp::WAIT_SESSION);
 	LOG_STATE ("WAIT_SESSION");
-	op->stream->startSession(aOpMemFun (op, &BoshXMPPConnection::onStartSession_locked));
+	op->stream->startSession(aOpMemFun (op, &BoshXMPPConnection::onStartSession));
 	addAsyncOp (op);
 }
 
-void BoshXMPPConnection::onStartSession_locked (ConnectingOp * op, Error result) {
+void BoshXMPPConnection::onStartSession (ConnectingOp * op, Error result) {
 	LOG_STATE ("READY");
 	// we are through it
-	finalize_locked (result, op);
+	finalize (result, op);
 }
 
 
-void BoshXMPPConnection::finalize_locked (Error e, ConnectingOp * op, const char * errorText) {
+void BoshXMPPConnection::finalize (Error e, ConnectingOp * op, const char * errorText) {
 	mConnecting = false;
 	if (e) {
 		Log (LogProfile) << LOGID << "Connect op failed in state " << op->state() << " due " << toString (e) << std::endl;
 		notifyAsync (op->resultCallback, e);
 		if (errorText)
 			mErrorText = errorText;
-		setState_locked (IMClient::CS_ERROR);
+		setState (IMClient::CS_ERROR);
 		delete op;
 		return;
 	}
 	Log (LogProfile) << LOGID << "Successfully logged in, rest time = " << op->lastingTimeMs();
-	setState_locked (IMClient::CS_CONNECTED);
+	setState (IMClient::CS_CONNECTED);
 	notifyAsync (op->resultCallback, NoError);
 	delete op;
 }
 
-void BoshXMPPConnection::setState_locked (State s) {
+void BoshXMPPConnection::setState (State s) {
 	if (mConnectionStateChanged)
 		xcall (abind (mConnectionStateChanged, s));
 	mState = s;

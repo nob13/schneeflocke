@@ -73,7 +73,7 @@ private:
 	void onConnect (Error result, HttpConnectionPtr con, AsyncOpId id);
 	void onChanged (AsyncOpId id);
 	// Finish the operation
-	void finish_locked (Error result, HttpGetOperation * op);
+	void finish (Error result, HttpGetOperation * op);
 	HttpConnectionManager mConnectionManager;
 };
 

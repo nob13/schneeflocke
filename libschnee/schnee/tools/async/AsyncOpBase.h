@@ -213,7 +213,7 @@ template <class Functor> void AsyncOpBase::forEachAsyncOp (Functor & func) {
 
 template <class ThisType, class OpType> VoidCallback AsyncOpBase::aOpMemFun (OpType * op, void (ThisType::*dstFun) (OpType *)){
 	OpId id = op->id();
-	assert (id != 0 && "This template works only if the operation has an associated id, use AsyncOp::setId(genFreeId_locked())");
+	assert (id != 0 && "This template works only if the operation has an associated id, use AsyncOp::setId(genFreeId())");
 	ThisType * me = static_cast<ThisType*> (this);
 
 	return abind (
@@ -223,7 +223,7 @@ template <class ThisType, class OpType> VoidCallback AsyncOpBase::aOpMemFun (OpT
 
 template <class ThisType, class OpType, class Param0> function<void (Param0)> AsyncOpBase::aOpMemFun (OpType * op, void (ThisType::*dstFun) (OpType *, Param0 result)){
 	OpId id = op->id();
-	assert (id != 0 && "This template works only if the operation has an associated id, use AsyncOp::setId(genFreeId_locked())");
+	assert (id != 0 && "This template works only if the operation has an associated id, use AsyncOp::setId(genFreeId())");
 	ThisType * me = static_cast<ThisType*> (this);
 
 	return abindAround1 <Param0> (abind (dMemFun (this, &AsyncOpBase::executeOpCheck<OpType>), id, op->type(), op->state()),  memFun (me, dstFun));
@@ -231,7 +231,7 @@ template <class ThisType, class OpType, class Param0> function<void (Param0)> As
 
 template <class ThisType, class OpType, class Param0, class Param1> function<void (Param0, Param1)> AsyncOpBase::aOpMemFun (OpType * op, void (ThisType::*dstFun) (OpType *, Param0 result0, Param1 result1)) {
 	OpId id = op->id();
-	assert (id != 0 && "This template works only if the operation has an associated id, use AsyncOp::setId(genFreeId_locked())");
+	assert (id != 0 && "This template works only if the operation has an associated id, use AsyncOp::setId(genFreeId())");
 	ThisType * me = static_cast<ThisType*> (this);
 
 	return abindAround2 <Param0, Param1> (abind (dMemFun (this, &AsyncOpBase::executeOpCheck<OpType>), id, op->type(), op->state()), memFun (me, dstFun));
@@ -239,7 +239,7 @@ template <class ThisType, class OpType, class Param0, class Param1> function<voi
 
 template <class ThisType, class OpType, class Param0, class Param1, class Param2> function<void (Param0, Param1, Param2)> AsyncOpBase::aOpMemFun (OpType * op, void (ThisType::*dstFun) (OpType *, Param0 result0, Param1 result1, Param2 result2)) {
 	OpId id = op->id();
-	assert (id != 0 && "This template works only if the operation has an associated id, use AsyncOp::setId(genFreeId_locked())");
+	assert (id != 0 && "This template works only if the operation has an associated id, use AsyncOp::setId(genFreeId())");
 	ThisType * me = static_cast<ThisType*> (this);
 
 	return abindAround3 <Param0, Param1, Param2> (abind (dMemFun (this, &AsyncOpBase::executeOpCheck<OpType>), id, op->type(), op->state()), memFun (me, dstFun));

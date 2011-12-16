@@ -55,11 +55,11 @@ ChannelHolder::ChannelId ChannelHolder::add (ChannelPtr channel, const HostId & 
 		bool oldHadError = existing.channel->error() != NoError;
 		if (!oldHadError && ((requested && mHostId < target) || (!requested && mHostId > target))){
 			// close this new channel
-			close_locked(id);
+			close(id);
 			return id;
 		} else {
 			// close the old channel
-			close_locked (info.channels[level]);
+			close (info.channels[level]);
 		}
 	}
 	if (level > info.bestLevel) {
@@ -74,7 +74,32 @@ ChannelHolder::ChannelId ChannelHolder::add (ChannelPtr channel, const HostId & 
 }
 
 Error ChannelHolder::close (ChannelId id) {
-	return close_locked (id);
+	ChannelMap::iterator i = mChannels.find (id);
+	if (i == mChannels.end()) return error::NotFound;
+	ChannelReceiver & receiver (i->second);
+
+	if (receiver.closing) {
+		return error::ExistsAlready;
+	}
+	// Removing from peer list
+	removeChannelPeerConnection (receiver.target, id, receiver.level);
+	notifyAsync (mChannelChanged, id, receiver.target, receiver.level);
+
+	// notify someone?
+	CloseChannel cc;
+	Error e = Datagram::fromCmd(cc).sendTo (receiver.channel);
+	if (e) {
+		Log (LogWarning) << LOGID << "Could not close the channel to " << receiver.target << "(" << receiver.level << ") as I could not send the close message!" << std::endl;
+		removeChannel (id);
+		return e;
+	}
+	CloseChannelOp * op = new CloseChannelOp (sf::regTimeOutMs(mCloseTimeoutMs));
+	op->setId(genFreeId());
+	op->channelId = id;
+	op->callback = abind (dMemFun (this, &ChannelHolder::onCloseChannelError), id);
+	receiver.closing = op->id();
+	addAsyncOp (op);
+	return NoError;
 }
 
 Error ChannelHolder::closeChannelsToHost (const HostId & host) {
@@ -83,7 +108,7 @@ Error ChannelHolder::closeChannelsToHost (const HostId & host) {
 	PeerInfo & info (i->second);
 	PeerInfo::ChannelLevelMap channels = info.channels; // copy it, otherwise it may be destroyed.
 	for (PeerInfo::ChannelLevelMap::const_iterator i = channels.begin(); i != channels.end(); i++) {
-		close_locked (i->second);
+		close (i->second);
 	}
 	return NoError;
 }
@@ -96,7 +121,7 @@ Error ChannelHolder::closeRedundantChannelsToHost (const HostId & host) {
 	bool first = true;
 	for (PeerInfo::ChannelLevelMap::reverse_iterator i = channels.rbegin(); i != channels.rend(); i++){
 		if (!first)
-			close_locked (i->second);
+			close (i->second);
 		first = false;
 	}
 	return NoError;
@@ -208,35 +233,6 @@ void ChannelHolder::setChannelTimeoutCheckInterval (int intervalMs) {
 	}
 }
 
-Error ChannelHolder::close_locked (ChannelId id){
-	ChannelMap::iterator i = mChannels.find (id);
-	if (i == mChannels.end()) return error::NotFound;
-	ChannelReceiver & receiver (i->second);
-
-	if (receiver.closing) {
-		return error::ExistsAlready;
-	}
-	// Removing from peer list
-	removeChannelPeerConnection_locked (receiver.target, id, receiver.level);
-	notifyAsync (mChannelChanged, id, receiver.target, receiver.level);
-
-	// notify someone?
-	CloseChannel cc;
-	Error e = Datagram::fromCmd(cc).sendTo (receiver.channel);
-	if (e) {
-		Log (LogWarning) << LOGID << "Could not close the channel to " << receiver.target << "(" << receiver.level << ") as I could not send the close message!" << std::endl;
-		removeChannel_locked (id);
-		return e;
-	}
-	CloseChannelOp * op = new CloseChannelOp (sf::regTimeOutMs(mCloseTimeoutMs));
-	op->setId(genFreeId());
-	op->channelId = id;
-	op->callback = abind (dMemFun (this, &ChannelHolder::onCloseChannelError), id);
-	receiver.closing = op->id();
-	addAsyncOp (op);
-	return NoError;
-}
-
 void ChannelHolder::onChannelChange (ChannelId id) {
 	HostId sender;
 	std::vector<Datagram> received; // we can store them, they are cheap.
@@ -255,11 +251,11 @@ void ChannelHolder::onChannelChange (ChannelId id) {
 		}
 		if (e != error::NotEnough) {
 			Log (LogWarning) << LOGID << "Got error on decoding datagram " << toString (e) << " will close channel" << std::endl;
-			close_locked (id);
+			close (id);
 		}
 		if (receiver.channel->error()){
 			Log (LogWarning) << LOGID << "Channel reports an error, trying to close" << std::endl;
-			close_locked (id); // should not harm if two times.
+			close (id); // should not harm if two times.
 		}
 	}
 	bool updatedUTime = false; // we already updated utime
@@ -334,13 +330,13 @@ void ChannelHolder::onReceivedCloseChannel (ChannelId id) {
 			delete op;
 		}
 		// finally closing channel
-		removeChannel_locked (id);
+		removeChannel (id);
 	} else {
 		// the other wants to close the channel, aknowleding
 		// he must have sent everything already now...
 		CloseChannel cc;
 		Datagram::fromCmd(cc).sendTo (receiver.channel);
-		removeChannel_locked (id);
+		removeChannel (id);
 	}
 }
 
@@ -355,7 +351,7 @@ void ChannelHolder::onCheckForTimeoutedChannels () {
 				if (dt > mChannelTimeoutMs){
 					Log (LogProfile) << LOGID << "Closing channel " << i->first << " to " << i->second.target << " due channel timeout" << std::endl;
 					// do it asynchronous, under certain circumstances it is possible
-					// that close_locked will change data structures.
+					// that close will change data structures.
 					xcall (abind (dMemFun (this, &ChannelHolder::close), i->first));
 				}
 			}
@@ -368,7 +364,7 @@ void ChannelHolder::onCheckForTimeoutedChannels () {
 }
 
 
-Error ChannelHolder::removeChannelPeerConnection_locked (const HostId & host, ChannelId id, int level)  {
+Error ChannelHolder::removeChannelPeerConnection (const HostId & host, ChannelId id, int level)  {
 	PeerMap::iterator i = mPeers.find(host);
 	if (i == mPeers.end())
 		return error::NotFound;
@@ -388,13 +384,13 @@ Error ChannelHolder::removeChannelPeerConnection_locked (const HostId & host, Ch
 	return NoError;
 }
 
-Error ChannelHolder::removeChannel_locked (ChannelId id) {
+Error ChannelHolder::removeChannel (ChannelId id) {
 	ChannelMap::iterator i = mChannels.find (id);
 	if (i == mChannels.end())
 		return error::NotFound;
 
 	ChannelReceiver & receiver (i->second);
-	removeChannelPeerConnection_locked (receiver.target, id, receiver.level); // doesn't harm if done to often
+	removeChannelPeerConnection (receiver.target, id, receiver.level); // doesn't harm if done to often
 	notifyAsync (mChannelChanged, id, receiver.target, receiver.level);
 	ChannelPtr channel = receiver.channel;
 	mChannels.erase (id);
@@ -407,7 +403,7 @@ void ChannelHolder::throwAwayChannel (ChannelPtr channel) {
 	// intentionally nothing
 }
 
-void ChannelHolder::logChannels_locked () const {
+void ChannelHolder::logChannels () const {
 	Log (LogInfo) << LOGID << "PeerInfos" << std::endl;
 	for (PeerMap::const_iterator i = mPeers.begin(); i != mPeers.end(); i++) {
 		Log (LogInfo) << LOGID << " To " << i->first << " Best: " << i->second.bestChannel << " level: " << i->second.bestLevel << std::endl;

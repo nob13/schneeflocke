@@ -63,7 +63,7 @@ Error DataSharingServerImpl::update (const Path & path, const SharingPromisePtr 
 	if (info.currentRevision <= 0) info.currentRevision = 1;
 	else info.currentRevision++;
 	info.promise = promise;
-	notify_locked (path);
+	notifySubscriber (path);
 	return NoError;
 }
 
@@ -341,7 +341,7 @@ void DataSharingServerImpl::onRequestTransmission (const HostId & sender, const 
 		reply.range = usedRange;
 		
 		trans->info.mark = reply.mark;
-		trans->promise->onTransmissionUpdate_locked(opid, trans->info);
+		trans->promise->onTransmissionUpdate(opid, trans->info);
 		sf::Log (LogInfo) << LOGID << "Adding transmission " << sf::toJSON (trans) << std::endl;
 	} while (false);
 	mCommunicationDelegate->send (sender, Datagram::fromCmd(reply));
@@ -402,7 +402,7 @@ void DataSharingServerImpl::onRpc (const HostId & sender, const Push & push, con
 	mCommunicationDelegate->send(sender, Datagram::fromCmd(reply));
 }
 
-Error DataSharingServerImpl::notify_locked (const Path & path) {
+Error DataSharingServerImpl::notifySubscriber (const Path & path) {
 	SharedDataMap::iterator i = mShared.find (path);
 	if (i == mShared.end()){
 		sf::Log (LogError) << LOGID << path << " not shared" << std::endl;
@@ -433,7 +433,7 @@ void DataSharingServerImpl::continueTransmission (Error lastError, AsyncOpId id)
 
 		t->info.mark  = RequestReply::TransmissionCancel;
 		t->info.error = lastError;
-		t->promise->onTransmissionUpdate_locked(t->id(), t->info);
+		t->promise->onTransmissionUpdate(t->id(), t->info);
 		mCommunicationDelegate->send (t->info.destination, Datagram::fromCmd(reply));
 		delete t;
 		return;
@@ -494,7 +494,7 @@ void DataSharingServerImpl::continueTransmission (Error lastError, AsyncOpId id)
 	t->info.speed        = t->speedMeasure.avg();
 
 	if (r.err) t->info.error = r.err;
-	t->promise->onTransmissionUpdate_locked(t->id(), t->info);
+	t->promise->onTransmissionUpdate(t->id(), t->info);
 
 	mTransmissionSentBytes += d.encodedSize();
 

@@ -169,7 +169,7 @@ private:
 	};
 	
 	/// Begins connecting process
-	void startConnecting_locked (CreateChannelOp * op);
+	void startConnecting (CreateChannelOp * op);
 	/// Got echo data from echoserver
 	void onEchoClientResult (Error result, AsyncOpId id);
 	/// Start with pure udp connecting
@@ -178,24 +178,24 @@ private:
 	void onUdpReadyRead (AsyncOpId id);
 
 	/// Received PunchUDP messsage
-	void onUdpRecvPunch_locked (const NetEndpoint & from, CreateChannelOp * op, const PunchUDP & punch);
+	void onUdpRecvPunch (const NetEndpoint & from, CreateChannelOp * op, const PunchUDP & punch);
 	/// Received PunchUDPReply message
-	void onUdpRecvPunchReply_locked (const NetEndpoint & from, CreateChannelOp * op, const PunchUDPReply & reply);
+	void onUdpRecvPunchReply (const NetEndpoint & from, CreateChannelOp * op, const PunchUDPReply & reply);
 	/// Received ACK
-	void onUdpRecvAck_locked (const NetEndpoint & from, CreateChannelOp * op, const AckUDP & ack);
+	void onUdpRecvAck (const NetEndpoint & from, CreateChannelOp * op, const AckUDP & ack);
 	
 	/// Result of UDT connect
-	void onUdtConnectResult_locked (CreateChannelOp* op, Error result);
+	void onUdtConnectResult (CreateChannelOp* op, Error result);
 	/// Result of TLS Handshake
-	void onTlsHandshake_locked (CreateChannelOp * op, Error result);
+	void onTlsHandshake (CreateChannelOp * op, Error result);
 	/// Result of authentication
-	void onAuthResult_locked (CreateChannelOp * op, Error result);
+	void onAuthResult (CreateChannelOp * op, Error result);
 
 	void onRpc (const HostId & sender, const RequestUDTConnect & request, const ByteArray & data);
 	void onRpc (const HostId & sender, const RequestUDTConnectReply & reply, const ByteArray & data);
 
 	// Varies the port [-1,+3] based on some access point port mapping experience
-	void guessSomeExternAddresses_locked (CreateChannelOp * op);
+	void guessSomeExternAddresses (CreateChannelOp * op);
 
 	ChannelCreationDelegate mChannelCreated;
 	HostId mHostId;

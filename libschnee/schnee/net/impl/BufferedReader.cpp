@@ -77,10 +77,10 @@ void BufferedReader::checkAndContinueReadingHandler (){
 	SF_SCHNEE_LOCK;
 	assert (IOService::isCurrentThreadService (mService));
 	mPendingOperations--;
-	checkAndContinueReading_locked ();
+	checkAndContinueReading ();
 }
 
-void BufferedReader::checkAndContinueReading_locked(){
+void BufferedReader::checkAndContinueReading(){
 	if (mInputBuffer.size() + mInputTransferBufferSize > mMaxInputBufferSize){
 		Log (LogInfo) << LOGID << "Input buffer full, stopping reading" << std::endl;
 		return;
@@ -92,7 +92,7 @@ void BufferedReader::checkAndContinueReading_locked(){
 		// already reading...
 		return;
 	}
-	asyncRead_locked (boost::asio::buffer (mInputTransferBuffer, mInputTransferBufferSize), memFun (this, &BufferedReader::readHandler));
+	asyncRead (boost::asio::buffer (mInputTransferBuffer, mInputTransferBufferSize), memFun (this, &BufferedReader::readHandler));
 }
 
 void BufferedReader::readHandler (const boost::system::error_code & ec, std::size_t bytesRead){
@@ -118,11 +118,11 @@ void BufferedReader::readHandler (const boost::system::error_code & ec, std::siz
 		doClose = true;
 	} else {
 		Log (LogWarning) << LOGID << "There was an error during reading " << ec.message() << std::endl;
-		setError_locked (error::Other, ec.message());
+		setError (error::Other, ec.message());
 	}
 	mBytesReadSum += bytesRead;
 	if (!ec)
-		checkAndContinueReading_locked ();
+		checkAndContinueReading ();
 
 	if (fireDelegate) {
 		notify (mReadyReadDelegate);

@@ -74,7 +74,7 @@ Error FileGetting::request (const Uri & uri, AsyncOpId * opIdOut) {
 	if (!generateName (mDestinationDirectory, uri, &dstFileName)){
 		return error::ExistsAlready;
 	}
-	Error err = requestFileTransfer_locked (uri, dstFileName, 0, opIdOut);
+	Error err = requestFileTransfer (uri, dstFileName, 0, opIdOut);
 	if (err) return err;
 	return NoError;
 }
@@ -85,7 +85,7 @@ sf::Error FileGetting::requestDirectory (const Uri & uri, AsyncOpId * opIdOut) {
 		return error::ExistsAlready;
 	}
 
-	AsyncOpId opId = nextId_locked ();
+	AsyncOpId opId = generateNextId ();
 
 	DirectoryTransferPtr dirTransfer = DirectoryTransferPtr (new DirectoryTransfer());
 	dirTransfer->stateChanged() = abind (dMemFun (this, &FileGetting::onTransferChange), opId, TransferInfo::Changed);
@@ -169,7 +169,7 @@ void FileGetting::onTransferChange (AsyncOpId id, TransferInfo::TransferUpdateTy
 	if (info.state == TransferInfo::TRANSFERRED_LISTING){
 		assert (info.type == TransferInfo::DIR_TRANSFER);
 		for (int i = 0; i < mFilesPerDirectory; i++){
-			Error e = startNextChildTransfer_locked (id);
+			Error e = startNextChildTransfer (id);
 			if (e) break;
 		}
 	}
@@ -177,13 +177,13 @@ void FileGetting::onTransferChange (AsyncOpId id, TransferInfo::TransferUpdateTy
 	// A subtransfer ended, lets begin a new one
 	if (info.state == TransferInfo::FINISHED && info.parent != 0){
 		assert (mTransfers.count (info.parent) > 0);
-		Error e = startNextChildTransfer_locked (info.parent);
+		Error e = startNextChildTransfer (info.parent);
 		(void)e;
 	}
 	if (mUpdatedTransfer) mUpdatedTransfer (id, type, info);
 }
 
-Error FileGetting::startNextChildTransfer_locked (AsyncOpId id) {
+Error FileGetting::startNextChildTransfer (AsyncOpId id) {
 	assert (mTransfers.count (id) > 0);
 	TransferPtr transfer = mTransfers[id];
 	assert (transfer->info().type == TransferInfo::DIR_TRANSFER);
@@ -196,7 +196,7 @@ Error FileGetting::startNextChildTransfer_locked (AsyncOpId id) {
 		dirTransfer->cancel (e);
 		return e;
 	}
-	e = requestFileTransfer_locked (task.uri, task.destinationFileName, id);
+	e = requestFileTransfer (task.uri, task.destinationFileName, id);
 	if (e){
 		Log (LogWarning) << LOGID << "Cancelling dir transfer because sub transfer failed" << std::endl;
 		dirTransfer->cancel (e);
@@ -205,8 +205,8 @@ Error FileGetting::startNextChildTransfer_locked (AsyncOpId id) {
 }
 
 
-Error FileGetting::requestFileTransfer_locked (const Uri & uri, const String & fileName, AsyncOpId parent, AsyncOpId * opIdOut) {
-	AsyncOpId id = nextId_locked ();
+Error FileGetting::requestFileTransfer (const Uri & uri, const String & fileName, AsyncOpId parent, AsyncOpId * opIdOut) {
+	AsyncOpId id = generateNextId ();
 	FileTransferPtr fileTransfer = FileTransferPtr (new FileTransfer(parent));
 
 	fileTransfer->stateChanged () = abind (dMemFun (this, &FileGetting::onTransferChange), id, TransferInfo::Changed);

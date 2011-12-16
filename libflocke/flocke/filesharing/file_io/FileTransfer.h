@@ -58,7 +58,7 @@ public:
 protected:
 
 	/// Go into an error state (also returns the error, so that you can return it again)
-	Error errorState_locked (Error e) {
+	Error errorState (Error e) {
 		mInfo.state = TransferInfo::ERROR;
 		mInfo.error = e;
 		return e;
@@ -84,14 +84,14 @@ public:
 
 private:
 	
-	void handleRequestReply_locked (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data); 
+	void handleRequestReply (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data); 
 	
 	// Handlers for the different states
-	void handleTransmissionStarting_locked     (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data);
-	void handleTransmissionTransferring_locked (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data);
+	void handleTransmissionStarting     (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data);
+	void handleTransmissionTransferring (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data);
 	
 	/// Cleanup handlers and subtypes
-	void cleanup_locked ();
+	void cleanup ();
 	
 	FILE * mDestination;
 	SpeedMeasure * mSpeedMeasure;

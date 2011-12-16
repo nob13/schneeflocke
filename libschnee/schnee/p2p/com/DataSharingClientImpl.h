@@ -73,7 +73,7 @@ private:
 	typedef std::map<sf::HostId, int> HostKeyMap;
 	HostKeyMap mHostKeys;
 	int mNextHostKey;
-	int hostKey_locked (const HostId & id) {
+	int hostKey (const HostId & id) {
 		HostKeyMap::const_iterator i = mHostKeys.find(id);
 		if (i == mHostKeys.end()) { mHostKeys[id] = mNextHostKey; return mNextHostKey++; }
 		else return i->second;

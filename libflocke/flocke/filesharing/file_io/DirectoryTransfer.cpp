@@ -20,7 +20,7 @@ DirectoryTransfer::~DirectoryTransfer () {
 Error DirectoryTransfer::start (DataSharingClient * client, const Uri & uri, const String & destinationDirName, int timeOutMs) {
 	// creating destination directory
 	Error e = sf::createDirectory (destinationDirName);
-	if (e) return errorState_locked (e);
+	if (e) return errorState (e);
 	
 	ds::Request r;
 	r.path = uri.path();
@@ -28,7 +28,7 @@ Error DirectoryTransfer::start (DataSharingClient * client, const Uri & uri, con
 	r.user = "glob";
 	e = client->request (uri.host(), r, dMemFun (this, &DirectoryTransfer::onRequestReply), timeOutMs);
 	if (e) {
-		return errorState_locked (e);
+		return errorState (e);
 	}
 	
 	mClient             = client;
@@ -98,14 +98,14 @@ void DirectoryTransfer::cancel (Error e) {
 }
 
 void DirectoryTransfer::onRequestReply (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
-	handleRequestReply_locked (sender, reply, data);
+	handleRequestReply (sender, reply, data);
 	if ((mInfo.state == TransferInfo::ERROR || mInfo.state == TransferInfo::CANCELED) && reply.mark != ds::RequestReply::TransmissionCancel) {
 		mClient->cancelTransmission(sender, reply.id, reply.path);
 	}
 	notify (mStateChanged);
 }
 
-void DirectoryTransfer::handleRequestReply_locked (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
+void DirectoryTransfer::handleRequestReply (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
 	if (reply.err){
 		mInfo.error = reply.err;
 		mInfo.state = TransferInfo::ERROR;
@@ -117,11 +117,11 @@ void DirectoryTransfer::handleRequestReply_locked (const HostId & sender, const 
 	
 	switch (mInfo.state) {
 		case TransferInfo::STARTING:{
-			handleTransmissionStarting_locked (sender, reply, data);
+			handleTransmissionStarting (sender, reply, data);
 			break;
 		}
 		case TransferInfo::TRANSFERRING:{
-			handleTransmissionTransferring_locked (sender, reply, data);
+			handleTransmissionTransferring (sender, reply, data);
 			break;
 		}
 		case TransferInfo::CANCELED:{
@@ -134,7 +134,7 @@ void DirectoryTransfer::handleRequestReply_locked (const HostId & sender, const 
 	}
 }
 
-void DirectoryTransfer::handleTransmissionStarting_locked (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
+void DirectoryTransfer::handleTransmissionStarting (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
 	assert (mInfo.transferred == 0);
 	if (reply.mark != ds::RequestReply::TransmissionStart || reply.range.from != 0){
 		Log (LogWarning) << LOGID << "Strange protocol" << std::endl;
@@ -146,10 +146,10 @@ void DirectoryTransfer::handleTransmissionStarting_locked (const HostId & sender
 	mSpeedMeasure = new SpeedMeasure ();
 	mInfo.state = TransferInfo::TRANSFERRING;
 	// Forwarding to Transferring State
-	handleTransmissionTransferring_locked (sender, reply, data);
+	handleTransmissionTransferring (sender, reply, data);
 }
 
-void DirectoryTransfer::handleTransmissionTransferring_locked (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
+void DirectoryTransfer::handleTransmissionTransferring (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data) {
 	if (reply.mark != ds::RequestReply::TransmissionStart
 		&& reply.mark != ds::RequestReply::TransmissionFinish
 		&& reply.mark != ds::RequestReply::Transmission){

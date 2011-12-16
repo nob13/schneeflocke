@@ -14,8 +14,8 @@ XMPPStream::XMPPStream() {
 
 	// XmlStreamDecoder is not asynchronous, doesn't need dMemFun
 	// Calls directly into locked state.
-	mXmlStreamDecoder.stateChange() = memFun (this, &XMPPStream::onXmlStreamStateChange_locked);
-	mXmlStreamDecoder.chunkRead()   = memFun (this, &XMPPStream::onXmlChunkRead_locked);
+	mXmlStreamDecoder.stateChange() = memFun (this, &XMPPStream::onXmlStreamStateChange);
+	mXmlStreamDecoder.chunkRead()   = memFun (this, &XMPPStream::onXmlChunkRead);
 }
 
 XMPPStream::~XMPPStream() {
@@ -52,19 +52,19 @@ XMLChunk XMPPStream::features () const {
 
 Error XMPPStream::startInit (ChannelPtr channel, const ResultCallback& callback) {
 	mSkipInit = false;
-	Error e = init_locked (channel, false);
+	Error e = init (channel, false);
 	if (e) return e;
-	e = startOp_locked (XMO_StartInitialize, callback);
+	e = startOp (XMO_StartInitialize, callback);
 	if (e) return e;
 	mState = XMS_StartInitializing;
-	sendStreamInit_locked();
+	sendStreamInit();
 	return NoError;
 }
 
 Error XMPPStream::respondInit (ChannelPtr channel, const ResultCallback & callback) {
-	Error e = init_locked (channel, false);
+	Error e = init (channel, false);
 	if (e) return e;
-	e = startOp_locked (XMO_RespondInitialize, callback);
+	e = startOp (XMO_RespondInitialize, callback);
 	if (e) return e;
 	mState = XMS_RespondInitializing;
 	/// wait for opponent...
@@ -72,7 +72,7 @@ Error XMPPStream::respondInit (ChannelPtr channel, const ResultCallback & callba
 }
 
 Error XMPPStream::startInitAfterHandshake (ChannelPtr channel) {
-	Error e = init_locked (channel, true);
+	Error e = init (channel, true);
 	if (e) return e;
 	mState = XMS_Initialized;
 	return NoError;
@@ -81,7 +81,7 @@ Error XMPPStream::startInitAfterHandshake (ChannelPtr channel) {
 Error XMPPStream::close () {
 	Error e = NoError;
 	if (!mSkipInit){
-		e = send_locked ("</stream:stream>");
+		e = send ("</stream:stream>");
 	}
 	if (mChannel) {
 		mChannel->changed().clear ();
@@ -97,7 +97,7 @@ Error XMPPStream::waitFeatures (const ResultCallback & callback) {
 		if (callback) xcall (abind (callback, NoError));
 		return NoError;
 	}
-	Error e = startOp_locked (XMO_WaitFeatures, callback);
+	Error e = startOp (XMO_WaitFeatures, callback);
 	if (e) return e;
 	return NoError;
 }
@@ -141,14 +141,14 @@ Error XMPPStream::authenticate (const String & username, const String & password
 		Log (LogWarning) << LOGID << "Authentication mechanism PLAIN not supported!" << std::endl;
 		return error::NotSupported;
 	}
-	Error e = startOp_locked (XMO_Authenticate, result);
+	Error e = startOp (XMO_Authenticate, result);
 	if (e) return e;
 
 	String secret = plainSecret (username, password);
 	String auth = "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>" + secret + "</auth>";
-	e = send_locked (auth);
+	e = send (auth);
 	if (e) return e;
-	mNextChunkHandler = memFun (this, &XMPPStream::onAuthReply_locked);
+	mNextChunkHandler = memFun (this, &XMPPStream::onAuthReply);
 	return NoError;
 }
 
@@ -161,19 +161,19 @@ Error XMPPStream::requestTls (const ResultCallback & callback) {
 		Log (LogWarning) << LOGID << "Cannot request TLS, not supported by stream features" << std::endl;
 		return error::NotSupported;
 	}
-	Error e = startOp_locked (XMO_RequestTls, callback);
+	Error e = startOp (XMO_RequestTls, callback);
 	if (e) return e;
 	String tlsRequest ("<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>");
-	e = send_locked (tlsRequest);
+	e = send (tlsRequest);
 	if (e) return e;
-	mNextChunkHandler = memFun (this, &XMPPStream::onStartTlsReply_locked);
+	mNextChunkHandler = memFun (this, &XMPPStream::onStartTlsReply);
 	return NoError;
 }
 
 Error XMPPStream::requestIq (xmpp::Iq * iq, const IqResultCallback & callback) {
-	iq->id = generateIqId_locked ();
+	iq->id = generateIqId ();
 	String req = iq->encode();
-	Error e = send_locked (req);
+	Error e = send (req);
 	if (e) return e;
 	mOpenIqs[iq->id] = callback;
 	return NoError;
@@ -215,22 +215,22 @@ Error XMPPStream::startSession (const ResultCallback & callback) {
 
 Error XMPPStream::sendPresence (const xmpp::PresenceInfo & p) {
 	String dst = p.encode();
-	return send_locked (dst);
+	return send (dst);
 }
 
 Error XMPPStream::sendMessage (const xmpp::Message & m) {
 	String dst;
 	m.encode(dst);
-	return send_locked (dst);
+	return send (dst);
 }
 
 Error XMPPStream::sendPlainIq (const xmpp::Iq & iq) {
 	String dst;
 	dst = iq.encode();
-	return send_locked (dst);
+	return send (dst);
 }
 
-Error XMPPStream::init_locked (ChannelPtr channel, bool skipInit) {
+Error XMPPStream::init (ChannelPtr channel, bool skipInit) {
 	if (mChannel) mChannel->changed().clear();
 	mError = NoError;
 	mSkipInit = skipInit;
@@ -247,29 +247,29 @@ Error XMPPStream::init_locked (ChannelPtr channel, bool skipInit) {
 	return NoError;
 }
 
-void XMPPStream::onXmlStreamStateChange_locked () {
+void XMPPStream::onXmlStreamStateChange () {
 	XMLStreamDecoder::State s = mXmlStreamDecoder.state();
 	if (s == XMLStreamDecoder::XS_ReadXmlBegin) return; // ignore
 	if (s == XMLStreamDecoder::XS_ReadOpener) {
 		if (mState == XMS_StartInitializing) {
-			if (!decodeStreamInit_locked()) {
-				finishOp_locked (XMO_StartInitialize, mError);
+			if (!decodeStreamInit()) {
+				finishOp (XMO_StartInitialize, mError);
 				return;
 			}
 			mState = XMS_Initialized;
-			finishOp_locked (XMO_StartInitialize, NoError);
+			finishOp (XMO_StartInitialize, NoError);
 			return;
 		} else
 		if (mState == XMS_RespondInitializing) {
-			if (!decodeStreamInit_locked()){
-				finishOp_locked (XMO_RespondInitialize, mError);
+			if (!decodeStreamInit()){
+				finishOp (XMO_RespondInitialize, mError);
 				return;
 			}
-			sendStreamInit_locked();
+			sendStreamInit();
 			mState = XMS_Initialized;
-			finishOp_locked (XMO_RespondInitialize, NoError);
+			finishOp (XMO_RespondInitialize, NoError);
 		} else {
-			onChannelError_locked (error::BadProtocol);
+			onChannelError (error::BadProtocol);
 		}
 	}
 	if (s == XMLStreamDecoder::XS_Closed) {
@@ -279,7 +279,7 @@ void XMPPStream::onXmlStreamStateChange_locked () {
 	}
 }
 
-void XMPPStream::onXmlChunkRead_locked (const XMLChunk & chunk) {
+void XMPPStream::onXmlChunkRead (const XMLChunk & chunk) {
 	if (mNextChunkHandler){
 		mNextChunkHandler (chunk);
 		mNextChunkHandler.clear();
@@ -292,7 +292,7 @@ void XMPPStream::onXmlChunkRead_locked (const XMLChunk & chunk) {
 		}
 		mFeatures         = chunk;
 		mReceivedFeatures = true;
-		finishOp_locked (XMO_WaitFeatures, NoError);
+		finishOp (XMO_WaitFeatures, NoError);
 		return;
 	} else
 	if (chunk.name() == "iq") {
@@ -354,7 +354,7 @@ void XMPPStream::onXmlChunkRead_locked (const XMLChunk & chunk) {
 	}
 }
 
-void XMPPStream::onChannelError_locked (Error e) {
+void XMPPStream::onChannelError (Error e) {
 	mError = e;
 	if (mCurrentCallback) {
 		xcall (abind (mCurrentCallback,e));
@@ -376,25 +376,25 @@ void XMPPStream::onChannelChange   () {
 	}
 	// mXmlStreamDecoder can remove the channel by its own callbacks!
 	if (mChannel && mChannel->error()) {
-		onChannelError_locked (mChannel->error());
+		onChannelError (mChannel->error());
 	}
 }
 
-void XMPPStream::onAuthReply_locked (const XMLChunk & chunk) {
+void XMPPStream::onAuthReply (const XMLChunk & chunk) {
 	if (chunk.name() == "success"){
-		finishOp_locked (XMO_Authenticate, NoError);
+		finishOp (XMO_Authenticate, NoError);
 		return;
 	}
-	finishOp_locked (XMO_Authenticate, error::AuthError);
+	finishOp (XMO_Authenticate, error::AuthError);
 }
 
-void XMPPStream::onStartTlsReply_locked (const XMLChunk & chunk) {
+void XMPPStream::onStartTlsReply (const XMLChunk & chunk) {
 	if (chunk.name() == "proceed"){
-		finishOp_locked (XMO_RequestTls, NoError);
+		finishOp (XMO_RequestTls, NoError);
 		return;
 	}
 	Log (LogWarning) << LOGID << "Could not request TLS: " << chunk << std::endl;
-	finishOp_locked (XMO_RequestTls, error::NotSupported);
+	finishOp (XMO_RequestTls, error::NotSupported);
 }
 
 void XMPPStream::onResourceBind (Error e, const xmpp::Iq & iq, const XMLChunk & chunk, const XMPPStream::BindCallback & originalCallback) {
@@ -415,7 +415,7 @@ void XMPPStream::onResourceBind (Error e, const xmpp::Iq & iq, const XMLChunk & 
 }
 
 
-bool XMPPStream::decodeStreamInit_locked () {
+bool XMPPStream::decodeStreamInit () {
 	const XMLChunk & opener = mXmlStreamDecoder.opener();
 	if (opener.name() != "stream:stream")  {
 		mState = XMS_Error;
@@ -427,14 +427,14 @@ bool XMPPStream::decodeStreamInit_locked () {
 	return true;
 }
 
-void XMPPStream::sendStreamInit_locked () {
+void XMPPStream::sendStreamInit () {
 	String fromPart = mOwnJid.empty() ? "" : "from='" + mOwnJid + "' ";
 	String toPart   = mDstJid.empty() ? "" : "to='" + mDstJid + "' ";
 	String init = String ("<?xml version='1.0' encoding='utf-8'?><stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' " + fromPart + toPart + " version='1.0'>");
-	send_locked (init);
+	send (init);
 }
 
-Error XMPPStream::send_locked (const String & content) {
+Error XMPPStream::send (const String & content) {
 	if (!mChannel) return error::NotInitialized;
 #ifndef NDEBUG
 	Log (LogInfo) << LOGID << "send " << content << std::endl;
@@ -442,7 +442,7 @@ Error XMPPStream::send_locked (const String & content) {
 	return mChannel->write (sf::createByteArrayPtr(content));
 }
 
-Error XMPPStream::startOp_locked (CurrentOp op, const ResultCallback & callback) {
+Error XMPPStream::startOp (CurrentOp op, const ResultCallback & callback) {
 	if (mCurrentOp) {
 		Log (LogWarning) << LOGID << "Cannot start op " << toString (op) << ", pending op " << toString (mCurrentOp) << std::endl;
 		return error::ExistsAlready;
@@ -452,7 +452,7 @@ Error XMPPStream::startOp_locked (CurrentOp op, const ResultCallback & callback)
 	return NoError;
 }
 
-void XMPPStream::finishOp_locked (CurrentOp op, Error result) {
+void XMPPStream::finishOp (CurrentOp op, Error result) {
 	if (mCurrentOp == op) {
 		if (mCurrentCallback) xcall (abind (mCurrentCallback, result));
 		mCurrentCallback.clear();
@@ -464,7 +464,7 @@ void XMPPStream::throwAwayChannel (ChannelPtr channel) {
 	// intentionally nothing
 }
 
-String XMPPStream::generateIqId_locked () {
+String XMPPStream::generateIqId () {
 	String id = sf::genRandomToken80();
 	while (mOpenIqs.count(id) > 0) id = sf::genRandomToken80();
 	return id;

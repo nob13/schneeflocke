@@ -123,14 +123,6 @@ private:
 	void onAuthFinishedRespondingChannel (Error err, AsyncOpId id);
 	///@}
 
-	///@name Tools
-	///@{
-
-	/// Returns the presence state of a specific id (function doesn't lock!)
-	sf::OnlineState onlineState_locked (const sf::String & id) const;
-
-	///@}
-
 	///@name Handlers
 	///@{
 	/// Handler for subscribe requests

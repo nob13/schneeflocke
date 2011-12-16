@@ -139,29 +139,29 @@ public:
 	///@}
 private:
 	/// Common parts of init
-	Error init_locked (ChannelPtr channel, bool skipInit);
+	Error init (ChannelPtr channel, bool skipInit);
 
-	void onXmlStreamStateChange_locked ();
-	void onXmlChunkRead_locked (const XMLChunk & chunk);
-	void onChannelError_locked (Error e);
+	void onXmlStreamStateChange ();
+	void onXmlChunkRead (const XMLChunk & chunk);
+	void onChannelError (Error e);
 	void onChannelChange   ();
-	void onAuthReply_locked     (const XMLChunk & chunk);
-	void onStartTlsReply_locked (const XMLChunk & chunk);
+	void onAuthReply     (const XMLChunk & chunk);
+	void onStartTlsReply (const XMLChunk & chunk);
 	void onResourceBind (Error e, const xmpp::Iq & iq, const XMLChunk & chunk, const XMPPStream::BindCallback & originalCallback);
 
 	/// Decodes stream opener, returns true if successfull
 	/// On Error the error state will be set and the init callback called.
-	bool decodeStreamInit_locked ();
-	void sendStreamInit_locked ();
-	Error send_locked (const String & content);
+	bool decodeStreamInit ();
+	void sendStreamInit ();
+	Error send (const String & content);
 
 	/// An iq timeouted
 	void onTimeoutIq (const String & id);
 
 	/// Starts a new async op
-	Error startOp_locked (CurrentOp op, const ResultCallback & callback);
+	Error startOp (CurrentOp op, const ResultCallback & callback);
 	/// Finish current operation (if its op), sets mCurrentOp to null, calls back
-	void finishOp_locked (CurrentOp op, Error result);
+	void finishOp (CurrentOp op, Error result);
 
 	/// some channels (TLSChannel) do not like to be kicked while delegating
 	/// so we do it asyncrhonous with this function
@@ -194,7 +194,7 @@ private:
 	ResultCallback   mCurrentCallback;			///< Callback for current operation
 	XMLStreamDecoder mXmlStreamDecoder;
 
-	String generateIqId_locked ();
+	String generateIqId ();
 
 	typedef std::map<String, IqResultCallback> OpenIqMap;
 	OpenIqMap mOpenIqs;

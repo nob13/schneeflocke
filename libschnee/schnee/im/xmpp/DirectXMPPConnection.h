@@ -36,7 +36,7 @@ public:
 
 private:
 	/// Starts connecting/registration
-	Error startConnectingProcess_locked (const XMPPStreamPtr & stream, int timeOutMs,const ResultCallback & callback);
+	Error startConnectingProcess (const XMPPStreamPtr & stream, int timeOutMs,const ResultCallback & callback);
 
 	// Connecting And Registration Process..
 	void onTcpConnect (Error result);
@@ -54,11 +54,11 @@ private:
 	void onSessionStart (Error result);
 
 	void onConnectTimeout ();
-	void onConnectError_locked (Error e);
-	void setPhase_locked (const String & phase);
+	void onConnectError (Error e);
+	void setPhase (const String & phase);
 
 	/// Change connection state
-	void stateChange_locked (State s);
+	void stateChange (State s);
 
 	XMPPStreamPtr mStream;
 	State mState;

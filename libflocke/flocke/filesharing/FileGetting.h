@@ -85,15 +85,15 @@ private:
 	void onTransferChange (AsyncOpId id, TransferInfo::TransferUpdateType type);
 	
 	// Starts the next child transfer of a DirectoryTransfer
-	Error startNextChildTransfer_locked (AsyncOpId id);
+	Error startNextChildTransfer (AsyncOpId id);
 	
 	/// Starts a file transfer
-	Error requestFileTransfer_locked (const Uri & uri, const String & fileName, AsyncOpId parent, AsyncOpId * opIdOut = 0);
+	Error requestFileTransfer (const Uri & uri, const String & fileName, AsyncOpId parent, AsyncOpId * opIdOut = 0);
 	
 	// for directory listing
 	void onListingReply (const HostId & sender, const ds::RequestReply & reply, const ByteArrayPtr & data);
 
-	AsyncOpId nextId_locked () { return mNextId++; }
+	AsyncOpId generateNextId () { return mNextId++; }
 
 	DataSharingClient * mClient;
 

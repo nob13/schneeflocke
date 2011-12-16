@@ -41,7 +41,7 @@ Error DataSharingClientImpl::request (const HostId & src, const Request & reques
 		RequestOp * op = new RequestOp (sf::regTimeOutMs (timeOutMs));
 		op->setId(id);
 		op->cb = callback;
-		op->setKey(hostKey_locked (src));
+		op->setKey(hostKey (src));
 		op->isTransmission = (request.mark == Request::Transmission);
 		op->path = request.path;
 		addAsyncOp (op);
@@ -67,7 +67,7 @@ Error DataSharingClientImpl::subscribe (const HostId & src, const Subscribe & su
 		SubscribeOp * op = new SubscribeOp (sf::regTimeOutMs(timeOutMs));
 		op->setId(id);
 		op->cb = callback;
-		op->setKey(hostKey_locked (src));
+		op->setKey(hostKey (src));
 		op->proposedNotificationDelegate = notDelegate;
 		addAsyncOp (op);
 	}
@@ -107,14 +107,13 @@ Error DataSharingClientImpl::push (const HostId & user, const ds::Push & pushCmd
 		PushOp * op = new PushOp (sf::regTimeOutMs(timeOutMs));
 		op->setId(id);
 		op->cb = callback;
-		op->setKey (hostKey_locked (user));
+		op->setKey (hostKey (user));
 		addAsyncOp (op);
 	}
 	return result;
 }
 
 void DataSharingClientImpl::onChannelChange (const HostId & host){
-	int hostKey = -1;
 	int level = mCommunicationDelegate->channelLevel(host);
 	if (level > 0) return; // just want to see if a host gets offline
 
@@ -135,10 +134,10 @@ void DataSharingClientImpl::onChannelChange (const HostId & host){
 		}
 		i++;
 	}
-	hostKey = hostKey_locked (host);
+	int key = hostKey (host);
 	// Canceling operations
 	// Async Operations have their own lock
-	cancelAsyncOps (hostKey, error::TargetOffline);
+	cancelAsyncOps (key, error::TargetOffline);
 }
 
 void DataSharingClientImpl::onRpc (const HostId & sender, const Notify & n, const ByteArray & content) {

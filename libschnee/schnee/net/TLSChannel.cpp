@@ -87,18 +87,15 @@ TLSChannel::TLSChannel (ChannelPtr next) {
 TLSChannel::~TLSChannel () {
 	SF_UNREGISTER_ME;
 	mNext.reset();
-	LockGuard guard (mMutex);
-	freeTlsData_locked();
+	freeTlsData();
 }
 
 void TLSChannel::setKey  (const x509::CertificatePtr & cert, const x509::PrivateKeyPtr& key) {
-	LockGuard guard (mMutex);
 	mCert = cert;
 	mKey  = key;
 }
 
 Error TLSChannel::clientHandshake (Mode mode, const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	if (mSecured) return error::WrongState;
 	const char * prios = 0;
 	switch (mode) {
@@ -117,11 +114,10 @@ Error TLSChannel::clientHandshake (Mode mode, const ResultCallback & callback) {
 			assert (!"Shall not come here");
 		break;
 	}
-	return startHandshake_locked (mode, callback, false, prios);
+	return startHandshake (mode, callback, false, prios);
 }
 
 Error TLSChannel::serverHandshake (Mode mode, const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	if (mSecured) return error::WrongState;
 	const char * prios = 0;
 	switch (mode) {
@@ -144,11 +140,10 @@ Error TLSChannel::serverHandshake (Mode mode, const ResultCallback & callback) {
 			assert (!"Shall not come here");
 		break;
 	}
-	return startHandshake_locked (mode, callback, true, prios);
+	return startHandshake (mode, callback, true, prios);
 }
 
 sf::Error TLSChannel::error () const {
-	LockGuard guard (mMutex);
 	if (mHandshakeError) return mHandshakeError;
 	return mNext->error();
 }
@@ -162,7 +157,6 @@ Channel::State TLSChannel::state () const {
 }
 
 Error TLSChannel::write (const ByteArrayPtr& data, const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	if (!mSecured) {
 		return error::NotInitialized;
 	}
@@ -209,7 +203,6 @@ Error TLSChannel::write (const ByteArrayPtr& data, const ResultCallback & callba
 }
 
 sf::ByteArrayPtr TLSChannel::read (long maxSize) {
-	LockGuard guard (mMutex);
 	const size_t bufSize = 65536;
 	char buffer [bufSize];
 #ifdef WIN32
@@ -235,7 +228,6 @@ sf::ByteArrayPtr TLSChannel::read (long maxSize) {
 }
 
 void TLSChannel::close (const ResultCallback & callback) {
-	LockGuard guard (mMutex);
 	if (mNext) mNext->close(callback);
 	else
 		notifyAsync (callback, NoError);
@@ -249,13 +241,13 @@ sf::VoidDelegate & TLSChannel::changed () {
 	return mChanged;
 }
 
-Error TLSChannel::startHandshake_locked (Mode m, const ResultCallback & callback, bool server, const char * type) {
-	freeTlsData_locked ();
+Error TLSChannel::startHandshake (Mode m, const ResultCallback & callback, bool server, const char * type) {
+	freeTlsData ();
 	mHandshakeCallback = callback;
 	CHECK (gnutls_init (&mSession, server ? GNUTLS_SERVER : GNUTLS_CLIENT));
 	CHECK (gnutls_priority_set_direct (mSession, type, NULL));
 	mEncryptionData->apply(mSession);
-    setTransport_locked ();
+    setTransport ();
 
     mHandshaking = true;
     mServer = server;
@@ -265,14 +257,14 @@ Error TLSChannel::startHandshake_locked (Mode m, const ResultCallback & callback
 }
 
 
-void TLSChannel::freeTlsData_locked () {
+void TLSChannel::freeTlsData () {
 	if (mSession) {
 		gnutls_deinit (mSession);
 		mSession = 0;
 	}
 }
 
-void TLSChannel::setTransport_locked() {
+void TLSChannel::setTransport() {
 	gnutls_transport_set_push_function (mSession, &TLSChannel::c_push);
 	// Note: new GnuTLS variants have a vec_push method
 	// But not yet available on development machine
@@ -283,40 +275,31 @@ void TLSChannel::setTransport_locked() {
 
 void TLSChannel::continueHandshake () {
 	Error result = NoError;
-	{
-		LockGuard guard (mMutex);
-		if (!mHandshaking) {
-			// Log (LogWarning) << LOGID << func_locked() << "How did I came here?" << std::endl;
-			return;
-		}
-		int r = gnutls_handshake (mSession);
-		if (!r) {
-			mSecured     = true;
-			result = NoError;
-		} else if (r == GNUTLS_E_AGAIN || r == GNUTLS_E_INTERRUPTED){
-			// Async, do something else
-			return;
-		} else {
-			// fail
-			Log (LogWarning) << LOGID << func_locked() << "Handshaking failed due " << gnutls_strerror_name (r) << std::endl;
-			result = error::TlsError;
-			mHandshakeError = result;
-		}
-		mHandshaking = false;
+	if (!mHandshaking) {
+		return;
 	}
+	int r = gnutls_handshake (mSession);
+	if (!r) {
+		mSecured     = true;
+		result = NoError;
+	} else if (r == GNUTLS_E_AGAIN || r == GNUTLS_E_INTERRUPTED){
+		// Async, do something else
+		return;
+	} else {
+		// fail
+		Log (LogWarning) << LOGID << functionalityName() << "Handshaking failed due " << gnutls_strerror_name (r) << std::endl;
+		result = error::TlsError;
+		mHandshakeError = result;
+	}
+	mHandshaking = false;
 	Log (LogInfo) << LOGID << "Handshaking result: " << toString (result) << std::endl;
 	if (mHandshakeCallback) mHandshakeCallback (result);
 }
 
 void TLSChannel::onChanged() {
 	{
-		LockGuard guard (mMutex);
-//		Log (LogInfo) << LOGID << "TLSChannel::onChanged (handler=" << (mChanged ? "true" : "false") << ")" << std::endl;
-//		Log (LogInfo) << LOGID << "Error: " << toString (mNext->error()) << std::endl;
-		{
-			if (mHandshaking) {
-				xcall (dMemFun (this, &TLSChannel::continueHandshake));
-			}
+		if (mHandshaking) {
+			xcall (dMemFun (this, &TLSChannel::continueHandshake));
 		}
 	}
 	if (mChanged) mChanged ();
@@ -334,7 +317,6 @@ void TLSChannel::onChanged() {
 		gnutls_transport_set_errno (_this->mSession, EBADFD);
 		return -1;
 	}
-	// Log (LogInfo) << LOGID << _this->func_locked()  << " Sent " << size << std::endl;
 	return size;
 }
 
@@ -363,7 +345,6 @@ void TLSChannel::onChanged() {
 		return -1;
 	}
 	memcpy (data, block->const_c_array(), block->size());
-	// Log (LogInfo) << LOGID << _this->func_locked() << " Recv " << block->size() << " Req: " << size << std::endl;
 	return block->size();
 }
 

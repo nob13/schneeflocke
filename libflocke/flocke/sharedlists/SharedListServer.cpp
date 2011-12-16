@@ -14,7 +14,7 @@ SharedListServer::~SharedListServer () {
 }
 
 Error SharedListServer::init () {
-	uninit_locked();
+	uninit();
 
 	Error err = mServer->share (gSharedName, createByteArrayPtr(toJSONEx (mList, INDENT)));
 	if (err) return err;
@@ -24,25 +24,28 @@ Error SharedListServer::init () {
 }
 
 Error SharedListServer::uninit () {
-	return uninit_locked ();
+	if (!mInitialized) return NoError;
+	mList.clear ();
+	mInitialized = false;
+	return mServer->unShare("shared");
 }
 
 Error SharedListServer::add (const String & shareName, const SharedElement & element) {
 	if (mList.count(shareName) > 0) return error::ExistsAlready;
 	mList[shareName] = element;
-	return update_locked ();	
+	return update ();	
 }
 
 Error SharedListServer::remove (const String & shareName) {
 	SharedList::iterator i = mList.find (shareName);
 	if (i == mList.end()) return error::NotFound;
 	mList.erase (i);
-	return update_locked ();	
+	return update ();	
 }
 
 Error SharedListServer::clear () {
 	mList.clear ();
-	return update_locked ();
+	return update ();
 	
 }
 
@@ -54,14 +57,7 @@ Path SharedListServer::path () const {
 	return gSharedName;
 }
 
-Error SharedListServer::uninit_locked () {
-	if (!mInitialized) return NoError;
-	mList.clear ();
-	mInitialized = false;
-	return mServer->unShare("shared");	
-}
-
-Error SharedListServer::update_locked () {
+Error SharedListServer::update () {
 	Error err = mServer->update ("shared", createByteArrayPtr(toJSONEx (mList, INDENT)));
 	return err;
 }

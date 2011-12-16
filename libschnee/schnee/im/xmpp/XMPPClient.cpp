@@ -171,95 +171,6 @@ Error XMPPClient::setIdentity (const String & name, const String & type) {
 
 
 Error XMPPClient::subscribeContact (const sf::UserId & user) {
-	return subscribeContact_locked (user);
-}
-
-Error XMPPClient::subscriptionRequestReply (const sf::UserId & user, bool allow, bool alsoAdd) {
-	if (!isConnected()) {
-		return error::ConnectionError;
-	}
-	if (!checkUserId (user))
-		return error::InvalidArgument;
-
-	const char * type = allow ? "subscribed" : "unsubscribed";
-
-	xmpp::PresenceInfo p;
-	p.to   = user;
-	p.from = mStream->ownFullJid();
-	p.type = type;
-
-	mStream->sendPresence(p);
-
-	if (alsoAdd && allow) {
-		subscribeContact_locked (user);
-	}
-	return NoError;
-}
-
-Error XMPPClient::cancelSubscription (const sf::UserId & user) {
-	if (!isConnected()) {
-		return error::ConnectionError;
-	}
-	if (!checkUserId (user)) return error::InvalidArgument;
-	const char * type = 0;
-	Contacts::const_iterator i = mContacts.find (user);
-	if (i != mContacts.end()) {
-		// removing from contact list
-		const ContactInfo & ci (i->second);
-		switch (ci.state) {
-		case SS_NONE:
-			return error::NotFound;
-			break;
-		case SS_TO:
-			type = "unsubscribe"; // "requesting for unsubscription"
-			break;
-		case SS_FROM:
-			type = "unsubscribed";
-			break;
-		case SS_BOTH:
-			type = "unsubscribed";
-			break;
-		}
-	}
-	if (!type) type = "unsubscribed";
-	mToAuthorize.erase (user);
-
-	xmpp::PresenceInfo p;
-	p.from = mStream->ownFullJid();
-	p.to = user;
-	p.type = type;
-	mStream->sendPresence(p);
-	return NoError;
-}
-
-Error XMPPClient::removeContact (const sf::UserId & user) {
-	return removeContact_locked (user);
-}
-
-String XMPPClient::fullJidToBareJid(const String & fullJid) {
-	// split at '/'
-	if (fullJid.empty())
-		return String();
-	String::size_type i = fullJid.find('/');
-	if (i == fullJid.npos) {
-		Log (LogWarning) << LOGID << fullJid << " is not a valid full jid" << std::endl;
-		return fullJid;
-	}
-	return String(fullJid.begin(), fullJid.begin() + i);
-}
-
-bool XMPPClient::isFullJid (const String & jid) {
-	return jid.find ('/') != jid.npos;
-}
-
-struct RemoveContactIq : public xmpp::Iq {
-	String whom;
-	String encode () const {
-		return "<iq type='set' id='" + id + "'><query xmlns='jabber:iq:roster'><item jid='" + whom + "' subscription='remove'/></query></iq>";
-	}
-};
-
-Error XMPPClient::subscribeContact_locked (const sf::UserId & user) {
 	if (!isConnected()){
 		return error::ConnectionError;
 	}
@@ -301,7 +212,72 @@ Error XMPPClient::subscribeContact_locked (const sf::UserId & user) {
 	return NoError;
 }
 
-Error XMPPClient::removeContact_locked (const UserId & user) {
+Error XMPPClient::subscriptionRequestReply (const sf::UserId & user, bool allow, bool alsoAdd) {
+	if (!isConnected()) {
+		return error::ConnectionError;
+	}
+	if (!checkUserId (user))
+		return error::InvalidArgument;
+
+	const char * type = allow ? "subscribed" : "unsubscribed";
+
+	xmpp::PresenceInfo p;
+	p.to   = user;
+	p.from = mStream->ownFullJid();
+	p.type = type;
+
+	mStream->sendPresence(p);
+
+	if (alsoAdd && allow) {
+		subscribeContact (user);
+	}
+	return NoError;
+}
+
+Error XMPPClient::cancelSubscription (const sf::UserId & user) {
+	if (!isConnected()) {
+		return error::ConnectionError;
+	}
+	if (!checkUserId (user)) return error::InvalidArgument;
+	const char * type = 0;
+	Contacts::const_iterator i = mContacts.find (user);
+	if (i != mContacts.end()) {
+		// removing from contact list
+		const ContactInfo & ci (i->second);
+		switch (ci.state) {
+		case SS_NONE:
+			return error::NotFound;
+			break;
+		case SS_TO:
+			type = "unsubscribe"; // "requesting for unsubscription"
+			break;
+		case SS_FROM:
+			type = "unsubscribed";
+			break;
+		case SS_BOTH:
+			type = "unsubscribed";
+			break;
+		}
+	}
+	if (!type) type = "unsubscribed";
+	mToAuthorize.erase (user);
+
+	xmpp::PresenceInfo p;
+	p.from = mStream->ownFullJid();
+	p.to = user;
+	p.type = type;
+	mStream->sendPresence(p);
+	return NoError;
+}
+
+struct RemoveContactIq : public xmpp::Iq {
+	String whom;
+	String encode () const {
+		return "<iq type='set' id='" + id + "'><query xmlns='jabber:iq:roster'><item jid='" + whom + "' subscription='remove'/></query></iq>";
+	}
+};
+
+Error XMPPClient::removeContact (const sf::UserId & user) {
 	// if (!mConnection.isConnected()) return error::ConnectionError;
 	if (!checkUserId (user)) return error::InvalidArgument;
 	Contacts::const_iterator i = mContacts.find(user);
@@ -310,6 +286,22 @@ Error XMPPClient::removeContact_locked (const UserId & user) {
 	RemoveContactIq iq;
 	iq.whom = user;
 	return mStream->requestIq(&iq);
+}
+
+String XMPPClient::fullJidToBareJid(const String & fullJid) {
+	// split at '/'
+	if (fullJid.empty())
+		return String();
+	String::size_type i = fullJid.find('/');
+	if (i == fullJid.npos) {
+		Log (LogWarning) << LOGID << fullJid << " is not a valid full jid" << std::endl;
+		return fullJid;
+	}
+	return String(fullJid.begin(), fullJid.begin() + i);
+}
+
+bool XMPPClient::isFullJid (const String & jid) {
+	return jid.find ('/') != jid.npos;
 }
 
 void XMPPClient::onConnect (Error result, const XMPPConnectionPtr& connector, const ResultCallback & originalCallback) {

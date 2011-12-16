@@ -66,7 +66,7 @@ private:
 
 	void onTcpConnect   (Error result, AsyncOpId id);
 	void onTlsHandshake (Error result, AsyncOpId id);
-	void doFinish_locked (Error result, EstablishConnectionOp * op);
+	void doFinish (Error result, EstablishConnectionOp * op);
 
 	/// Channel changes on a pending op
 	void onChannelChange (AsyncOpId);
@@ -77,10 +77,9 @@ private:
 	typedef std::map<ConId, PendingConnectionList> PendingConnectionMap;
 
 	PendingConnectionMap mPendingConnections;
-	void addToPendingConnections_locked (PendingConnectionOp * op);
-	void removeFromPendingConnections (ConId c, AsyncOpId id);
-	void removeFromPendingConnections_locked (PendingConnectionOp * op);
-	void removeFromPendingConnections_locked (ConId c, AsyncOpId id);
+	void addToPendingConnections (PendingConnectionOp * op);
+	void removeFromPendingConnections (PendingConnectionOp * op);
+	void removeFromPendingConnectionsExplicit (ConId c, AsyncOpId id);
 
 	int mGeneralTimeoutMs; ///< General timeout for holding connections
 	int mPendingConnectionsCount;
