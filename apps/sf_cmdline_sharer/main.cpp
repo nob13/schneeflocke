@@ -132,6 +132,7 @@ struct Model {
 
 int main (int argc, char * argv[]){
 	sf::schnee::SchneeApp app (argc, argv);
+	SF_SCHNEE_LOCK;
 	if (argc<2){
 		std::cerr << "Usage: sf_cmdline_sharer LOGINDATA" << std::endl;
 		return 1;
@@ -164,7 +165,8 @@ int main (int argc, char * argv[]){
 					"unshare [shareName]                         - unshare a file / directory\n"
 					"shared                                      - list own shared files\n"
 					"cons                                        - list open connections\n"
-					"users                                       - list all users/hosts\n"
+					"users                                       - list all users\n"
+					"hosts                                       - list all hosts\n"
 					"track [host]                                - track a host\n"
 					"ls [uri]                                    - list a directory\n"
 					"request [fulluri]                           - transfer some file\n"
@@ -217,6 +219,11 @@ int main (int argc, char * argv[]){
 		if (cmd == "users" || cmd == "state") {
 			sf::PresenceManagement::UserInfoMap users = model.beacon->presences().users();
 			std::cout << "users: " << std::endl << sf::toJSONEx (users, sf::INDENT | sf::COMPRESS) << std::endl;
+			handled = true;
+		}
+		if (cmd == "hosts" || cmd == "state") {
+			sf::PresenceManagement::HostInfoMap hosts = model.beacon->presences().hosts();
+			std::cout << "hosts: " << std::endl << sf::toJSONEx (hosts, sf::INDENT | sf::COMPRESS) << std::endl;
 			handled = true;
 		}
 		if (cmd == "track" && args.size() >= 2){
