@@ -50,8 +50,11 @@ int createSelfSignedCertificate (x509::PrivateKey * key, x509::Certificate * cer
 	CHECK (cert->textExport (&cacertText));
 	std::string cacertDnText;
 	CHECK (cert->dnTextExport(&cacertDnText));
-	printf ("Cert Text:    %s\n", cacertText.c_str());
-	printf ("Cert DN Text: %s\n", cacertDnText.c_str());
+	std::string sha256Fingerprint;
+	CHECK (cert->fingerprintSha256(&sha256Fingerprint));
+	printf ("Cert Text:               %s\n", cacertText.c_str());
+	printf ("Cert DN Text:            %s\n", cacertDnText.c_str());
+	printf ("Cert SHA256 Fingerprint: %s\n", sha256Fingerprint.c_str());
 	return ret;
 }
 
@@ -142,6 +145,9 @@ int x509AuthTest2 () {
 	String dn;
 	tcheck1 (cert->dnTextExport(&dn) == 0);
 	printf ("Google DN: %s\n", dn.c_str());
+	String fp;
+	tcheck1 (cert->fingerprintSha256(&fp) == 0);
+	printf ("Fignerprint: %s\n", fp.c_str());
 	tcheck1 (tls.authenticate(cert.get(), "www.google.com") == NoError);
 	tcheck1 (tls.authenticate(cert.get(), "www.sflx.net") == error::AuthError);
 	return 0;

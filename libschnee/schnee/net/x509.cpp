@@ -4,7 +4,7 @@
 namespace sf {
 namespace x509 {
 
-bool Certificate::verify (const Certificate * trusted){
+bool Certificate::verify (const Certificate * trusted) const {
 	unsigned int v = 0;
 	int r = gnutls_x509_crt_verify (data, &trusted->data, 1, 0, &v);
 	if (r) {
