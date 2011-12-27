@@ -10,6 +10,7 @@
 
 #include "ChannelHolder.h"
 #include "ChannelPinger.h"
+#include "../Authentication.h"
 
 
 namespace sf {
@@ -23,14 +24,9 @@ public:
 	GenericConnectionManagement ();
 	virtual ~GenericConnectionManagement();
 
-	/// Adds and initializes an ChannelProvider
-	/// Do it before init()
-	Error addChannelProvider  (ChannelProviderPtr channelProvider, int priority = 0);
-
 	/// Init generic connection management
 	/// Connect the delegates first!
-	/// Do it after adding channel providers
-	Error init (CommunicationMultiplex * multiplex);
+	Error init (CommunicationMultiplex * multiplex, Authentication * authentication);
 
 	/// Uninitialize the connection management
 	/// Must be done before disconnecting channels (or unregistering delegate!)
@@ -50,6 +46,9 @@ public:
 
 	/// Stops delay measurement
 	void stopPing ();
+
+	/// Adds and initializes an ChannelProvider
+	Error addChannelProvider  (ChannelProviderPtr channelProvider, int priority = 0);
 
 	//	Implementation of ConnectionManagement
 	virtual ConnectionInfos connections () const;
@@ -125,6 +124,7 @@ private:
 	// Components
 	ChannelHolder mChannels;
 	ChannelPinger mChannelPinger;
+	Authentication * mAuthentication; // not owned
 
 	// Delegates
 	VoidDelegate mConDetailsChanged;

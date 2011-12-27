@@ -13,6 +13,7 @@ namespace sf {
 
 AuthProtocol::AuthProtocol (ChannelPtr channel, const HostId & me) {
 	SF_REGISTER_ME;
+	mAuthentication = 0;
 	init (channel, me);
 }
 
@@ -41,6 +42,10 @@ void AuthProtocol::connect (const HostId & other, int timeOutInMs) {
 	cmd.to      = other;
 	cmd.version = schnee::version();
 	
+	if (keyExchange()){
+		cmd.toCertFp = mAuthentication->get(other).fingerprint();
+	}
+
 	mOther = other;
 	mChannel->changed () = dMemFun (this, &AuthProtocol::onChannelChange);
 	Error err = Datagram::fromCmd(cmd).sendTo (mChannel);
@@ -65,7 +70,6 @@ void AuthProtocol::passive (const HostId & other, int timeOutInMs) {
 }
 
 void AuthProtocol::onChannelChange () {
-	// TODO: Locking cleanup!
 	sf::Error err;
 	sf::ByteArrayPtr header;
 	if (mState == AUTH_ERROR || mState == TIMEOUT || mState == FINISHED) return;
@@ -89,6 +93,13 @@ void AuthProtocol::onChannelChange () {
 				ChannelAccept accept;
 				accept.from = mMe;
 				accept.to   = mOther;
+				if (keyExchange()) {
+					if (mOtherCertFp != mAuthentication->certFingerprint()){
+						// The other knows some different fingerprint, send the certificate
+						mAuthentication->certificate()->textExport (&accept.cert);
+					}
+					updateOtherCert ();
+				}
 				err = Datagram::fromCmd(accept).sendTo (mChannel);
 				if (err) {
 					onError (error::ConnectionError);
@@ -112,8 +123,11 @@ void AuthProtocol::onChannelChange () {
 				accept.from    = mMe;
 				accept.to      = mOther;
 				accept.version = schnee::version();
-				String answerCmd = toJSONCmd (accept); 
-				
+				if (keyExchange () && mOtherCertFp != mAuthentication->certFingerprint()){
+					// The other knows some different fingerprint, send the certificate
+					mAuthentication->certificate()->textExport (&accept.cert);
+				}
+				String answerCmd = toJSONCmd (accept);
 				err = Datagram::fromCmd(accept).sendTo (mChannel);
 				if (err) {
 					onError (error::ConnectionError);
@@ -134,6 +148,9 @@ void AuthProtocol::onChannelChange () {
 		break;
 		case SENT_CREATE_CHANNEL_ACCEPT:
 			if (checkParams (deserialization, cmd, "channelAccept")){
+				if (keyExchange()) {
+					updateOtherCert ();
+				}
 				// Ok, finished
 				onFinish ();
 			} else { 
@@ -192,6 +209,8 @@ bool AuthProtocol::checkParams (const sf::Deserialization & ds, const String & c
 	String from, to;
 	decode = ds ("from", from);
 	decode = decode && ds ("to", to);
+	ds ("toCertFp", mOtherCertFp);
+	ds ("cert", mOtherCert);
 	if (!decode) return false;
 	if (setOther) {
 		mOther = from;
@@ -200,5 +219,31 @@ bool AuthProtocol::checkParams (const sf::Deserialization & ds, const String & c
 		return (from == mOther && to == mMe);
 	}
 }
+
+bool AuthProtocol::keyExchange () const {
+	if (!mAuthentication || !mAuthentication->isEnabled())
+		return false;
+	Channel::ChannelInfo info;
+	if (!info.authenticated)
+		return false;
+	if (!info.encrypted)
+		return false;
+	return true;
+}
+
+void AuthProtocol::updateOtherCert () {
+	if (mAuthentication && !mOtherCert.empty()){
+		// the other GUI sent its certificate
+		x509::CertificatePtr cert (new x509::Certificate());
+		if (!cert->textImport (mOtherCert)){
+			Authentication::CertInfo info;
+			info.type = Authentication::CT_PEER;
+			info.cert = cert;
+			mAuthentication->update (mOther, info);
+		}
+	}
+}
+
+
 
 }

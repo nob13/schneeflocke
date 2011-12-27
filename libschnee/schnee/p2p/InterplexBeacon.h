@@ -7,6 +7,7 @@
 
 #include "CommunicationMultiplex.h"
 #include "ConnectionManagement.h"
+#include "Authentication.h"
 
 namespace sf {
 
@@ -16,8 +17,6 @@ namespace sf {
  * - It holds the different communication components (with CommunicationMultiplex in components)
  * - Have connections to the other peers (you can send them data via the send () method, but this
  *   is usually done by the communication components).
- *
- * - TODO: It would be better to make InterplexBeacon a PresenceProvider as it already has 70% of the methods
  *
  * The name was a cool thing in StarTrek 8.
  */
@@ -65,6 +64,10 @@ public:
 	virtual ConnectionManagement & connections() = 0;
 	virtual const ConnectionManagement & connections() const = 0;
 	
+	/// Gives you accesss to authentication subsystem
+	virtual Authentication & authentication () = 0;
+	virtual const Authentication & authtentication () const = 0;
+
 	///@}
 	
 	///@name Creators

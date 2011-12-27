@@ -1,6 +1,7 @@
 #pragma once
 
 #include <schnee/net/Channel.h>
+#include "../Authentication.h"
 
 namespace sf {
 
@@ -30,6 +31,9 @@ public:
 
 	/// Sets own host id, often necessary to accept/create connections
 	virtual void setHostId (const sf::HostId & id) = 0;
+
+	/// Binds with authentication
+	virtual void setAuthentication (Authentication * auth) {}
 
 	///@name Delegates
 	///@{

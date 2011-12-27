@@ -61,6 +61,7 @@ public:
 	virtual bool providesInitialChannels () { return false; }
 	virtual CommunicationComponent * protocol () { return &mProtocol; }
 	virtual void setHostId (const sf::HostId & id);
+	virtual void setAuthentication (Authentication * auth);
 	virtual ChannelCreationDelegate & channelCreated () { return mChannelCreated; }
 
 private:
@@ -169,6 +170,7 @@ private:
 
 	// Delegates
 	ChannelCreationDelegate mChannelCreated;
+	Authentication * mAuthentication;
 };
 
 

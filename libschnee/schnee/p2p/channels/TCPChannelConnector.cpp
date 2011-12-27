@@ -7,6 +7,7 @@ namespace sf {
 TCPChannelConnector::TCPChannelConnector () {
 	SF_REGISTER_ME;
 	mTimeOutMs = 10000;
+	mAuthentication = 0;
 	mServer.newConnection () = dMemFun (this, &TCPChannelConnector::onNewConnection);
 }
 
@@ -72,6 +73,10 @@ sf::Error TCPChannelConnector::createChannel (const HostId & target, const Resul
 
 void TCPChannelConnector::setHostId (const sf::HostId & id) {
 	mHostId = id;
+}
+
+void TCPChannelConnector::setAuthentication (Authentication * auth) {
+	mAuthentication = auth;
 }
 
 void TCPChannelConnector::startConnecting (CreateChannelOp * op) {

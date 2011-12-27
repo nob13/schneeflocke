@@ -13,9 +13,10 @@ GenericConnectionManagement::GenericConnectionManagement() {
 GenericConnectionManagement::~GenericConnectionManagement () {
 }
 
-Error GenericConnectionManagement::init (CommunicationMultiplex * multiplex) {
+Error GenericConnectionManagement::init (CommunicationMultiplex * multiplex, Authentication * authentication) {
 	SF_REGISTER_ME;
 	mCommunicationMultiplex = multiplex;
+	mAuthentication = authentication;
 
 	// wiring
 	mChannelPinger.init(&mChannels);
@@ -68,6 +69,7 @@ Error GenericConnectionManagement::addChannelProvider  (ChannelProviderPtr chann
 	}
 	mChannelProviders[priority] = channelProvider;
 	channelProvider->channelCreated() = abind (dMemFun (this, &GenericConnectionManagement::onChannelCreated), priority);
+	channelProvider->setAuthentication(mAuthentication);
 	if (channelProvider->protocol()){
 		Error e = mCommunicationMultiplex->addComponent (channelProvider->protocol());
 		if (e) return e;

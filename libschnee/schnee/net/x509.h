@@ -174,6 +174,14 @@ struct Certificate {
 		if (!r) *dst = buffer;
 		return r;
 	}
+	/// 0 = success
+	int textImport (const std::string & src) const {
+		gnutls_datum_t datum;
+		datum.data = (unsigned char*) src.c_str();
+		datum.size = src.length();
+		int r = gnutls_x509_crt_import (data, &datum, GNUTLS_X509_FMT_PEM);
+		return r;
+	}
 
 	/// 0 = success
 	int dnTextExport (std::string * dst) const {

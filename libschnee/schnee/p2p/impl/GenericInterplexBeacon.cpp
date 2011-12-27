@@ -5,7 +5,7 @@ namespace sf {
 GenericInterplexBeacon::GenericInterplexBeacon () {
 	SF_REGISTER_ME;
 	mCommunicationMultiplex.setCommunicationDelegate(&mConnectionManagement);
-	mConnectionManagement.init (&mCommunicationMultiplex);
+	mConnectionManagement.init (&mCommunicationMultiplex, &mAuthentication);
 }
 
 GenericInterplexBeacon::~GenericInterplexBeacon (){

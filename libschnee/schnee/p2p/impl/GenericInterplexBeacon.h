@@ -41,6 +41,9 @@ public:
 	virtual CommunicationMultiplex & components ();
 	virtual GenericConnectionManagement & connections (); // overwriting return type with derived
 	virtual const GenericConnectionManagement & connections() const;
+	virtual Authentication & authentication () { return mAuthentication; }
+	virtual const Authentication & authtentication () const { return mAuthentication; }
+
 
 private:
 
@@ -54,6 +57,7 @@ private:
 	PresenceManagement::HostInfoMap mHosts;
 	CommunicationMultiplex      mCommunicationMultiplex;
 	GenericConnectionManagement mConnectionManagement;
+	Authentication mAuthentication;
 };
 
 
