@@ -89,7 +89,7 @@ template <class T> static void holdIt (const shared_ptr<T> & x) {
 /// deletion to the next cycle.
 template <class T> void safeRemove (shared_ptr<T> & x){
 	// the xcall mechanism will hold it
-	xcall (abind (&holdIt, x));
+	xcall (abind (&holdIt<T>, x));
 }
 
 /// Call the callback x asynchronously, if valid (0 Parameter)

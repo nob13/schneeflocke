@@ -83,6 +83,17 @@ struct Certificate {
 		return gnutls_x509_crt_set_dn_by_oid (data, oid, 0, value, len);
 	}
 
+	/// 0 = success
+	int getDN (const char * oid, std::string * target) const {
+		char buffer[1024];
+		memset (buffer, sizeof(buffer), 0);
+		size_t size = sizeof(buffer) - 1;
+		int r = gnutls_x509_crt_get_dn_by_oid (data, oid, 0, 0, buffer, &size);
+		if (r) return r;
+		target->assign (buffer, buffer + size);
+		return 0;
+	}
+
 	// necessary
 	/// 0 = success
 	int setVersion (int version = 1) {
@@ -140,6 +151,11 @@ struct Certificate {
 	int setCommonName (const char * name) {
 		return setDN (GNUTLS_OID_X520_COMMON_NAME, name);
 	}
+	/// 0 = success
+	int getCommonName (std::string * name) {
+		return getDN (GNUTLS_OID_X520_COMMON_NAME, name);
+	}
+
 	/// 0 = success
 	int setName (const char * name){
 		return setDN (GNUTLS_OID_X520_NAME, name);

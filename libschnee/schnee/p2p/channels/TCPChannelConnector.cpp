@@ -144,6 +144,25 @@ void TCPChannelConnector::onTlsHandshake (CreateChannelOp * op, Error result) {
 		connectNext (op);
 		return;
 	}
+	if (mAuthentication && mAuthentication->isEnabled()) {
+		Authentication::CertInfo info = mAuthentication->get(op->target);
+		if (info.type != Authentication::CT_PEER) {
+			Log (LogProfile) << LOGID << "Could not do TLS authentication as no certificate is stored" << std::endl;
+			// there is no sense in doing next operation; won't exchange certificates
+			notify (op->callback, error::AuthError);
+			sf::safeRemove(op->tlsChannel);
+			delete op;
+			return;
+		}
+		result = op->tlsChannel->authenticate(info.cert.get(), op->target);
+		if (result) {
+			Log (LogProfile) << LOGID << "Could not TLS authenticate " << op->target << std::endl;
+			connectNext (op);
+			return;
+		}
+		// continue regular AuthProtocol authentication in order to not break prior versions
+	}
+
 	// Try to authenticate it
 	Log (LogInfo) << LOGID << "TLS Handshake successfull, authenticating..." << std::endl;
 	op->setState (CreateChannelOp::Authenticating);
@@ -199,6 +218,23 @@ void TCPChannelConnector::onAcceptTlsHandshake (AcceptConnectionOp * op, Error r
 		delete op;
 		return;
 	}
+	if (mAuthentication && mAuthentication->isEnabled()){
+		op->tlsChannel->peerCertificate()->getCommonName(&op->target);
+		Authentication::CertInfo info = mAuthentication->get(op->target);
+		if (info.type != Authentication::CT_PEER){
+			Log (LogInfo) << LOGID << "TLS Authentication failed, no certificate for this peer " << std::endl;
+			sf::safeRemove(op->tlsChannel);
+			delete op;
+			return;
+		}
+		result = op->tlsChannel->authenticate(info.cert.get(), op->target);
+		if (result) {
+			Log (LogProfile) << LOGID << "TLS Authentication failed, wrong certificate" << std::endl;
+			sf::safeRemove(op->tlsChannel);
+			delete op;
+			return;
+		}
+	}
 	Log (LogInfo) << LOGID << "TLS Handshake successfull, authenticating..." << std::endl;
 	op->setState (AcceptConnectionOp::Authenticating);
 	op->authProtocol.init (op->tlsChannel, mHostId);
@@ -210,9 +246,16 @@ void TCPChannelConnector::onAcceptTlsHandshake (AcceptConnectionOp * op, Error r
 void TCPChannelConnector::onAcceptAuthFinished (AcceptConnectionOp * op, Error result) {
 	if (result) {
 		Log (LogInfo) << LOGID << "Authentication failed (" << toString (result) << ") for incoming connection from " << op->authProtocol.other() << std::endl;
-	} else {
-		notifyAsync (mChannelCreated, op->authProtocol.other(), op->tlsChannel, false);
 	}
+	if (mAuthentication && mAuthentication->isEnabled()){
+		if (op->authProtocol.other() != op->target) {
+			Log (LogError) << LOGID << "The other side told us another name as in the certificate?!" << std::endl;
+			safeRemove (op->tlsChannel);
+			delete op;
+			return;
+		}
+	}
+	notifyAsync (mChannelCreated, op->authProtocol.other(), op->tlsChannel, false);
 	delete op;
 }
 

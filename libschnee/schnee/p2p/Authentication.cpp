@@ -46,7 +46,11 @@ void Authentication::enable (bool v) {
 }
 
 void Authentication::update (const String & identity, const CertInfo& info) {
-	mCerts[identity] = info;
+	if (!info.cert || info.type == CT_ERROR) {
+		mCerts.erase(identity);
+	} else {
+		mCerts[identity] = info;
+	}
 }
 
 Authentication::CertInfo Authentication::get (const String & identity) {
