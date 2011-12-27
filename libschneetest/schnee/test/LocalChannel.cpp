@@ -60,6 +60,7 @@ LocalChannel::LocalChannel (const HostId & id, LocalChannelUsageCollectorPtr col
 	mBandwidth = -1.0f;
 	mDelay = -1.0f;
 	mIsToNeighbor = false;
+	mAuthenticated = false;
 	mHostId = id;
 	mCollector = collector;
 	mHops = 1;
@@ -94,6 +95,10 @@ void LocalChannel::setIsToNeighbor (bool v) {
 
 void LocalChannel::setHops (int hops) {
 	mHops = hops;
+}
+
+void LocalChannel::setAuthenticated (bool v) {
+	mAuthenticated = v;
 }
 
 Error LocalChannel::error() const {

@@ -79,6 +79,7 @@ TLSChannel::TLSChannel (ChannelPtr next) {
 	mHandshaking     = false;
 	mSecured         = false;
 	mServer          = false;
+	mAuthenticated   = false;
 	mHandshakeError  = NoError;
 
 	mSession = 0;
@@ -156,6 +157,7 @@ Error TLSChannel::authenticate (const x509::Certificate*  trusted, const String 
 	if (!peerCert->verify(trusted)){
 		return error::AuthError;
 	}
+	mAuthenticated = true;
 	return NoError;
 }
 
@@ -268,6 +270,13 @@ void TLSChannel::close (const ResultCallback & callback) {
 }
 
 Channel::ChannelInfo TLSChannel::info () const {
+	ChannelInfo info = mNext->info();
+	if (!info.encrypted) {
+		info.encrypted = mSecured;
+	}
+	if (!info.authenticated) {
+		info.authenticated = mAuthenticated;
+	}
 	return mNext->info();
 }
 

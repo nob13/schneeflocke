@@ -78,10 +78,13 @@ public:
 	void setDelay (float delay);
 
 	/// Marks the channel as being to a neighbor
-	void setIsToNeighbor (bool v);
+	void setIsToNeighbor (bool v = true);
 
 	/// Set the number of (network!) hops of this local channel, = 1 (default) means direct connection
 	void setHops (int hops);
+
+	/// Sets the channel to be authenticated
+	void setAuthenticated (bool v = true);
 
 	///@}
 
@@ -104,6 +107,7 @@ public:
 		info.delay      = mDelay;
 		info.toNeighbor = mIsToNeighbor;
 		info.virtual_   = true;
+		info.authenticated = mAuthenticated;
 		info.laddress   = toString (this->delegateKey());
 		info.raddress   = mOther ? toString (mOther->delegateKey()) : String ("none");
 		return info;
@@ -136,6 +140,7 @@ private:
 	float mDelay;
 	float mBandwidth;
 	bool mIsToNeighbor;
+	bool mAuthenticated;
 	int   mHops;				///< Number of hops, =1 means direct connection
 };
 

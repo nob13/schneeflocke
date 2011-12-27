@@ -73,6 +73,7 @@ private:
 	bool            mSecured;	///< Did handhskaing
 	bool            mHandshaking;
 	bool            mServer;	///< Acts as a server during handshake
+	bool            mAuthenticated;
 	Mode            mMode;
 	ResultCallback  mHandshakeCallback;
 	ResultCallback  mCurrentWriteCallback;

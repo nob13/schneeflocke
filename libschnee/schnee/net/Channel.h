@@ -59,11 +59,13 @@ public:
 
 	/// Generic information about channels
 	struct ChannelInfo {
-		ChannelInfo () : bandwidth (-1), delay (-1), toNeighbor (false), virtual_ (false){}
+		ChannelInfo () : bandwidth (-1), delay (-1), toNeighbor (false), virtual_ (false), authenticated (false), encrypted (false) {}
 		float       bandwidth;	///< Bandwidth or < 0 if unknown
 		float       delay;		///< Delay or < 0 if unknown
 		bool        toNeighbor;	///< Channel is to a neighbor (very near)
 		bool        virtual_;	///< Channel is virtual (e.g. IM Channel)
+		bool        authenticated;	///< Channel is authenticated so far
+		bool        encrypted;		///< Channel is encrypted
 		std::string laddress;	///< Full local address (e.g. IP + Port), if available
 		std::string raddress;	///< Full remote address (e.g. IP + Port), if available
 		SF_AUTOREFLECT_SERIAL;
