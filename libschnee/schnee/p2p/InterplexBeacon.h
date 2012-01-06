@@ -33,7 +33,6 @@ public:
 
 	/// Connect to the Network
 	/// This function calls back if you want to be notified if connection was successfull (NoError) or failed
-	/// Callback will be called always, even if connect() returns an error (but from a different thread)
 	virtual Error connect (const String & connectionString, const String & password = "", const ResultCallback & callback = ResultCallback()) = 0;
 
 	/// Disconnects from IM Network
