@@ -29,6 +29,7 @@ Error GenericInterplexBeacon::setConnectionString (const String & connectionStri
 	if (e) return e;
 	// HostId is valid now
 	mConnectionManagement.setHostId (mPresenceProvider->hostId());
+	mAuthentication.setIdentity(mPresenceProvider->hostId());
 	return NoError;
 }
 

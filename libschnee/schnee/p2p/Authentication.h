@@ -30,6 +30,7 @@ public:
 	/// Sets own identity name
 	/// Must be called before enablation
 	/// Must fit to own key
+	/// TODO: To be moved to implementation!
 	void setIdentity (const String & identity);
 
 	/// Checks authentication enabled state

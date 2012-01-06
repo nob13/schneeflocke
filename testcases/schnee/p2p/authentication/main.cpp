@@ -20,6 +20,8 @@ int simpleAuth (){
 	tcheck1(!e);
 	e = scenario.connectThem(1000);
 	tcheck1(!e);
+	e = scenario.liftThem(1000);
+	tcheck1(!e);
 
 	// Check that connections are authenticated
 	tcheck1 (scenario.peer(0)->beacon->connections().connectionInfo(scenario.peerId(1)).cinfo.authenticated == true);

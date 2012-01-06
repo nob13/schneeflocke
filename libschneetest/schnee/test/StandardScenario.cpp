@@ -35,7 +35,7 @@ sf::Error StandardScenario::initWithBeaconCreator (int nodeCount, bool withServe
 		} else {
 			connectionString = testNames (i);
 		}
-		mServer->beacon->setConnectionString(connectionString);
+		p->beacon->setConnectionString(connectionString);
 	}
 	if (withServer) {
 		mServer = createPeer (beaconCreator());
