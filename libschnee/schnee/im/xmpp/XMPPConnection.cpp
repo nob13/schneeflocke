@@ -6,7 +6,7 @@ void XMPPConnection::XmppConnectDetails::defaultValues (){
 	username = "";
 	password = "";
 	server   = "";
-	port     = 5222;
+	port     = 0;
 	resource = "schneeflocke";
 }
 
@@ -63,5 +63,9 @@ bool XMPPConnection::XmppConnectDetails::setTo (const String & cs){
 	return true;
 }
 
+String XMPPConnection::XmppConnectDetails::fullId () const {
+	if (username.empty() || server.empty()) return String();
+	return username + "@" + server + "/" + resource;
+}
 
 }

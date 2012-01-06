@@ -18,12 +18,12 @@ XMPPConnection::State BoshXMPPConnection::state () const {
 	return mState;
 }
 
-Error BoshXMPPConnection::setConnectionString (const String & s) {
-	mDetails.defaultValues();
-	mDetails.port = 443; // Bosh
-	bool suc = mDetails.setTo (s);
-	if (!suc) return error::InvalidArgument;
-	return NoError;
+void BoshXMPPConnection::setConnectionDetails (XmppConnectDetails & details) {
+	mDetails = details;
+}
+
+String BoshXMPPConnection::fullId () const {
+	return mDetails.fullId();
 }
 
 Error BoshXMPPConnection::setPassword (const String & p) {
@@ -56,6 +56,9 @@ Error BoshXMPPConnection::startConnect (bool withLogin, const XMPPStreamPtr & st
 	op->stream = stream;
 	op->boss = this;
 
+	if (mDetails.port == 0)
+		mDetails.port = 5222;
+
 	// Starting connect
 	Url url = Url (String ("https://") + mDetails.server + ":" + toString (mDetails.port) +  "/http-bind/");
 	BoshTransport::StringMap addArgs;
@@ -82,7 +85,8 @@ void BoshXMPPConnection::onBoshConnect (Error result, AsyncOpId id) {
 	op->stream->startInitAfterHandshake(op->transport);
 	op->setState (ConnectingOp::WAIT_FEATURE);
 	LOG_STATE ("WAIT_FEATURE");
-	op->stream->waitFeatures(aOpMemFun (op, &BoshXMPPConnection::onFeatures));
+	result = op->stream->waitFeatures(aOpMemFun (op, &BoshXMPPConnection::onFeatures));
+	if (result) return finalize (result, op);
 	addAsyncOp (op);
 }
 
@@ -96,7 +100,8 @@ void BoshXMPPConnection::onFeatures (ConnectingOp * op, Error result) {
 	}
 	op->setState (ConnectingOp::WAIT_LOGIN);
 	LOG_STATE ("WAIT_LOGIN");
-	op->stream->authenticate(mDetails.username, mDetails.password, aOpMemFun (op, &BoshXMPPConnection::onLogin));
+	result = op->stream->authenticate(mDetails.username, mDetails.password, aOpMemFun (op, &BoshXMPPConnection::onLogin));
+	if (result) return finalize (result, op);
 	addAsyncOp (op);
 }
 
@@ -107,7 +112,9 @@ void BoshXMPPConnection::onLogin (ConnectingOp * op, Error result) {
 	op->setState (ConnectingOp::WAIT_FEATURE2);
 	op->transport->restart();
 	op->stream->startInitAfterHandshake(op->transport);
-	op->stream->waitFeatures(aOpMemFun (op, &BoshXMPPConnection::onFeatures2));
+	result = op->stream->waitFeatures(aOpMemFun (op, &BoshXMPPConnection::onFeatures2));
+	if (result)
+		return finalize (result, op);
 	LOG_STATE ("WAIT_FEATURE2"); // Note: Internal state, not external state
 	setState (IMClient::CS_AUTHENTICATING);
 
@@ -123,7 +130,9 @@ void BoshXMPPConnection::onFeatures2 (ConnectingOp * op, Error result) {
 
 	function <void (Error, const String &)> xx = aOpMemFun (op, &BoshXMPPConnection::onResourceBind);
 
-	op->stream->bindResource(mDetails.resource, aOpMemFun (op, &BoshXMPPConnection::onResourceBind));
+	result = op->stream->bindResource(mDetails.resource, aOpMemFun (op, &BoshXMPPConnection::onResourceBind));
+	if (result)
+		return finalize (result, op);
 	addAsyncOp (op);
 }
 
@@ -131,9 +140,18 @@ void BoshXMPPConnection::onResourceBind (ConnectingOp * op, Error result, const 
 	if (result) {
 		return finalize (result, op);
 	}
+	String expectedId = mDetails.fullId();
+	if (fullJid != mDetails.fullId()){
+		// Forbit this: Full JID must be predictable in order to get crypt/authentication working.
+		Log (LogWarning) << LOGID << "Bound to wrong full jid! expected: " << expectedId << " found: " << fullJid << std::endl;
+		return finalize (error::BadProtocol, op);
+	}
+
 	op->setState (ConnectingOp::WAIT_SESSION);
 	LOG_STATE ("WAIT_SESSION");
-	op->stream->startSession(aOpMemFun (op, &BoshXMPPConnection::onStartSession));
+	result = op->stream->startSession(aOpMemFun (op, &BoshXMPPConnection::onStartSession));
+	if (result)
+		return finalize (result, op);
 	addAsyncOp (op);
 }
 

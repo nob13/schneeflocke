@@ -28,6 +28,9 @@ public:
 		String server;				///< The server to whom we connect
 		int     port;				///< The port of the server
 		String resource;			///< The resource identification
+
+		/// full id which which would be set after successfull connection
+		String fullId () const;
 	};
 
 
@@ -37,8 +40,14 @@ public:
 	/// Returns current connection state
 	virtual State state () const = 0;
 
-	/// Set Connection URL
-	virtual Error setConnectionString (const String & s) = 0;
+	/// Set connection details
+	virtual void setConnectionDetails (XmppConnectDetails & details) = 0;
+
+//	/// Set Connection URL
+//	virtual Error setConnectionString (const String & s) = 0;
+//
+	/// Returns full id (valid with connection string)
+	virtual String fullId () const = 0;
 
 	/// Seperately set login password (if not already included in connectionstring)
 	virtual Error setPassword (const String & p) = 0;

@@ -23,7 +23,8 @@ public:
 
 	// Implementation of XMPPConnection
 	virtual State state () const;
-	virtual Error setConnectionString (const String & s);
+	virtual void setConnectionDetails (XmppConnectDetails & details);
+	virtual String fullId () const;
 	virtual Error setPassword (const String & p);
 	virtual Error connect (const XMPPStreamPtr& stream, int timeOutMs, const ResultCallback & callback = ResultCallback());
 	virtual Error pureConnect (const XMPPStreamPtr & stream, int timeOutMs, const ResultCallback & callback = ResultCallback());

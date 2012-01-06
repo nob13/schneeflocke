@@ -87,8 +87,7 @@ private:
 	void onAsyncCloseStream (); /// < Close stream asyncronously (on StreamErrors)
 
 	// Login data
-	String mConnectionString;
-	String mPassword;
+	XMPPConnection::XmppConnectDetails mConnectDetails;
 
 	typedef shared_ptr<XMPPStream> XMPPStreamPtr;
 	String mErrorText;

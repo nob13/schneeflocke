@@ -95,11 +95,12 @@ int testManualConnect () {
 int testAutoConnect () {
 	shared_ptr<XMPPStream> stream (new XMPPStream);
 	BoshXMPPConnection con;
-	Error e = con.setConnectionString("xmpp://autotest1:boom74_x@localhost/autoConnect");
-	tcheck1 (!e);
+	XMPPConnection::XmppConnectDetails details;
+	tcheck1 (details.setTo ("xmpp://autotest1:boom74_x@localhost/autoConnect"));
+	con.setConnectionDetails(details);
 
 	ResultCallbackHelper conResultHandler;
-	e = con.connect(stream, 2500, conResultHandler.onResultFunc());
+	Error e = con.connect(stream, 2500, conResultHandler.onResultFunc());
 	tcheck1 (!e && conResultHandler.waitReadyAndNoError(5000));
 
 	tcheck1 (stream->ownFullJid() == "autotest1@localhost/autoConnect");

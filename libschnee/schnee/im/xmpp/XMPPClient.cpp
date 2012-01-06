@@ -26,13 +26,12 @@ XMPPClient::~XMPPClient() {
 }
 
 void XMPPClient::setConnectionString(const String & connectionString) {
-	mConnectionString = connectionString;
-	mPassword.clear();
+	mConnectDetails.setTo(connectionString);
 	mToAuthorize.clear();
 }
 
 void XMPPClient::setPassword(const String & password) {
-	mPassword = password;
+	mConnectDetails.password = password;
 }
 
 void XMPPClient::connect(const ResultDelegate & callback) {
@@ -44,10 +43,7 @@ void XMPPClient::connect(const ResultDelegate & callback) {
 	}
 	connector->connectionStateChanged() = dMemFun (this, &XMPPClient::onConnectionStateChanged);
 
-	connector->setConnectionString(mConnectionString);
-	if (!mPassword.empty()){ // overwriting password in connection string...
-		connector->setPassword(mPassword);
-	}
+	connector->setConnectionDetails(mConnectDetails);
 
 	Error e = connector->connect (mStream, 10000, abind (dMemFun (this, &XMPPClient::onConnect), connector, callback));
 	if (e) xcall (abind (callback, e));
@@ -75,7 +71,7 @@ IMClient::ContactInfo XMPPClient::ownInfo() {
 }
 
 String XMPPClient::ownId () {
-	return mStream->ownFullJid();
+	return mConnectDetails.fullId();
 }
 
 void XMPPClient::setPresence (const PresenceState & state, const String & desc, int priority) {

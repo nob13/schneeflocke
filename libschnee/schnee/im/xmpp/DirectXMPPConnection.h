@@ -19,10 +19,13 @@ public:
 
 	// Implementation of XMPPConnection
 	virtual State state () const;
-	virtual Error setConnectionString (const String & s) {
-		bool suc = mDetails.setTo(s);
-		return suc ? NoError : error::InvalidArgument;
-	};
+
+	virtual void setConnectionDetails (XmppConnectDetails & details) {
+		mDetails = details;
+	}
+	virtual String fullId () const {
+		return mDetails.fullId();
+	}
 
 	virtual Error setPassword (const String & p){
 		mDetails.password = p;

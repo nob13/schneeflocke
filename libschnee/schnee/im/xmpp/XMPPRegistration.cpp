@@ -127,7 +127,10 @@ Error XMPPRegistration::start (const String & server, const Credentials & creden
 	} else {
 		mConnection = XMPPConnectionPtr (new DirectXMPPConnection());
 	}
-	mConnection->setConnectionString("xmpp://"+credentials.username+"@"+server);
+	XMPPConnection::XmppConnectDetails details;
+	details.username = credentials.username;
+	details.server = server;
+	mConnection->setConnectionDetails(details);
 	Error e = mConnection->pureConnect(mStream, timeOutMs * 0.7, dMemFun (this, &XMPPRegistration::onConnect));
 	if (e) return e;
 	mTimeoutHandle = sf::xcallTimed(dMemFun(this, &XMPPRegistration::onTimeout), sf::regTimeOutMs(timeOutMs));

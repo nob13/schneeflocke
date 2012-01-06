@@ -38,6 +38,8 @@ Error DirectXMPPConnection::startConnectingProcess (const XMPPStreamPtr & stream
 	mErrorText.clear();
 	mTcpSocket = TCPSocketPtr (new TCPSocket());
 	Log (LogInfo) << LOGID << "Attempting to connect XMPP Service " << mDetails.server << ":" << mDetails.port << " timeout=" << timeOutMs << "ms" << std::endl;
+	if (mDetails.port == 0)
+		mDetails.port = 5222;
 	Error e = mTcpSocket->connectToHost(mDetails.server,mDetails.port, timeOutMs, dMemFun (this, &DirectXMPPConnection::onTcpConnect));
 	if (e) return e;
 	if (timeOutMs > 0){
@@ -146,6 +148,12 @@ void DirectXMPPConnection::onFinalStreamFeatures (Error result) {
 void DirectXMPPConnection::onFinalBind (Error result, const String & fullJid) {
 	if (result) return onConnectError (result);
 	if (!mConnecting) return;
+	String expectedId = mDetails.fullId();
+	if (fullJid != mDetails.fullId()){
+		// Forbit this: Full JID must be predictable in order to get crypt/authentication working.
+		Log (LogWarning) << LOGID << "Bound to wrong full jid! expected: " << expectedId << " found: " << fullJid << std::endl;
+		return onConnectError (error::BadProtocol);
+	}
 	Error e = mStream->startSession (dMemFun (this, &DirectXMPPConnection::onSessionStart));
 	setPhase ("Session Start");
 	if (e) onConnectError (result);

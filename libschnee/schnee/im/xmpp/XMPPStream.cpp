@@ -406,12 +406,7 @@ void XMPPStream::onResourceBind (Error e, const xmpp::Iq & iq, const XMLChunk & 
 		Log (LogInfo) << LOGID << "Bound resource to " << mFullJid << std::endl;
 		mFullJid = jid;
 	}
-	if (originalCallback){
-		if (e) {
-			return originalCallback (e, "");
-		}
-		originalCallback (NoError, jid);
-	}
+	notify (originalCallback, e, jid);
 }
 
 
