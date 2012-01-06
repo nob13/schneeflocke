@@ -201,6 +201,27 @@ ConnectionManagement::ConnectionInfos ChannelHolder::connections () const {
 	return result;
 }
 
+ConnectionManagement::ConnectionInfo ChannelHolder::connectionInfo (const HostId & target) const {
+	PeerMap::const_iterator i = mPeers.find(target);
+	if (i == mPeers.end())
+		return ConnectionManagement::ConnectionInfo(); // empty
+	ChannelMap::const_iterator j = mChannels.find (i->second.bestChannel);
+	if (j == mChannels.end())
+		return ConnectionManagement::ConnectionInfo(); // empty
+
+	const ChannelReceiver & r (j->second);
+	if (r.closing)
+		return ConnectionManagement::ConnectionInfo (); // won't exist anymore in future
+
+	ConnectionManagement::ConnectionInfo info;
+	info.target = r.target;
+	info.level  = r.level;
+	info.cinfo = r.channel->info();
+	info.id = j->first;
+	info.stack = getStack (r.channel);
+	return info;
+}
+
 Error ChannelHolder::send (ChannelId id, const Datagram & d, bool highLevel, const ResultCallback & callback) {
 	ChannelMap::iterator i = mChannels.find(id);
 	if (i == mChannels.end()) return error::NotFound;

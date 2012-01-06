@@ -100,6 +100,13 @@ public:
 	/// Gives delay of a route (summized delay of each connection)
 	/// Returns < 0 in case of error
 	float routeDelay (const Route & r) const;
+
+	/// Sets authentication flag. NetworkDispatcher will use it to mark all connections as authenticated
+	/// Does nothign more than that!
+	void setAuthentication (bool f = true) { mAuthenticated = f;}
+
+	/// Returns authenticated flag
+	bool authenticated () const { return mAuthenticated; }
 private:
 	/// Returns information about a connection (locked version)
 	/// @param DiConId the connection id
@@ -130,6 +137,7 @@ private:
 	typedef std::map<sf::String, Host> HostMap;		///< Type of our hostmap (name to Host)
 	HostMap mHosts;									///< A list of our hosts
 	ConId mNextConnectionId;							///< Our next connection id
+	bool mAuthenticated;
 
 	typedef std::pair<const Host*, const Host*> HostPair;
 	typedef std::map<HostPair, Route> RouteCache;

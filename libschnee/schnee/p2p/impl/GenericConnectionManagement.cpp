@@ -81,6 +81,10 @@ GenericConnectionManagement::ConnectionInfos GenericConnectionManagement::connec
 	return mChannels.connections();
 }
 
+GenericConnectionManagement::ConnectionInfo GenericConnectionManagement::connectionInfo (const HostId & target) const {
+	return mChannels.connectionInfo (target);
+}
+
 Error GenericConnectionManagement::liftConnection (const HostId & hostId, const ResultCallback & callback, int timeOutMs) {
 	return liftToAtLeast (1, hostId, callback, timeOutMs);
 }

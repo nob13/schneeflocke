@@ -44,6 +44,7 @@ add_automatic_test (schnee/p2p/interplex)
 add_automatic_test (schnee/p2p/transmission_test)
 add_automatic_test (schnee/p2p/datasharingbasics)
 add_automatic_test (schnee/p2p/async_stream)
+add_automatic_test (schnee/p2p/authentication)
 
 add_automatic_test (flocke/tools/globtest)
 add_automatic_test (flocke/sharedlists/sharedlists)

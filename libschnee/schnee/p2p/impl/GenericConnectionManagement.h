@@ -52,6 +52,7 @@ public:
 
 	//	Implementation of ConnectionManagement
 	virtual ConnectionInfos connections () const;
+	virtual ConnectionInfo connectionInfo (const HostId & target) const;
 	virtual Error liftConnection (const HostId & hostId, const ResultCallback & callback, int timeOutMs);
 	virtual Error liftToAtLeast  (int level, const HostId & hostId, const ResultCallback & callback, int timeOutMs);
 	virtual Error closeChannel (const HostId & host, int level);

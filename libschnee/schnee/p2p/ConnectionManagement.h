@@ -33,6 +33,9 @@ public:
 	/// Request all connections (for GUIs etc.)
 	virtual ConnectionInfos connections () const = 0;
 
+	/// Returns info about best connection to a specific target. All data are empty if none found
+	virtual ConnectionInfo connectionInfo (const HostId & target) const = 0;
+
 	/// Returns level of channel (also see ConnectionManagement)
 	virtual int channelLevel (const HostId & receiver) = 0;
 

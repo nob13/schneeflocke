@@ -56,8 +56,11 @@ public:
 	/// Finds the best channel level to a given host
 	int findBestChannelLevel (const HostId & host) const;
 
-	/// Info about all connections
+	/// Info about all connections (see ConnectionManagement)
 	ConnectionManagement::ConnectionInfos connections () const;
+	/// Info about specifc connection (see ConnectionManagement)
+	ConnectionManagement::ConnectionInfo connectionInfo (const HostId & target) const;
+
 
 	/// Send a datagram into a channel with given id
 	/// @param highLevel   if set to true, it is a high level protocol datagram

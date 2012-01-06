@@ -155,6 +155,8 @@ sf::Error NetworkDispatcher::createChannel (const HostId & target, const ResultC
 	}
 	lca->setHops (route.size());
 	lcb->setHops (route.size());
+	lca->setAuthenticated(mNetwork.authenticated());
+	lcb->setAuthenticated(mNetwork.authenticated());
 	Log (LogInfo) << LOGID << "Created channel " << mHostId << " to " << target << " with delay " << delay << std::endl;
 	dispatcher->pushChannel (mHostId, ChannelPtr (lcb));
 	xcall (abind (mChannelCreated, target, ChannelPtr(lca), true));

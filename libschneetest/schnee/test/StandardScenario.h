@@ -96,6 +96,16 @@ public:
 	/// Returns true if scenario uses a simulated network
 	bool isSimulated () const { return mSimulated; }
 
+	/// Sets the authenticated flag in case of simulated network.
+	/// Default = false
+	void setAuthenticatedForSimulatedNetwork(bool f = true) { mNetwork.setAuthentication(f); }
+
+	/// Gives access to one peer
+	virtual Peer * peer (int i) { assert (i < mNodeCount && i>=0); return mPeers[i]; };
+
+	/// Shortcut to host id
+	inline HostId peerId (int i) const { assert (i < mNodeCount && i>=0); return mPeers[i]->hostId(); }
+
 protected:
 	typedef std::vector<Peer*> PeerVec;
 	PeerVec mPeers;							///< Peers playing in the scenario
@@ -128,8 +138,8 @@ public:
 		}
 	};
 
-	/// Gives you up cast access to the peers
-	DataSharingPeer * peer (int i) { assert (i < mNodeCount); return (DataSharingPeer*) mPeers[i]; }
+	/// override
+	virtual DataSharingPeer * peer (int i) { assert (i < mNodeCount); return (DataSharingPeer*) mPeers[i]; }
 
 	virtual Peer * createPeer (InterplexBeacon * beacon) { return new DataSharingPeer (beacon); }
 };
