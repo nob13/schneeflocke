@@ -99,7 +99,7 @@ void Controller::init () {
 	loadShares();
 
 	if (s.autoConnect){
-		xcall (abind (dMemFun (this, &Controller::changeConnection_locked), DS_CONNECT));
+		xcall (abind (dMemFun (this, &Controller::onChangeConnection), DS_CONNECT));
 	}
 }
 
@@ -269,8 +269,8 @@ Controller::State Controller::state() {
 }
 
 void Controller::changeConnection (DesiredState state) {
-	SF_SCHNEE_LOCK;
-	changeConnection_locked (state);
+	// do it asynchronous, as it may calls back
+	xcall (abind (dMemFun (this, &Controller::onChangeConnection), state));
 }
 
 bool Controller::autostartAvailable () const {
@@ -289,7 +289,7 @@ bool Controller::setAutostartInstall (bool v) {
 	}
 }
 
-void Controller::changeConnection_locked (DesiredState state) {
+void Controller::onChangeConnection (DesiredState state) {
 	if (state == DS_CONNECT) {
 		if (mState == CONNECTED)
 			return; // already connected

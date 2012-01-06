@@ -80,7 +80,7 @@ public:
 	ShareList * shareList () { return mShareList; }
 	
 private:
-	void changeConnection_locked (DesiredState connect);
+	void onChangeConnection (DesiredState connect);
 
 	void onError        (err::Code code, const QString & title, const QString & what);
 	
