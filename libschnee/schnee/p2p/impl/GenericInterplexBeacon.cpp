@@ -22,15 +22,18 @@ void GenericInterplexBeacon::setPresenceProvider (PresenceProviderPtr presencePr
 	mPresenceProvider->peersChanged().add (dMemFun (this, &GenericInterplexBeacon::onPeersChanged));
 }
 
-Error GenericInterplexBeacon::connect (const sf::String & connectionString, const sf::String & password, const ResultCallback & callback) {
+Error GenericInterplexBeacon::setConnectionString (const String & connectionString, const String & password) {
 	if (!mPresenceProvider) return error::NotInitialized;
-	
 	mConnectionManagement.clear(); // hack
 	Error e = mPresenceProvider->setConnectionString(connectionString, password);
 	if (e) return e;
-	e = mPresenceProvider->connect (callback);
-	mConnectionManagement.setHostId (mPresenceProvider->hostId()); // hack (some components have to know their host id very early)
-	return e;
+	// HostId is valid now
+	mConnectionManagement.setHostId (mPresenceProvider->hostId());
+	return NoError;
+}
+
+Error GenericInterplexBeacon::connect (const ResultCallback & callback) {
+	return mPresenceProvider->connect (callback);
 }
 
 void GenericInterplexBeacon::disconnect () {

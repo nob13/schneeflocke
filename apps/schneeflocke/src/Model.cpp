@@ -80,7 +80,8 @@ sf::Error Model::connect (const sf::ResultCallback & resultCallback) {
 	sf::LockGuard guard (mMutex);
 	sf::String connectionString;
 	connectionString = "xmpp://" + mSettings.userId + "/" + fixResourceName (mSettings.resource);
-	sf::Error err = mBeacon->connect (connectionString, mSettings.password,  resultCallback);
+	mBeacon->setConnectionString(connectionString, mSettings.password);
+	sf::Error err = mBeacon->connect (resultCallback);
 	return err;
 }
 

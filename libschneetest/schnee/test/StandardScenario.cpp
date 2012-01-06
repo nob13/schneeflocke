@@ -29,10 +29,22 @@ sf::Error StandardScenario::initWithBeaconCreator (int nodeCount, bool withServe
 		Peer * p = createPeer (beaconCreator());
 		mPeers.push_back (p);
 		p->beforeConnect();
+		String connectionString = "";
+		if (!mSimulated){
+			connectionString = sf::hardcodedLogin(i);
+		} else {
+			connectionString = testNames (i);
+		}
+		mServer->beacon->setConnectionString(connectionString);
 	}
 	if (withServer) {
 		mServer = createPeer (beaconCreator());
 		mServer->beforeConnect();
+		if (!mSimulated) {
+			assert (!"No server support in non simulated because we don't have login data yet");
+			return error::NotSupported;
+		}
+		mServer->beacon->setConnectionString(serverName());
 	}
 	return NoError;
 }
@@ -40,21 +52,11 @@ sf::Error StandardScenario::initWithBeaconCreator (int nodeCount, bool withServe
 
 sf::Error StandardScenario::connectThem (int timeOutMs) {
 	if (mServer){
-		if (!mSimulated) {
-			assert (!"No server support in non simulated");
-			return error::NotSupported;
-		}
-		sf::Error err = mServer->beacon->connect (serverName());
+		sf::Error err = mServer->beacon->connect ();
 		if (err) return err;
 	}
 	for (int i = 0; i < mNodeCount; i++) {
-		String connectionString = "";
-		if (!mSimulated){
-			connectionString = sf::hardcodedLogin(i);
-		} else {
-			connectionString = testNames (i);
-		}
-		sf::Error err = mPeers[i]->beacon->connect (connectionString);
+		sf::Error err = mPeers[i]->beacon->connect ();
 		if (err) return err;
 	}
 	// Connecting

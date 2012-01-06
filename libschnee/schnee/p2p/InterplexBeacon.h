@@ -31,9 +31,13 @@ public:
 	///@name State
 	///@{
 
+	/// Sets connection details. presence's hostId will be valid after this call
+	/// Note: will get offline if being connected.
+	virtual Error setConnectionString (const String & connectionString, const String & password = String()) = 0;
+
 	/// Connect to the Network
 	/// This function calls back if you want to be notified if connection was successfull (NoError) or failed
-	virtual Error connect (const String & connectionString, const String & password = "", const ResultCallback & callback = ResultCallback()) = 0;
+	virtual Error connect (const ResultCallback & callback = ResultCallback()) = 0;
 
 	/// Disconnects from IM Network
 	virtual void disconnect () = 0;

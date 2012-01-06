@@ -33,7 +33,8 @@ public:
 	///@}
 	
 	// Implementation of InterplexBeacon
-	virtual Error connect (const String & connectionString, const String & password = "", const ResultCallback & callback = ResultCallback());
+	virtual Error setConnectionString (const String & connectionString, const String & password);
+	virtual Error connect (const ResultCallback & callback = ResultCallback());
 	virtual void disconnect ();
 
 	virtual PresenceManagement & presences ();

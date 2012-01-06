@@ -101,7 +101,8 @@ struct Model {
 	}
 	sf::Error connect (const sf::String & loginData) {
 		sf::ResultCallbackHelper helper;
-		sf::Error err = beacon->connect(loginData, "", helper.onResultFunc());
+		beacon->setConnectionString (loginData);
+		sf::Error err = beacon->connect(helper.onResultFunc());
 		if (err || (err = helper.wait())){
 			std::cerr << "Could not connect: " << toString (err) << std::endl;
 		}
