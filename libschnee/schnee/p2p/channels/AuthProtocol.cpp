@@ -19,6 +19,7 @@ AuthProtocol::AuthProtocol (ChannelPtr channel, const HostId & me) {
 
 AuthProtocol::AuthProtocol () {
 	SF_REGISTER_ME;
+	mAuthentication = 0;
 }
 
 void AuthProtocol::init (ChannelPtr channel, const sf::HostId & me) {
