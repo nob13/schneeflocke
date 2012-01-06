@@ -16,6 +16,10 @@ IMDispatcher::IMDispatcher () {
 IMDispatcher::~IMDispatcher (){
 	SF_UNREGISTER_ME;
 	disconnect ();
+	if (mClient) {
+		delete mClient;
+		mClient = 0;
+	}
 }
 
 sf::Error IMDispatcher::createChannel (const HostId & target, const ResultCallback & callback, int timeOutMs) {
@@ -58,8 +62,15 @@ void IMDispatcher::setHostId (const sf::HostId & id) {
 	}
 }
 
-sf::Error IMDispatcher::connect (const sf::String & connectionString, const sf::String & password, const ResultDelegate & callback) {
-	disconnect ();
+Error IMDispatcher::setConnectionString (const String & connectionString, const String & password) {
+	if (mClient) {
+		if (mClient->isConnected()){
+			Log (LogWarning) << LOGID << "Changing connection string while being connected leads to disconnection" << std::endl;
+		}
+		disconnect ();
+		delete mClient;
+		mClient  = 0;
+	}
 	// figure out protocol
 	size_t pos = connectionString.find("://");
 	if (pos == connectionString.npos) return sf::error::InvalidArgument;
@@ -79,8 +90,17 @@ sf::Error IMDispatcher::connect (const sf::String & connectionString, const sf::
 	mClient->contactRosterChanged()   = dMemFun (this, &IMDispatcher::onContactRosterChanged);
 	mClient->messageReceived()        = dMemFun (this, &IMDispatcher::onMessageReceived);
 	mClient->streamErrorReceived()    = dMemFun (this, &IMDispatcher::onServerStreamErrorRecevied);
-	mClient->connect(callback);
 
+	mClient->setConnectionString(connectionString);
+	return NoError;
+}
+
+Error IMDispatcher::connect (const ResultDelegate & callback) {
+	if (!mClient) {
+		return error::NotInitialized;
+	}
+	disconnect ();
+	mClient->connect(callback);
 	return sf::error::NoError;
 }
 
@@ -91,10 +111,6 @@ void IMDispatcher::disconnect (){
 	mChannels.clear();
 	if (mClient) {
 		mClient->disconnect();	// callback will be send asynchronous
-		// TODO: We have to give it  some time here in order to mark us offline!!
-		// BUG: #159
-		delete mClient;
-		mClient = 0;
 	}
 	mHosts.clear();
 	mUsers.clear();

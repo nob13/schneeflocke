@@ -12,13 +12,6 @@ namespace sf {
 XMPPClient::XMPPClient() {
 	SF_REGISTER_ME;
 	mConnectionState = CS_OFFLINE;
-	mStream = shared_ptr<XMPPStream> (new XMPPStream ());
-	mStream->incomingMessage()     = dMemFun (this, &XMPPClient::onIncomingMessage);
-	mStream->incomingPresence()    = dMemFun (this, &XMPPClient::onIncomingPresence);
-	mStream->incomingIq()          = dMemFun (this, &XMPPClient::onIncomingIq);
-	mStream->incomingStreamError() = dMemFun (this, &XMPPClient::onIncomingStreamError);
-	mStream->closed() = dMemFun (this, &XMPPClient::onStreamClosed);
-	mStream->asyncError() = dMemFun (this, &XMPPClient::onStreamError);
 }
 
 XMPPClient::~XMPPClient() {
@@ -45,6 +38,14 @@ void XMPPClient::connect(const ResultDelegate & callback) {
 
 	connector->setConnectionDetails(mConnectDetails);
 
+	mStream = shared_ptr<XMPPStream> (new XMPPStream ());
+	mStream->incomingMessage()     = dMemFun (this, &XMPPClient::onIncomingMessage);
+	mStream->incomingPresence()    = dMemFun (this, &XMPPClient::onIncomingPresence);
+	mStream->incomingIq()          = dMemFun (this, &XMPPClient::onIncomingIq);
+	mStream->incomingStreamError() = dMemFun (this, &XMPPClient::onIncomingStreamError);
+	mStream->closed() = dMemFun (this, &XMPPClient::onStreamClosed);
+	mStream->asyncError() = dMemFun (this, &XMPPClient::onStreamError);
+
 	Error e = connector->connect (mStream, 10000, abind (dMemFun (this, &XMPPClient::onConnect), connector, callback));
 	if (e) xcall (abind (callback, e));
 }
@@ -59,6 +60,7 @@ void XMPPClient::disconnect() {
 }
 
 IMClient::ContactInfo XMPPClient::ownInfo() {
+	if (!mStream) return IMClient::ContactInfo();
 	String fullJid = mStream->ownFullJid();
 	String bareJid = fullJidToBareJid(fullJid);
 	Contacts::iterator i = mContacts.find(bareJid);
@@ -75,6 +77,7 @@ String XMPPClient::ownId () {
 }
 
 void XMPPClient::setPresence (const PresenceState & state, const String & desc, int priority) {
+	if (!mStream) return;
 	xmpp::PresenceInfo p;
 	p.state  = state;
 	p.status = desc;

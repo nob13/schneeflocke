@@ -20,13 +20,19 @@ NetworkDispatcher::~NetworkDispatcher () {
 	disconnect();
 }
 
-sf::Error NetworkDispatcher::connect(const sf::String & connectionString, const sf::String & password, const ResultDelegate & callback) {
-	if (mOnline) disconnect ();
-	{
-		size_t pos = connectionString.find ("://");
-		if (pos == connectionString.npos) mHostId = connectionString;
-		else mHostId = connectionString.substr (pos + 3, connectionString.npos);
+Error NetworkDispatcher::setConnectionString (const String & connectionString, const String & password) {
+	if (mOnline) {
+		Log (LogWarning) << LOGID << "Setting connection string while being logged in leads to logout" << std::endl;
+		disconnect ();
 	}
+	size_t pos = connectionString.find ("://");
+	if (pos == connectionString.npos) mHostId = connectionString;
+	else mHostId = connectionString.substr (pos + 3, connectionString.npos);
+	return NoError;
+}
+
+sf::Error NetworkDispatcher::connect(const ResultDelegate & callback) {
+	if (mOnline) disconnect ();
 	const Host * h = mNetwork.host (mHostId);
 	if (!h) {
 		Log (LogError) << LOGID << "Did not found host " << mHostId << std::endl;

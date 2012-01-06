@@ -33,7 +33,8 @@ public:
 	virtual ChannelCreationDelegate & channelCreated () { return mChannelCreated; }
 
 	// Implementation of PresenceProvider
-	virtual sf::Error connect(const sf::String & connectionString, const sf::String & password = "", const ResultDelegate & callback = ResultDelegate());
+	virtual Error setConnectionString (const String & connectionString, const String & password);
+	virtual sf::Error connect(const ResultDelegate & callback = ResultDelegate());
 	virtual void disconnect();
 	virtual HostId hostId () const;
 	virtual OnlineState onlineState () const;

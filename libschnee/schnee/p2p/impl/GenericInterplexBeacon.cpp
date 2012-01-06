@@ -26,7 +26,9 @@ Error GenericInterplexBeacon::connect (const sf::String & connectionString, cons
 	if (!mPresenceProvider) return error::NotInitialized;
 	
 	mConnectionManagement.clear(); // hack
-	Error e = mPresenceProvider->connect (connectionString, password, callback);
+	Error e = mPresenceProvider->setConnectionString(connectionString, password);
+	if (e) return e;
+	e = mPresenceProvider->connect (callback);
 	mConnectionManagement.setHostId (mPresenceProvider->hostId()); // hack (some components have to know their host id very early)
 	return e;
 }

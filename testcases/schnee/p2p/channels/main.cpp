@@ -308,13 +308,15 @@ int main (int argc, char * argv[]){
 		
 		IMDispatcher dispatcher1;
 		ResultCallbackHelper helper;
-		Error e = dispatcher1.connect ("xmpp://" + a, apw, helper.onResultFunc());
+		dispatcher1.setConnectionString("xmpp://" + a, apw);
+		Error e = dispatcher1.connect (helper.onResultFunc());
 		assert (!e); if (e) return 1;
 		e = helper.wait();
 		assert (!e); if (e) return 1;
 
 		IMDispatcher dispatcher2;
-		dispatcher2.connect ("xmpp://" + b, bpw, helper.onResultFunc());
+		dispatcher2.setConnectionString("xmpp://" + b, bpw);
+		dispatcher2.connect (helper.onResultFunc());
 		assert (!e); if (e) return 1;
 		e = helper.wait();
 		assert (!e); if (e) return 1;
