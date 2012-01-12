@@ -3,6 +3,13 @@
 #include <schnee/tools/Log.h>
 #include <schnee/schnee.h>
 #include <flocke/hardcodedLogin.h>
+
+#include <schnee/p2p/channels/UDTChannelConnector.h>
+#include <schnee/p2p/channels/TCPChannelConnector.h>
+#include <schnee/p2p/impl/GenericInterplexBeacon.h>
+#include <schnee/settings.h>
+#include <schnee/test/NetworkDispatcher.h>
+
 namespace sf {
 namespace test {
 
@@ -15,7 +22,6 @@ StandardScenario::~StandardScenario(){
 
 sf::Error StandardScenario::init(int nodeCount, bool withServer, bool simulated) {
 	if (simulated) {
-		genDoubleStarNetwork (mNetwork, nodeCount, withServer, true);
 		return initWithBeaconCreator (nodeCount, withServer, sf::bind (&test::createNetworkInterplexBeacon, &mNetwork, mCollector), true);
 	} else {
 		return initWithBeaconCreator (nodeCount, withServer, &test::createGenericInterplexBeacon, false);
@@ -23,6 +29,9 @@ sf::Error StandardScenario::init(int nodeCount, bool withServer, bool simulated)
 }
 
 sf::Error StandardScenario::initWithBeaconCreator (int nodeCount, bool withServer, const BeaconCreator & beaconCreator, bool simulated) {
+	if (simulated) {
+		genDoubleStarNetwork (mNetwork, nodeCount, withServer, true);
+	}
 	this->mNodeCount = nodeCount;
 	this->mSimulated = simulated;
 	for (int i = 0; i < nodeCount; i++){
@@ -49,6 +58,31 @@ sf::Error StandardScenario::initWithBeaconCreator (int nodeCount, bool withServe
 	return NoError;
 }
 
+InterplexBeacon * StandardScenario::createNetAndUdtBeacon () {
+	GenericInterplexBeacon * beacon = new GenericInterplexBeacon ();
+	shared_ptr<test::NetworkDispatcher> networkDispatcher = shared_ptr<test::NetworkDispatcher> (new test::NetworkDispatcher (mNetwork));
+	shared_ptr<UDTChannelConnector> udtConnector = shared_ptr<UDTChannelConnector> (new UDTChannelConnector);
+	UDTChannelConnector::NetEndpoint echoServer (schnee::settings().echoServer, schnee::settings().echoServerPort);
+	udtConnector->setEchoServer(echoServer);
+
+	beacon->setPresenceProvider (networkDispatcher);
+	beacon->connections().addChannelProvider(networkDispatcher, 1);
+	beacon->connections().addChannelProvider(udtConnector, 10);
+	return beacon;
+}
+
+InterplexBeacon * StandardScenario::createNetAndTcpBeacon () {
+	GenericInterplexBeacon * beacon = new GenericInterplexBeacon ();
+
+	shared_ptr<test::NetworkDispatcher> networkDispatcher = shared_ptr<test::NetworkDispatcher> (new test::NetworkDispatcher (mNetwork));
+	shared_ptr<TCPChannelConnector> tcpConnector         = shared_ptr<TCPChannelConnector> (new TCPChannelConnector());
+	tcpConnector->start();
+
+	beacon->setPresenceProvider (networkDispatcher);
+	beacon->connections().addChannelProvider  (networkDispatcher, 1);
+	beacon->connections().addChannelProvider (tcpConnector, 10);
+	return beacon;
+}
 
 sf::Error StandardScenario::connectThem (int timeOutMs) {
 	if (mServer){

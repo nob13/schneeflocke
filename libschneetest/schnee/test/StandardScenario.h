@@ -56,6 +56,13 @@ public:
 	/// Inits the Standardscenario using a given BeaconCreator
 	sf::Error initWithBeaconCreator (int nodeCount, bool withServer, const BeaconCreator & beaconCreator, bool simulated);
 
+	/// A beacon creator which creates a Beacon with simulated Network and UDT leveling functionality
+	/// for use with initWithBeaconCreator
+	InterplexBeacon * createNetAndUdtBeacon ();
+	/// A beacon creator which creates a Beacon with simulated Network and TCP leveling functionality
+	/// for use with initWithBeaconCreator
+	InterplexBeacon * createNetAndTcpBeacon ();
+
 	/// Connect the beacons to the service and waits that all peers see each other
 	/// (But does not connect peers to each other)
 	sf::Error connectThem (int timeOutMs = 2000);
