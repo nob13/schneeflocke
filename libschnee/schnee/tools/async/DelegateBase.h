@@ -90,6 +90,7 @@ template <class T> static void holdIt (const shared_ptr<T> & x) {
 template <class T> void safeRemove (shared_ptr<T> & x){
 	// the xcall mechanism will hold it
 	xcall (abind (&holdIt<T>, x));
+	x.reset();
 }
 
 /// Call the callback x asynchronously, if valid (0 Parameter)
@@ -253,6 +254,25 @@ private:
 	DelegateKey key;
 };
 
+template <class R, class Class, class Arg0, class Arg1, class Arg2, class Arg3, class Arg4> struct DMemFun5 {
+
+	typedef R (Class::*MemFun) (Arg0, Arg1, Arg2, Arg3, Arg4);
+
+	DMemFun5 (Class * _instance, MemFun _memPtr, DelegateKey _key) : instance(_instance), memPtr(_memPtr), key (_key) {
+	}
+
+	R operator () (typename constref<Arg0>::type arg0, typename constref<Arg1>::type arg1, typename constref<Arg2>::type arg2, typename constref<Arg3>::type arg3, typename constref<Arg4>::type arg4) {
+		DelegateRegisterLock lock (key);
+		if (lock.suc()) return (instance->*memPtr)(arg0, arg1, arg2, arg3, arg4);
+		return R();
+	}
+
+private:
+	Class * instance;
+	MemFun memPtr;
+	DelegateKey key;
+};
+
 /*
  * dMemFun can be called like this
  * dMemFun(GenericClass, GenericClass::Function, const DelegateBase * )
@@ -328,6 +348,18 @@ template <class R, class Derived, class Class, class Arg0, class Arg1, class Arg
 	Class * c = instance;
 	return dMemFun (c, memPtr, delBase);
 }
+
+template <class R, class Derived, class Class, class Arg0, class Arg1, class Arg2, class Arg3, class Arg4> static DMemFun5<R,Class,Arg0,Arg1,Arg2,Arg3,Arg4> dMemFun (Derived * instance, R (Class::*memPtr)(Arg0, Arg1, Arg2,Arg3,Arg4), const DelegateBase * delBase ){
+	Class * c = instance;
+	return DMemFun5<R, Class, Arg0, Arg1, Arg2,Arg3,Arg4> (c, memPtr, delBase->delegateKey());
+}
+
+template <class R, class Derived, class Class, class Arg0, class Arg1, class Arg2, class Arg3, class Arg4> static DMemFun5<R,Class,Arg0,Arg1,Arg2,Arg3,Arg4> dMemFun (Derived * instance, R (Class::*memPtr)(Arg0, Arg1, Arg2,Arg3,Arg4) ){
+	DelegateBase * delBase = instance;
+	Class * c = instance;
+	return dMemFun (c, memPtr, delBase);
+}
+
 
 ///@endcond DEV
 }

@@ -40,7 +40,7 @@ void Authentication::enable (bool v) {
 		mCertificate->fingerprintSha256(&mCertFingerprint);
 		mKeySet = true;
 		double t1 = sf::microtime ();
-		Log (LogProfile) << LOGID << "Key generation took " << (t1 - t0) / 1000.0 << "ms" << std::endl;
+		Log (LogProfile) << LOGID << "Key generation took " << (t1 - t0) * 1000.0 << "ms" << std::endl;
 	}
 	mEnabled = v;
 }
@@ -48,8 +48,13 @@ void Authentication::enable (bool v) {
 void Authentication::update (const String & identity, const CertInfo& info) {
 	if (!info.cert || info.type == CT_ERROR) {
 		mCerts.erase(identity);
+		Log (LogInfo) << LOGID << mIdentity << ": Removed certificate for " << identity << std::endl;
 	} else {
 		mCerts[identity] = info;
+		String fp;
+		if (info.cert)
+			info.cert->fingerprintSha256(&fp);
+		Log (LogInfo) << LOGID << mIdentity << ": Added certificate for " << identity << ":" << fp << std::endl;
 	}
 }
 

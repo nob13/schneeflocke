@@ -234,6 +234,12 @@ bool StandardScenario::waitForNoPendingData (int timeOutMs) const {
 	return waitUntilTrueMs (sf::bind (&noPendingData, mCollector), timeOutMs);
 }
 
+void StandardScenario::enableAuthentication (bool v) {
+	if (mServer) mServer->beacon->authentication().enable(v);
+	for (int i = 0; i < mNodeCount; i++) {
+		mPeers[i]->beacon->authentication().enable(v);
+	}
+}
 
 }
 }

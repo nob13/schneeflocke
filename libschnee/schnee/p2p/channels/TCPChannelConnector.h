@@ -103,6 +103,9 @@ private:
 
 	///@}
 
+	/// Checks if authentication is enabled
+	bool authenticationEnabled () const { return mAuthentication && mAuthentication->isEnabled(); }
+
 	enum ChannelOpId { CREATE_CHANNEL = 1, ACCEPT_CONNECTION };
 
 	/// Operation on building a channel

@@ -107,6 +107,9 @@ public:
 	/// Default = false
 	void setAuthenticatedForSimulatedNetwork(bool f = true) { mNetwork.setAuthentication(f); }
 
+	/// Enable authentication on all peers
+	void enableAuthentication (bool v  = true);
+
 	/// Gives access to one peer
 	virtual Peer * peer (int i) { assert (i < mNodeCount && i>=0); return mPeers[i]; };
 

@@ -171,6 +171,10 @@ x509::CertificatePtr TLSChannel::peerCertificate () const {
 	const gnutls_datum_t * cert_list;
 	unsigned int cert_list_size;
 	cert_list = gnutls_certificate_get_peers (mSession, &cert_list_size);
+	if (!cert_list) {
+		Log (LogWarning) << LOGID << "No peer certificate or error" << std::endl;
+		return x509::CertificatePtr();
+	}
 	x509::CertificatePtr result (new x509::Certificate());
 	if (result->binaryImport (&cert_list[0])) {
 		Log (LogWarning) << LOGID << "Could not decode peer certificate" << std::endl;

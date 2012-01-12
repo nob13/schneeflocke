@@ -4,6 +4,8 @@
 #include <schnee/p2p/impl/PresenceProvider.h>
 #include <schnee/p2p/channels/ChannelProvider.h>
 #include <schnee/tools/async/DelegateBase.h>
+#include <schnee/p2p/channels/AuthProtocol.h>
+
 #include "LocalChannel.h"
 
 
@@ -50,17 +52,26 @@ public:
 	virtual bool providesInitialChannels () { return true; }
 	virtual CommunicationComponent * protocol () { return 0; /* no protocol */}
 	virtual void setHostId (const sf::HostId & id) {}
+	virtual void setAuthentication (Authentication * auth) { mAuthentication = auth; }
 	virtual ChannelCreationDelegate & channelCreated () { return mChannelCreated; }
 
 private:
 	// Pushs in a Network Channel from another NetworkDispatcher instance
 	void pushChannel (const HostId & source, ChannelPtr channel);
 
+	// Authenticate an outgoing channel
+	void authChannel (ChannelPtr channel, const HostId & target, const ResultCallback & originalCallback);
+	// Authenticate an ingoing channel
+	void authReplyChannel (ChannelPtr channel, const HostId & source);
+	void onChannelAuth (Error result, ChannelPtr channel, shared_ptr<AuthProtocol> & authProtocol, const HostId & target, const ResultCallback & originalCallback);
+	void onChannelReplyAuth (Error result, ChannelPtr channel, shared_ptr<AuthProtocol> & authProtocol, const HostId & source);
+
 	/// Gets called if peers changed
 	void onPeersChanged ();
 	bool mOnline;
 	Network & mNetwork;
 	HostId mHostId;
+	Authentication * mAuthentication;
 	
 	VoidSignal mPeersChanged;
 	OnlineStateChangedSignal mOnlineStateChanged;

@@ -13,6 +13,7 @@ NetworkDispatcher::NetworkDispatcher (Network & network, LocalChannelUsageCollec
 	SF_REGISTER_ME;
 	mOnline = false;
 	mUsageCollector = usageCollector;
+	mAuthentication = 0;
 }
 
 NetworkDispatcher::~NetworkDispatcher () {
@@ -148,8 +149,8 @@ sf::Error NetworkDispatcher::createChannel (const HostId & target, const ResultC
 	if (!dispatcher) {
 		return error::CouldNotConnectHost;
 	}
-	LocalChannel * lca = new LocalChannel (mHostId, mUsageCollector);
-	LocalChannel * lcb = new LocalChannel (target, mUsageCollector);
+	LocalChannelPtr lca (new LocalChannel (mHostId, mUsageCollector));
+	LocalChannelPtr lcb (new LocalChannel (target, mUsageCollector));
 	LocalChannel::bindChannels (*lca, *lcb); // here we should also insert delay/bw etc.
 	if (delay > 0){
 		lca->setDelay (delay);
@@ -164,10 +165,15 @@ sf::Error NetworkDispatcher::createChannel (const HostId & target, const ResultC
 	lca->setAuthenticated(mNetwork.authenticated());
 	lcb->setAuthenticated(mNetwork.authenticated());
 	Log (LogInfo) << LOGID << "Created channel " << mHostId << " to " << target << " with delay " << delay << std::endl;
-	dispatcher->pushChannel (mHostId, ChannelPtr (lcb));
-	xcall (abind (mChannelCreated, target, ChannelPtr(lca), true));
-	if (callback) xcall (abind (callback, NoError));
+
+	authChannel (lca, target, callback);
+	dispatcher->authReplyChannel (lcb, mHostId);
 	return NoError;
+// Old code without authentication
+//	dispatcher->pushChannel (mHostId, ChannelPtr (lcb));
+//	xcall (abind (mChannelCreated, target, ChannelPtr(lca), true));
+//	if (callback) xcall (abind (callback, NoError));
+//	return NoError;
 }
 
 void NetworkDispatcher::pushChannel (const HostId & source, ChannelPtr channel) {
@@ -176,6 +182,40 @@ void NetworkDispatcher::pushChannel (const HostId & source, ChannelPtr channel) 
 		return;
 	}
 	xcall (abind (mChannelCreated, source, channel, false));
+}
+
+void NetworkDispatcher::authChannel (ChannelPtr channel, const HostId & target, const ResultCallback & originalCallback) {
+	shared_ptr<AuthProtocol> protocol (new AuthProtocol(channel, mHostId));
+	protocol->finished() = abind (dMemFun (this, &NetworkDispatcher::onChannelAuth), channel, protocol, target, originalCallback);
+	protocol->setAuthentication (mAuthentication);
+	protocol->connect(target);
+}
+
+void NetworkDispatcher::authReplyChannel (ChannelPtr channel, const HostId & source) {
+	shared_ptr<AuthProtocol> protocol (new AuthProtocol(channel, mHostId));
+	protocol->finished() = abind (dMemFun (this, &NetworkDispatcher::onChannelReplyAuth), channel, protocol, source);
+	protocol->setAuthentication(mAuthentication);
+	protocol->passive(); // do not set source, as in reality it wouldn't be set too
+}
+
+void NetworkDispatcher::onChannelAuth (Error result, ChannelPtr channel, shared_ptr<AuthProtocol> & authProtocol, const HostId & target, const ResultCallback & originalCallback) {
+	authProtocol->finished().clear(); // otherwise it will live forever
+	safeRemove(authProtocol);
+	if (!result) {
+		notify (mChannelCreated, target, channel, true);
+	}
+	notify (originalCallback, result);
+}
+
+void NetworkDispatcher::onChannelReplyAuth (Error result, ChannelPtr channel, shared_ptr<AuthProtocol> & authProtocol, const HostId & source) {
+	if (authProtocol->other() != source) {
+		Log (LogError) << LOGID << "Strange, auth protocol reported " << authProtocol->other() << " but request came from " << source << std::endl;
+	}
+	authProtocol->finished().clear(); // otherwise it will live forever
+	safeRemove(authProtocol);
+	if (!result) {
+		notify (mChannelCreated, source, channel, false);
+	}
 }
 
 void NetworkDispatcher::onPeersChanged () {

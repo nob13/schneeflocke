@@ -68,11 +68,14 @@ public:
 	/// Constructs uninitialized auto protocol
 	AuthProtocol ();
 
+	~AuthProtocol ();
+
 	/// Inits the AuthProtocol
 	/// Can be done multiple times
 	void init (ChannelPtr channel, const sf::HostId & me);
 
-	~AuthProtocol ();
+	/// Sets authentication (must be done before starting process)
+	void setAuthentication (Authentication * auth);
 	
 	enum State { SENT_CREATE_CHANNEL, WAIT_FOR_CREATE_CHANNEL, SENT_CREATE_CHANNEL_ACCEPT, FINISHED, TIMEOUT, AUTH_ERROR };
 	

@@ -129,7 +129,11 @@ void TCPChannelConnector::onConnect (CreateChannelOp * op, Error result) {
 		// Try to encrypt it
 		op->setState (CreateChannelOp::TlsHandshaking);
 		op->tlsChannel = TLSChannelPtr (new TLSChannel (op->socket));
-		Error e = op->tlsChannel->clientHandshake(TLSChannel::DH, aOpMemFun (op, &TCPChannelConnector::onTlsHandshake));
+		TLSChannel::Mode mode = authenticationEnabled () ? TLSChannel::X509 : TLSChannel::DH;
+		if (mode == TLSChannel::X509) {
+			op->tlsChannel->setKey(mAuthentication->certificate(), mAuthentication->key());
+		}
+		Error e = op->tlsChannel->clientHandshake(mode, aOpMemFun (op, &TCPChannelConnector::onTlsHandshake));
 		if (e) {
 			xcall (abind (aOpMemFun (op, &TCPChannelConnector::onTlsHandshake), e));
 		}
@@ -144,7 +148,7 @@ void TCPChannelConnector::onTlsHandshake (CreateChannelOp * op, Error result) {
 		connectNext (op);
 		return;
 	}
-	if (mAuthentication && mAuthentication->isEnabled()) {
+	if (authenticationEnabled()){
 		Authentication::CertInfo info = mAuthentication->get(op->target);
 		if (info.type != Authentication::CT_PEER) {
 			Log (LogProfile) << LOGID << "Could not do TLS authentication as no certificate is stored" << std::endl;
@@ -202,7 +206,11 @@ void TCPChannelConnector::onNewConnection (){
 	op->setState (AcceptConnectionOp::TlsHandshaking);
 	op->socket = socket;
 	op->tlsChannel = TLSChannelPtr (new TLSChannel (op->socket));
-	Error e = op->tlsChannel->serverHandshake(TLSChannel::DH, aOpMemFun (op, &TCPChannelConnector::onAcceptTlsHandshake));
+	TLSChannel::Mode mode = authenticationEnabled() ? TLSChannel::X509 : TLSChannel::DH;
+	if (mode == TLSChannel::X509) {
+		op->tlsChannel->setKey(mAuthentication->certificate(), mAuthentication->key());
+	}
+	Error e = op->tlsChannel->serverHandshake(mode, aOpMemFun (op, &TCPChannelConnector::onAcceptTlsHandshake));
 	if (e) {
 		Log (LogWarning) << LOGID << "TLS failed immediately on new connection" << toString (e) << std::endl;
 		delete op;
@@ -218,11 +226,18 @@ void TCPChannelConnector::onAcceptTlsHandshake (AcceptConnectionOp * op, Error r
 		delete op;
 		return;
 	}
-	if (mAuthentication && mAuthentication->isEnabled()){
-		op->tlsChannel->peerCertificate()->getCommonName(&op->target);
+	if (authenticationEnabled ()){
+		x509::CertificatePtr peerCert = op->tlsChannel->peerCertificate();
+		if (!peerCert) {
+			Log (LogProfile) << LOGID << "No peer certificate for this client" << std::endl;
+			sf::safeRemove(op->tlsChannel);
+			delete op;
+			return;
+		}
+		peerCert->getCommonName(&op->target);
 		Authentication::CertInfo info = mAuthentication->get(op->target);
 		if (info.type != Authentication::CT_PEER){
-			Log (LogInfo) << LOGID << "TLS Authentication failed, no certificate for this peer " << std::endl;
+			Log (LogProfile) << LOGID << "TLS Authentication failed, no certificate for this peer " << std::endl;
 			sf::safeRemove(op->tlsChannel);
 			delete op;
 			return;
@@ -247,7 +262,7 @@ void TCPChannelConnector::onAcceptAuthFinished (AcceptConnectionOp * op, Error r
 	if (result) {
 		Log (LogInfo) << LOGID << "Authentication failed (" << toString (result) << ") for incoming connection from " << op->authProtocol.other() << std::endl;
 	}
-	if (mAuthentication && mAuthentication->isEnabled()){
+	if (authenticationEnabled()){
 		if (op->authProtocol.other() != op->target) {
 			Log (LogError) << LOGID << "The other side told us another name as in the certificate?!" << std::endl;
 			safeRemove (op->tlsChannel);

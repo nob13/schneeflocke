@@ -22,6 +22,11 @@ AuthProtocol::AuthProtocol () {
 	mAuthentication = 0;
 }
 
+AuthProtocol::~AuthProtocol () {
+	SF_UNREGISTER_ME;
+	sf::cancelTimer (mTimer);
+}
+
 void AuthProtocol::init (ChannelPtr channel, const sf::HostId & me) {
 	sf::cancelTimer(mTimer);
 	mMe        = me;
@@ -30,9 +35,8 @@ void AuthProtocol::init (ChannelPtr channel, const sf::HostId & me) {
 	mWasActive = false;
 }
 
-
-AuthProtocol::~AuthProtocol () {
-	SF_UNREGISTER_ME;
+void AuthProtocol::setAuthentication (Authentication * auth) {
+	mAuthentication = auth;
 }
 
 void AuthProtocol::connect (const HostId & other, int timeOutInMs) {
@@ -49,6 +53,7 @@ void AuthProtocol::connect (const HostId & other, int timeOutInMs) {
 
 	mOther = other;
 	mChannel->changed () = dMemFun (this, &AuthProtocol::onChannelChange);
+	Log (LogInfo) << LOGID << "(RemoveMe) " << mMe << " -> " << other << ": " << sf::toJSONCmd(cmd) << std::endl;
 	Error err = Datagram::fromCmd(cmd).sendTo (mChannel);
 	if (err) {
 		mState = AUTH_ERROR;
@@ -101,6 +106,7 @@ void AuthProtocol::onChannelChange () {
 					}
 					updateOtherCert ();
 				}
+				Log (LogInfo) << LOGID << "(RemoveMe) " << mMe << " -> " << mOther << ": " << sf::toJSONCmd(accept) << std::endl;
 				err = Datagram::fromCmd(accept).sendTo (mChannel);
 				if (err) {
 					onError (error::ConnectionError);
@@ -111,6 +117,7 @@ void AuthProtocol::onChannelChange () {
 					// wrong command, or decoding etc.
 					ChannelFail fail;
 					fail.error = error::BadProtocol;
+					Log (LogInfo) << LOGID << "(RemoveMe) " << mMe << " -> " << mOther << ": " << sf::toJSONCmd(fail) << std::endl;
 					Datagram::fromCmd(fail).sendTo(mChannel);
 					onError (error::BadProtocol);
 				} else {
@@ -129,6 +136,7 @@ void AuthProtocol::onChannelChange () {
 					mAuthentication->certificate()->textExport (&accept.cert);
 				}
 				String answerCmd = toJSONCmd (accept);
+				Log (LogInfo) << LOGID << "(RemoveMe) " << mMe << " -> " << mOther << ": " << sf::toJSONCmd(accept) << std::endl;
 				err = Datagram::fromCmd(accept).sendTo (mChannel);
 				if (err) {
 					onError (error::ConnectionError);
@@ -141,6 +149,7 @@ void AuthProtocol::onChannelChange () {
 					ChannelFail fail;
 					fail.error = error::BadProtocol;
 					Datagram::fromCmd(fail).sendTo(mChannel);
+					Log (LogInfo) << LOGID << "(RemoveMe) " << mMe << " -> " << mOther << ": " << sf::toJSONCmd(fail) << std::endl;
 					onError (error::BadProtocol);
 				} else {
 					onError (fail.error);
@@ -160,6 +169,7 @@ void AuthProtocol::onChannelChange () {
 					ChannelFail fail;
 					fail.error = error::BadProtocol;
 					Datagram::fromCmd (fail).sendTo(mChannel);
+					Log (LogInfo) << LOGID << "(RemoveMe) " << mMe << " -> " << mOther << ": " << sf::toJSONCmd(fail) << std::endl;
 					onError (error::BadProtocol);
 				} else {
 					onError (fail.error);
@@ -224,10 +234,8 @@ bool AuthProtocol::checkParams (const sf::Deserialization & ds, const String & c
 bool AuthProtocol::keyExchange () const {
 	if (!mAuthentication || !mAuthentication->isEnabled())
 		return false;
-	Channel::ChannelInfo info;
+	Channel::ChannelInfo info = mChannel->info();
 	if (!info.authenticated)
-		return false;
-	if (!info.encrypted)
 		return false;
 	return true;
 }
