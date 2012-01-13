@@ -57,14 +57,62 @@ struct X509EncryptionData : public TLSChannel::EncryptionData {
 	~X509EncryptionData(){
 		gnutls_certificate_free_credentials (credentials);
 	}
+
+	static int cert_callback (gnutls_session_t session,
+		       const gnutls_datum_t * req_ca_rdn,
+		       int nreqs,
+		       const gnutls_pk_algorithm_t * sign_algos, int sign_algos_length,
+		       gnutls_retr_st * st) {
+		TLSChannel * instance = static_cast<TLSChannel*> (gnutls_session_get_ptr (session));
+		st->type = gnutls_certificate_type_get (session);
+		st->ncerts = 0;
+		if (st->type == GNUTLS_CRT_X509){
+			{
+				// Check if server accepts signature algorithm
+				int ret = gnutls_x509_crt_get_signature_algorithm (instance->cert()->data);
+				if (ret < 0) {
+					Log (LogError) << LOGID << "Invalid signature algorithm" << std::endl;
+					return -1; // invalid cert signature algorithm
+				}
+				gnutls_sign_algorithm_t certAlgorithm = static_cast<gnutls_sign_algorithm_t> (ret);
+				bool foundOne = false;
+				for (int i = 0;; i++) {
+					gnutls_sign_algorithm_t requestedAlgorithm;
+					int ret = gnutls_sign_algorithm_get_requested (session, i, &requestedAlgorithm);
+					if (ret == 0 && requestedAlgorithm == certAlgorithm) { foundOne = true; break; }
+					if (i == 0 && ret == GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE) { foundOne = true; break; } // don't care
+					if (ret < 0) break;
+				}
+				if (!foundOne) {
+					Log (LogWarning) << LOGID << "Do not have a signature algorithm for the server!" << std::endl;
+					return -1;
+				}
+			}
+
+			// Putting in our key / cert.
+			st->cert.x509   = &(instance->cert()->data);
+			st->ncerts = 1;
+			st->key.x509    = instance->key()->data;
+			st->deinit_all = 0;
+			return 0;
+		}
+		Log (LogWarning) << LOGID << "Wrong cert type requested?!" << std::endl;
+		return -1; // error
+	}
+
 	virtual int apply (Session s) {
 		return gnutls_credentials_set (s, GNUTLS_CRD_CERTIFICATE, credentials);
 	}
 
-	void setKey (const x509::CertificatePtr& cert, const x509::PrivateKeyPtr& key){
+	Error setKey (const x509::CertificatePtr& cert, const x509::PrivateKeyPtr& key){
 		this->cert = cert;
 		this->key  = key;
-		gnutls_certificate_set_x509_key (credentials, &cert->data, 1, key->data);
+		CHECK (gnutls_certificate_set_x509_key (credentials, &cert->data, 1, key->data));
+
+		// install callback for client sending server a certificate even if it doesn't match his CA's
+		// see http://comments.gmane.org/gmane.network.gnutls.general/145
+		gnutls_certificate_client_set_retrieve_function (credentials, &X509EncryptionData::cert_callback);
+		return NoError;
 	}
 
 	x509::CertificatePtr cert;
@@ -106,7 +154,8 @@ Error TLSChannel::clientHandshake (Mode mode, const ResultCallback & callback) {
 			break;
 		case X509:{
 			X509EncryptionData * data = new X509EncryptionData;
-			if (mKey && mCert) data->setKey (mCert,mKey);
+			if (mKey && mCert)
+				data->setKey (mCert,mKey);
 			mEncryptionData = EncryptionDataPtr (data);
 			prios = "PERFORMANCE";
 			break;
@@ -281,7 +330,7 @@ Channel::ChannelInfo TLSChannel::info () const {
 	if (!info.authenticated) {
 		info.authenticated = mAuthenticated;
 	}
-	return mNext->info();
+	return info;
 }
 
 sf::VoidDelegate & TLSChannel::changed () {
@@ -293,7 +342,13 @@ Error TLSChannel::startHandshake (Mode m, const ResultCallback & callback, bool 
 	mHandshakeCallback = callback;
 	CHECK (gnutls_init (&mSession, server ? GNUTLS_SERVER : GNUTLS_CLIENT));
 	CHECK (gnutls_priority_set_direct (mSession, type, NULL));
-	mEncryptionData->apply(mSession);
+	gnutls_session_set_ptr (mSession, this);
+	CHECK (mEncryptionData->apply(mSession));
+	if (m == X509 && server){
+		// request certificate from the client
+		// otherwise he would never send it
+		gnutls_certificate_server_set_request (mSession, GNUTLS_CERT_REQUEST);
+	}
     setTransport ();
 
     mHandshaking = true;

@@ -34,7 +34,7 @@ int createSelfSignedCertificate (x509::PrivateKey * key, x509::Certificate * cer
 	key->generate();
 	std::string keyText;
 	CHECK (key->textExport(&keyText));
-	printf ("Key: %s\n", keyText.c_str());
+	// printf ("Key: %s\n", keyText.c_str());
 
 	CHECK (cert->setKey (key));
 	CHECK (cert->setVersion (1));
@@ -52,9 +52,10 @@ int createSelfSignedCertificate (x509::PrivateKey * key, x509::Certificate * cer
 	CHECK (cert->dnTextExport(&cacertDnText));
 	std::string sha256Fingerprint;
 	CHECK (cert->fingerprintSha256(&sha256Fingerprint));
-	printf ("Cert Text:               %s\n", cacertText.c_str());
-	printf ("Cert DN Text:            %s\n", cacertDnText.c_str());
-	printf ("Cert SHA256 Fingerprint: %s\n", sha256Fingerprint.c_str());
+	// printf ("Cert Text:               %s\n", cacertText.c_str());
+	printf ("Created self sigend certificate\n");
+	printf ("  Cert DN Text:            %s\n", cacertDnText.c_str());
+	printf ("  Cert SHA256 Fingerprint: %s\n", sha256Fingerprint.c_str());
 	return ret;
 }
 
@@ -107,9 +108,13 @@ int x509Comtest () {
 }
 
 int x509AuthTest () {
-	x509::PrivateKeyPtr   key = x509::PrivateKeyPtr (new x509::PrivateKey());
-	x509::CertificatePtr  cert = x509::CertificatePtr (new x509::Certificate());
-	createSelfSignedCertificate (key.get(), cert.get(), "bummi");
+	x509::PrivateKeyPtr   serverKey = x509::PrivateKeyPtr (new x509::PrivateKey());
+	x509::CertificatePtr  serverCert = x509::CertificatePtr (new x509::Certificate());
+	createSelfSignedCertificate (serverKey.get(), serverCert.get(), "bummi");
+
+	x509::PrivateKeyPtr   clientKey = x509::PrivateKeyPtr (new x509::PrivateKey());
+	x509::CertificatePtr  clientCert = x509::CertificatePtr (new x509::Certificate());
+	createSelfSignedCertificate (clientKey.get(), clientCert.get(), "bommel");
 
 	LocalChannelPtr a = LocalChannelPtr (new test::LocalChannel());
 	LocalChannelPtr b = LocalChannelPtr (new test::LocalChannel());
@@ -118,7 +123,8 @@ int x509AuthTest () {
 	TLSChannel sa (a);
 	TLSChannel sb (b);
 
-	sb.setKey (cert, key);
+	sa.setKey (clientCert, clientKey);
+	sb.setKey (serverCert, serverKey);
 	ResultCallbackHelper helperA;
 	ResultCallbackHelper helperB;
 	sa.clientHandshake(TLSChannel::X509, helperA.onResultFunc());
@@ -127,8 +133,10 @@ int x509AuthTest () {
 	tcheck1 (helperA.wait() == NoError);
 	tcheck1 (helperB.wait() == NoError);
 
-	tcheck (sa.authenticate(cert.get(), "other") != NoError, "Should detect wrong hostname"); // wrong host name
-	tcheck (sa.authenticate(cert.get(), "bummi") == NoError, "Should accept self signed if provided");
+	tcheck (sa.authenticate(serverCert.get(), "other") != NoError, "Should detect wrong hostname");
+	tcheck (sa.authenticate(serverCert.get(), "bummi") == NoError, "Should accept self signed if provided");
+	tcheck (sb.authenticate(clientCert.get(), "other") != NoError, "Should detect wrong hostname");
+	tcheck (sb.authenticate(clientCert.get(), "bommel") == NoError, "Should accept self signed if provided");
 	return 0;
 }
 

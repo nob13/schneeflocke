@@ -19,6 +19,12 @@ public:
 	/// Set key/cert for X509 Encryption (necessary for servers!)
 	void setKey  (const x509::CertificatePtr & cert, const x509::PrivateKeyPtr& key);
 
+	/// Returns private key
+	const x509::PrivateKeyPtr& key () const { return mKey; }
+
+	/// Returns certificate
+	const x509::CertificatePtr & cert () const { return mCert; }
+
 	Error clientHandshake (Mode mode, const ResultCallback & callback = ResultCallback());
 	Error serverHandshake (Mode mode, const ResultCallback & callback = ResultCallback());
 
