@@ -62,18 +62,6 @@ const char * testNames (int id) {
 	return names[id];
 }
 
-InterplexBeacon * createGenericInterplexBeacon () {
-	return InterplexBeacon::createIMInterplexBeacon();
-}
-
-InterplexBeacon * createNetworkInterplexBeacon (test::Network * network, test::LocalChannelUsageCollectorPtr collector) {
-	GenericInterplexBeacon * beacon = new GenericInterplexBeacon ();
-	shared_ptr<test::NetworkDispatcher> networkDispatcher = shared_ptr<test::NetworkDispatcher> (new test::NetworkDispatcher(*network, collector));
-	beacon->setPresenceProvider(networkDispatcher);
-	beacon->connections().addChannelProvider (networkDispatcher, 10);
-	return beacon;
-}
-
 static float randDelay (){
 	int r = pseudoRandom (90) + 10;
 	return 0.001f * (float) r;

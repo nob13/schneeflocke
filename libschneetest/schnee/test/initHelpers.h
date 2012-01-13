@@ -43,13 +43,6 @@ const char * testNames (int id);
 /// Returns the name of a server used in a testcase
 inline const char * serverName (int id = 0) { return id==0?"Server" : 0; }
 
-/// Creates a generic InterplexBeacon, consisting of an IMClient connection and TCP-Channel creation
-/// IM-Channels have level 1, TCP Channels level 10
-InterplexBeacon * createGenericInterplexBeacon ();
-
-/// Generates a simulated Network interplex beacon based on GenericInterplexBeacon
-InterplexBeacon * createNetworkInterplexBeacon (test::Network * network, test::LocalChannelUsageCollectorPtr collector = LocalChannelUsageCollectorPtr());
-
 /// Typical inner network delay ~3..8ms
 float smallRandDelay ();
 

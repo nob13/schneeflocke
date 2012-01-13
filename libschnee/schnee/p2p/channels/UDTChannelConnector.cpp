@@ -8,6 +8,7 @@ UDTChannelConnector::UDTChannelConnector() {
 	mRemoteTimeOutMs = 10000;
 	mPunchRetryTimeMs = 1000;
 	mMaxPunchTrys     = 5;
+	mAuthentication   = 0;
 }
 
 UDTChannelConnector::~UDTChannelConnector() {
@@ -256,10 +257,16 @@ void UDTChannelConnector::onUdtConnectResult (CreateChannelOp * op, Error result
 	op->setState (CreateChannelOp::TlsHandshaking);
 	op->tlsChannel = TLSChannelPtr (new TLSChannel (op->udtSocket));
 	Error e;
+
+	TLSChannel::Mode mode = authenticationEnabled () ? TLSChannel::X509 : TLSChannel::DH;
+	if (mode == TLSChannel::X509) {
+		op->tlsChannel->setKey (mAuthentication->certificate(), mAuthentication->key());
+	}
+
 	if (op->connector) {
-		e = op->tlsChannel->clientHandshake(TLSChannel::DH, aOpMemFun (op, &UDTChannelConnector::onTlsHandshake));
+		e = op->tlsChannel->clientHandshake(mode, aOpMemFun (op, &UDTChannelConnector::onTlsHandshake));
 	} else {
-		e = op->tlsChannel->serverHandshake(TLSChannel::DH, aOpMemFun (op, &UDTChannelConnector::onTlsHandshake));
+		e = op->tlsChannel->serverHandshake(mode, aOpMemFun (op, &UDTChannelConnector::onTlsHandshake));
 	}
 	if (e) {
 		Log (LogWarning) << LOGID << "Warning TLS failed at the early beginning " << toString (e) << std::endl;
@@ -281,6 +288,25 @@ void UDTChannelConnector::onTlsHandshake (CreateChannelOp * op, Error result) {
 		}
 		delete op;
 		return;
+	}
+	if (authenticationEnabled()){
+		Authentication::CertInfo info = mAuthentication->get(op->target);
+		if (info.type != Authentication::CT_PEER) {
+			Log (LogProfile) << LOGID << "Could not do TLS authentication as no certificate is stored" << std::endl;
+			// there is no sense in doing next operation; won't exchange certificates
+			notifyAsync (op->callback, error::AuthError);
+			sf::safeRemove(op->tlsChannel);
+			delete op;
+			return;
+		}
+		result = op->tlsChannel->authenticate(info.cert.get(), op->target);
+		if (result) {
+			Log (LogProfile) << LOGID << "Could not TLS authenticate " << op->target << std::endl;
+			notifyAsync (op->callback, error::AuthError);
+			sf::safeRemove (op->tlsChannel);
+			delete op;
+			return;
+		}
 	}
 	op->setState (CreateChannelOp::Authenticating);
 	op->authProtocol.finished() = aOpMemFun (op, &UDTChannelConnector::onAuthResult);

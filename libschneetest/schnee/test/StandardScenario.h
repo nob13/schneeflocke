@@ -51,17 +51,14 @@ public:
 	/// (Comfort variant)
 	sf::Error init (int nodeCount = 8, bool withServer = true, bool simulated = true);
 
-	typedef sf::function <InterplexBeacon * ()> BeaconCreator;
-
-	/// Inits the Standardscenario using a given BeaconCreator
-	sf::Error initWithBeaconCreator (int nodeCount, bool withServer, const BeaconCreator & beaconCreator, bool simulated);
-
-	/// A beacon creator which creates a Beacon with simulated Network and UDT leveling functionality
-	/// for use with initWithBeaconCreator
-	InterplexBeacon * createNetAndUdtBeacon ();
-	/// A beacon creator which creates a Beacon with simulated Network and TCP leveling functionality
-	/// for use with initWithBeaconCreator
-	InterplexBeacon * createNetAndTcpBeacon ();
+	enum InitMode {
+		IM_SIMULATED, // pure simulated network
+		IM_SIMULATED_AND_UDT, // simulated and udt for leveling
+		IM_SIMULATED_AND_TCP, // simulated and tcp for leveling
+		IM_FULLSTACK // full IM + UDT/TCP stack
+	};
+	/// Init with a given int mode
+	sf::Error initWithInitMode (InitMode mode, int nodeCount, bool withServer);
 
 	/// Connect the beacons to the service and waits that all peers see each other
 	/// (But does not connect peers to each other)
@@ -117,6 +114,21 @@ public:
 	inline HostId peerId (int i) const { assert (i < mNodeCount && i>=0); return mPeers[i]->hostId(); }
 
 protected:
+	typedef sf::function <InterplexBeacon * ()> BeaconCreator;
+
+	/// Inits the Standardscenario using a given BeaconCreator
+	sf::Error initWithBeaconCreator (int nodeCount, bool withServer, const BeaconCreator & beaconCreator, bool simulated);
+
+	/// A beacon creator which creates a Beacon with simulated Network and UDT leveling functionality
+	/// for use with initWithBeaconCreator
+	InterplexBeacon * createNetAndUdtBeacon ();
+	/// A beacon creator which creates a Beacon with simulated Network and TCP leveling functionality
+	/// for use with initWithBeaconCreator
+	InterplexBeacon * createNetAndTcpBeacon ();
+	/// Create pure simulated beacon
+	InterplexBeacon * createSimulatedBeacon ();
+
+
 	typedef std::vector<Peer*> PeerVec;
 	PeerVec mPeers;							///< Peers playing in the scenario
 	Peer *  mServer;							///< The server peer, if any

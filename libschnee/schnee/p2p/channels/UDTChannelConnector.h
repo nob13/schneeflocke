@@ -107,6 +107,7 @@ public:
 	virtual bool providesInitialChannels () { return false; }
 	virtual CommunicationComponent * protocol ();
 	virtual void setHostId (const sf::HostId & id);
+	virtual void setAuthentication (Authentication * auth) { mAuthentication = auth; }
 	virtual ChannelCreationDelegate & channelCreated () { return mChannelCreated; }
 
 private:
@@ -197,12 +198,16 @@ private:
 	// Varies the port [-1,+3] based on some access point port mapping experience
 	void guessSomeExternAddresses (CreateChannelOp * op);
 
+	/// Checks if authentication is enabled
+	bool authenticationEnabled () const { return mAuthentication && mAuthentication->isEnabled(); }
+
 	ChannelCreationDelegate mChannelCreated;
 	HostId mHostId;
 	NetEndpoint mEchoServer;
 	int    mRemoteTimeOutMs;	///< Timeout for remote connection creation
 	int    mPunchRetryTimeMs;	///< Time until retrying punching process
 	int    mMaxPunchTrys;		///< Maximum trys to get punching working
+	Authentication * mAuthentication; ///< Authentication component
 };
 
 }
