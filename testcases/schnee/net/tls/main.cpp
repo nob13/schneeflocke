@@ -161,6 +161,51 @@ int x509AuthTest2 () {
 	return 0;
 }
 
+static const char * sflxCaCertificate = "-----BEGIN CERTIFICATE-----"
+		"MIIEMDCCAxigAwIBAgIJANPa8IW8g0knMA0GCSqGSIb3DQEBBQUAMG0xGTAXBgNV"
+		"BAoTEHNmbHgubmV0IFByb2plY3QxCzAJBgNVBAsTAkNBMQ8wDQYDVQQHEwZCZXJs"
+		"aW4xDzANBgNVBAgTBkJlcmxpbjELMAkGA1UEBhMCREUxFDASBgNVBAMTC3NmbHgu"
+		"bmV0IENBMB4XDTEyMDExMzE3MTgwMFoXDTIyMDExMDE3MTgwMFowbTEZMBcGA1UE"
+		"ChMQc2ZseC5uZXQgUHJvamVjdDELMAkGA1UECxMCQ0ExDzANBgNVBAcTBkJlcmxp"
+		"bjEPMA0GA1UECBMGQmVybGluMQswCQYDVQQGEwJERTEUMBIGA1UEAxMLc2ZseC5u"
+		"ZXQgQ0EwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDED+J5bVXnlpvk"
+		"RxE5szJ1oBJ1neXZj/yAbrXxJ3O1ZKNRepS70Vz8TCyb/XyBxtzkmUOyY4ny/hRK"
+		"Ar3mgGKsrN3Qa02hQ014DahdyW/HdUjAuqannMPHuJvPqqfzJY0imCNXmy708aaf"
+		"s6M29HKbN+ReUIa0ZNYq40i9Rmkk+uFvpwww/LCFRhrr6JoM+Tr+a46sKRsPevlz"
+		"ZUZM+hL4ewwquFd/rvSJxVQxfeiK1/RqsYQFFWb7b0aa0Mx70SVUws9OOMJfzEMQ"
+		"OEWxfRcJnjFo4EoBQdX+altEsBymmS/x1H14HkGUQeby2VlKS2CwEb8xIzbpVqej"
+		"foUgOoU5AgMBAAGjgdIwgc8wDAYDVR0TBAUwAwEB/zAdBgNVHQ4EFgQUZsPKN1J5"
+		"fFSp84Vs/aSEB+ra+hQwgZ8GA1UdIwSBlzCBlIAUZsPKN1J5fFSp84Vs/aSEB+ra"
+		"+hShcaRvMG0xGTAXBgNVBAoTEHNmbHgubmV0IFByb2plY3QxCzAJBgNVBAsTAkNB"
+		"MQ8wDQYDVQQHEwZCZXJsaW4xDzANBgNVBAgTBkJlcmxpbjELMAkGA1UEBhMCREUx"
+		"FDASBgNVBAMTC3NmbHgubmV0IENBggkA09rwhbyDSScwDQYJKoZIhvcNAQEFBQAD"
+		"ggEBAGe+uUg9jJiDv5xX0qWgkBgJDmR1exp8QlaoMVnFFirxxTjz6JFuPJa6R/PM"
+		"C/quLO9rTCVR2BLUk3+wpr82ZYre+RiyWA6oDSzv0pJoVveTP1Mm/E/hjqr2ufKF"
+		"oRpX8fUFW1Dwxrt9TnIYRp6v1cHRZzUeuoMoo69YDcv0v8rllpbRh1PS/HC5YYPU"
+		"CLzz3tIIucaWXnSMARdbqGuixLXZeY1te9KbtIOIsptIlNU9Y3AzP3S/gwPj8LXL"
+		"Og3d/1PerrJyg4pqx7gz2GqwHkeWMIU8T1DIzeGBSKH2TsWFA5dTLLSb2Ky8TjVq"
+		"zMjqqHVo2tgYNlTvabyk9QQCAPI="
+		"-----END CERTIFICATE-----";
+
+/// Note: this test is not portable; as it requires installed certificates...
+int x509AuthTest3 () {
+	x509::CertificatePtr caCert = x509::CertificatePtr (new x509::Certificate ());
+	int ret = caCert->textImport(sflxCaCertificate);
+	tcheck1 (!ret);
+
+	TCPSocketPtr tcpSocket (new TCPSocket());
+	ResultCallbackHelper helper;
+	tcpSocket->connectToHost("localhost", 443, 30000, helper.onResultFunc());
+	tcheck1 (helper.wait() == NoError);
+	TLSChannel tls (tcpSocket);
+	tls.clientHandshake (TLSChannel::X509, helper.onResultFunc());
+	tcheck1 (helper.wait() == NoError);
+
+	tcheck (tls.authenticate(caCert.get(), "localhostbla") == error::AuthError, "Should detect wrong hostname");
+	tcheck (tls.authenticate(caCert.get(), "localhost") == NoError, "Should accept right certificate");
+	return 0;
+}
+
 // create private key and a certificate request
 // Mostly copied from GnuTLS doc.
 int createCertificateRequestTest () {
@@ -169,7 +214,7 @@ int createCertificateRequestTest () {
 	key.generate();
 	std::string keyText;
 	key.textExport(&keyText);
-	printf ("My Private Key is: %s\n", keyText.c_str());
+	// printf ("My Private Key is: %s\n", keyText.c_str());
 
 	// Generating requests
 	x509::CertificateRequest request;
@@ -181,7 +226,7 @@ int createCertificateRequestTest () {
 	CHECK (request.sign(&key));
 	std::string requestText;
 	CHECK (request.textExport(&requestText));
-	printf ("My Request is %s\n", requestText.c_str());
+	// printf ("My Request is %s\n", requestText.c_str());
 	return ret;
 }
 
@@ -204,7 +249,7 @@ int signCertificateTest () {
 	CHECK (cert.sign(&cacert, &cakey));
 	std::string certText;
 	CHECK (cert.textExport(&certText));
-	printf ("Cert Text: %s\n", certText.c_str());
+	// printf ("Cert Text: %s\n", certText.c_str());
 
 	// Test this certificate:
 	if (!cert.verify (&cacert)) {
@@ -222,6 +267,7 @@ int main (int argc, char * argv[]){
 	testcase (x509Comtest());
 	testcase (x509AuthTest());
 	testcase (x509AuthTest2());
+	testcase (x509AuthTest3());
 	testcase (createCertificateRequestTest());
 	testcase (signCertificateTest());
 	testcase_end();

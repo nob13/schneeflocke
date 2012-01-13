@@ -11,11 +11,22 @@ bool Certificate::verify (const Certificate * trusted) const {
 		Log (LogError) << LOGID << "Verification error: " << gnutls_strerror_name(r) << std::endl;
 		return false;
 	} else {
-		if (v) {
-			Log (LogInfo) << LOGID << "Verification gave result: " << v << std::endl;
+		if (v & GNUTLS_CERT_INVALID){
+			if (v & GNUTLS_CERT_SIGNER_NOT_FOUND){
+				Log (LogInfo )<< LOGID << "Signer not found" << std::endl;
+			}
+			if (v & GNUTLS_CERT_SIGNER_NOT_CA) {
+				Log (LogInfo) << LOGID << "Signer is not a CA" << std::endl;
+			}
+			if (v & GNUTLS_CERT_INSECURE_ALGORITHM) {
+				Log (LogInfo) << LOGID << "Insecure algorithm" << std::endl;
+			}
+			Log (LogInfo) << LOGID << "Certificate not trusted, " << v << std::endl;
 			return false;
+		} else {
+
+			return true;
 		}
-		return true;
 	}
 }
 

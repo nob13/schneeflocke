@@ -32,5 +32,6 @@ int main (int argc, char * argv[]){
 	testcase (simpleAuth(test::StandardScenario::IM_SIMULATED));
 	testcase (simpleAuth(test::StandardScenario::IM_SIMULATED_AND_TCP));
 	testcase (simpleAuth(test::StandardScenario::IM_SIMULATED_AND_UDT));
+	testcase (simpleAuth(test::StandardScenario::IM_FULLSTACK));
 	testcase_end();
 }
