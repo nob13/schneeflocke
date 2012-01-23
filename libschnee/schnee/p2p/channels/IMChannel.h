@@ -26,11 +26,7 @@ public:
 	virtual Error write (const ByteArrayPtr& data, const ResultCallback & callback = ResultCallback());
 	virtual sf::ByteArrayPtr read (long maxSize);
 	virtual void close (const ResultCallback &  resultCallback = ResultCallback());
-	virtual ChannelInfo info () const {
-		ChannelInfo info;
-		info.virtual_ = true;
-		return info;
-	}
+	virtual ChannelInfo info () const;
 	virtual const char * stackInfo () const { return "im";}
 	virtual sf::VoidDelegate & changed () { return mChanged; }
 

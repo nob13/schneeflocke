@@ -11,6 +11,7 @@ IMDispatcher::IMDispatcher () {
 	SF_REGISTER_ME;
 	mClient = 0;
 	mTimeOutMs = 10000;
+	mAuthentication = 0;
 }
 
 IMDispatcher::~IMDispatcher (){
@@ -44,6 +45,7 @@ sf::Error IMDispatcher::createChannel (const HostId & target, const ResultCallba
 	op->callback = callback;
 	op->channel  = IMChannelPtr (new IMChannel (this, target, onlineState (target)));
 	op->auth.finished() = abind (dMemFun (this, &IMDispatcher::onAuthFinishedCreatingChannel), id);
+	op->auth.setAuthentication(mAuthentication);
 	op->auth.init (op->channel, mClient->ownId());
 	op->auth.connect (target, timeOutMs);
 	op->setState (CreateChannelOp::AwaitAuth);
@@ -92,6 +94,7 @@ Error IMDispatcher::setConnectionString (const String & connectionString, const 
 	mClient->streamErrorReceived()    = dMemFun (this, &IMDispatcher::onServerStreamErrorRecevied);
 
 	mClient->setConnectionString(connectionString);
+	mHostId = mClient->ownId();
 	return NoError;
 }
 
@@ -259,7 +262,6 @@ void IMDispatcher::onConnectionStateChanged (sf::IMClient::ConnectionState state
 	if (state == sf::IMClient::CS_CONNECTED) {
 		mClient->setPresence (IMClient::PS_CHAT, "Schneeflocke (http://sflx.net)", -10);
 		mClient->updateContactRoster();
-		mHostId = mClient->ownId();
 	} else {
 		// If we are not online, all channels go offline
 		for (ChannelMap::iterator i = mChannels.begin(); i != mChannels.end(); i++){
@@ -384,6 +386,7 @@ void IMDispatcher::onMessageReceived (const sf::IMClient::Message & message){
 		op->channel  = IMChannelPtr (new IMChannel (this, source, onlineState (source)));
 		op->cancelOp = abind (dMemFun (this, &IMDispatcher::onOpCanceled), source, op->channel);
 		op->auth.init     (op->channel, mClient->ownId());
+		op->auth.setAuthentication (mAuthentication);
 		op->auth.finished() = abind (dMemFun (this, &IMDispatcher::onAuthFinishedRespondingChannel), id);
 		op->auth.passive (source);
 

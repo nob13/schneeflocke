@@ -100,6 +100,14 @@ void IMChannel::close (const ResultCallback & resultCallback) {
 	notifyAsync (resultCallback, NoError);
 }
 
+Channel::ChannelInfo IMChannel::info () const {
+	ChannelInfo info;
+	info.virtual_ = true;
+	info.authenticated = mDispatcher ? mDispatcher->isAuthenticated() : false;
+	return info;
+}
+
+
 void IMChannel::invalidate () {
 	mDispatcher = 0;
 	mState = OS_OFFLINE;

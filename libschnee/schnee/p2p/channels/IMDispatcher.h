@@ -30,6 +30,7 @@ public:
 
 	/// setHostId will be ignored (as IMDispatcher is also the PresenceProvider)
 	virtual void setHostId (const sf::HostId & id);
+	virtual void setAuthentication (Authentication * auth) { mAuthentication = auth; }
 	virtual ChannelCreationDelegate & channelCreated () { return mChannelCreated; }
 
 	// Implementation of PresenceProvider
@@ -109,6 +110,9 @@ private:
 	/// @return true if message was given successfully to the IMClient
 	bool send(const sf::IMClient::Message & m);
 	
+	/// IMClient is authenticated
+	bool isAuthenticated () const { return mClient ? mClient->isAuthenticated() : false; }
+
 	///@}
 
 	///@name Async Operation workflow
@@ -154,6 +158,7 @@ private:
 	UserInfoMap mUsers;		///< Information about all peers
 	HostId mHostId;			///< Own host id
 	int    mTimeOutMs;		///< Timeout for responding of channels (in ms)
+	Authentication * mAuthentication;
 
 	String mClientName;			///< Own client name
 	std::vector<String> mFeatures; ///< Own feature list
