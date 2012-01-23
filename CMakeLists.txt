@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.6)
 project (Schneeflocke)
-set (SF_VERSION "0.5.5pre")
+set (SF_VERSION "0.6.0pre")
 add_definitions (-DSF_VERSION="${SF_VERSION}")
 
 
