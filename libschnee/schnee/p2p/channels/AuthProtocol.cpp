@@ -232,8 +232,7 @@ bool AuthProtocol::checkParams (const sf::Deserialization & ds, const String & c
 }
 
 bool AuthProtocol::keyExchange () const {
-	if (!mAuthentication || !mAuthentication->isEnabled())
-		return false;
+	if (!mAuthentication) return false;
 	Channel::ChannelInfo info = mChannel->info();
 	if (!info.authenticated)
 		return false;

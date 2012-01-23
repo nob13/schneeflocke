@@ -9,6 +9,7 @@ class StandardScenario {
 public:
 	StandardScenario () : mServer(0), mNodeCount (0), mSimulated (false) {
 		mCollector = LocalChannelUsageCollectorPtr(new LocalChannelUsageCollector());
+		mNetwork.setAuthentication(true);
 	}
 	virtual ~StandardScenario ();
 
@@ -100,12 +101,8 @@ public:
 	/// Returns true if scenario uses a simulated network
 	bool isSimulated () const { return mSimulated; }
 
-	/// Sets the authenticated flag in case of simulated network.
-	/// Default = false
-	void setAuthenticatedForSimulatedNetwork(bool f = true) { mNetwork.setAuthentication(f); }
-
-	/// Enable authentication on all peers
-	void enableAuthentication (bool v  = true);
+//	/// Enable authentication on all peers
+//	void enableAuthentication (bool v  = true);
 
 	/// Gives access to one peer
 	virtual Peer * peer (int i) { assert (i < mNodeCount && i>=0); return mPeers[i]; };

@@ -195,13 +195,13 @@ bool StandardScenario::waitForNoPendingData (int timeOutMs) const {
 	return waitUntilTrueMs (sf::bind (&noPendingData, mCollector), timeOutMs);
 }
 
-void StandardScenario::enableAuthentication (bool v) {
-	if (mServer) mServer->beacon->authentication().enable(v);
-	for (int i = 0; i < mNodeCount; i++) {
-		mPeers[i]->beacon->authentication().enable(v);
-	}
-}
-
+//void StandardScenario::enableAuthentication (bool v) {
+//	if (mServer) mServer->beacon->authentication().enable(v);
+//	for (int i = 0; i < mNodeCount; i++) {
+//		mPeers[i]->beacon->authentication().enable(v);
+//	}
+//}
+//
 sf::Error StandardScenario::initWithBeaconCreator (int nodeCount, bool withServer, const BeaconCreator & beaconCreator, bool simulated) {
 	if (simulated) {
 		genDoubleStarNetwork (mNetwork, nodeCount, withServer, true);

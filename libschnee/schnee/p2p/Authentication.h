@@ -7,13 +7,11 @@ namespace sf {
 /// and controls authentication subsystem
 /// Stores:
 /// - Certificates for other peers (CT_PEER)
-/// - Certificates for XMPP hosts (CT_HUB)
 /// - Own certificate and private key
 /// TODO: Not yet ready
 class Authentication {
 public:
 	enum CertType {
-		CT_HUB,
 		CT_PEER,
 		CT_ERROR
 	};
@@ -28,18 +26,16 @@ public:
 	Authentication ();
 
 	/// Sets own identity name
-	/// Must be called before enablation
-	/// Must fit to own key
-	/// TODO: To be moved to implementation!
+	/// And generates keys if necessary.
 	void setIdentity (const String & identity);
 
-	/// Checks authentication enabled state
-	bool isEnabled () const { return mEnabled; }
+//	/// Checks authentication enabled state
+//	bool isEnabled () const { return mEnabled; }
 
-	/// Sets authentication to enabled
-	/// If no key was assigned so far
-	/// one will be generated here
-	void enable (bool v = true);
+//	/// Sets authentication to enabled
+//	/// If no key was assigned so far
+//	/// one will be generated here
+//	void enable (bool v = true);
 
 	/// Access to private key
 	const x509::PrivateKeyPtr & key () const { return mKey; }

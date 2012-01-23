@@ -199,7 +199,7 @@ private:
 	void guessSomeExternAddresses (CreateChannelOp * op);
 
 	/// Checks if authentication is enabled
-	bool authenticationEnabled () const { return mAuthentication && mAuthentication->isEnabled(); }
+	bool authenticationEnabled () const { return mAuthentication ? true : false; }
 
 	ChannelCreationDelegate mChannelCreated;
 	HostId mHostId;

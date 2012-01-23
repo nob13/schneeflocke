@@ -10,10 +10,8 @@ using namespace sf;
  */
 int simpleAuth (test::StandardScenario::InitMode initMode){
 	test::StandardScenario scenario;
-	scenario.setAuthenticatedForSimulatedNetwork(true);
 	Error e = scenario.initWithInitMode(initMode, 2, false);
 	tcheck1(!e);
-	scenario.enableAuthentication();
 	e = scenario.connectThem(10000);
 	tcheck1(!e);
 	e = scenario.liftThem(10000);

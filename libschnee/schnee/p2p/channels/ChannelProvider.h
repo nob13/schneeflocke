@@ -33,7 +33,7 @@ public:
 	virtual void setHostId (const sf::HostId & id) = 0;
 
 	/// Binds with authentication
-	virtual void setAuthentication (Authentication * auth) {}
+	virtual void setAuthentication (Authentication * auth) = 0;
 
 	///@name Delegates
 	///@{

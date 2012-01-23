@@ -104,7 +104,7 @@ private:
 	///@}
 
 	/// Checks if authentication is enabled
-	bool authenticationEnabled () const { return mAuthentication && mAuthentication->isEnabled(); }
+	bool authenticationEnabled () const { return mAuthentication ? true : false; }
 
 	enum ChannelOpId { CREATE_CHANNEL = 1, ACCEPT_CONNECTION };
 

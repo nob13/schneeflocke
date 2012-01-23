@@ -18,17 +18,14 @@ Authentication::Authentication () {
 
 void Authentication::setIdentity (const String & identity) {
 	mIdentity = identity;
-}
 
-void Authentication::enable (bool v) {
-	if (v && !mKeySet) {
+	String dn;
+	if (mCertificate) mCertificate->getCommonName(&dn);
+	if (!mKey || dn != identity){
 		mKey         = x509::PrivateKeyPtr (new x509::PrivateKey());
 		mCertificate = x509::CertificatePtr (new x509::Certificate());
-		double t0 = sf::microtime();
 		Log (LogProfile) << LOGID << "Generating key as no key was set" << std::endl;
-		if (mIdentity.empty()){
-			Log (LogError) << LOGID << "No identity set!" << std::endl;
-		}
+		double t0 = sf::microtime();
 		mKey->generate(1024);
 		mCertificate->setKey(mKey.get());
 		mCertificate->setVersion (1);
@@ -42,8 +39,32 @@ void Authentication::enable (bool v) {
 		double t1 = sf::microtime ();
 		Log (LogProfile) << LOGID << "Key generation took " << (t1 - t0) * 1000.0 << "ms" << std::endl;
 	}
-	mEnabled = v;
 }
+
+//void Authentication::enable (bool v) {
+//	if (v && !mKeySet) {
+//		mKey         = x509::PrivateKeyPtr (new x509::PrivateKey());
+//		mCertificate = x509::CertificatePtr (new x509::Certificate());
+//		double t0 = sf::microtime();
+//		Log (LogProfile) << LOGID << "Generating key as no key was set" << std::endl;
+//		if (mIdentity.empty()){
+//			Log (LogError) << LOGID << "No identity set!" << std::endl;
+//		}
+//		mKey->generate(1024);
+//		mCertificate->setKey(mKey.get());
+//		mCertificate->setVersion (1);
+//		mCertificate->setActivationTime();
+//		mCertificate->setExpirationDays (10 * 365); // todo: reduce in future and check it
+//		mCertificate->setSerial (1);
+//		mCertificate->setCommonName(mIdentity.c_str());
+//		mCertificate->sign(mCertificate.get(), mKey.get()); // self sign
+//		mCertificate->fingerprintSha256(&mCertFingerprint);
+//		mKeySet = true;
+//		double t1 = sf::microtime ();
+//		Log (LogProfile) << LOGID << "Key generation took " << (t1 - t0) * 1000.0 << "ms" << std::endl;
+//	}
+//	mEnabled = v;
+//}
 
 void Authentication::update (const String & identity, const CertInfo& info) {
 	if (!info.cert || info.type == CT_ERROR) {
