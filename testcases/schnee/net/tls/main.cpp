@@ -206,6 +206,21 @@ int x509AuthTest3 () {
 	return 0;
 }
 
+/// Check authentication using self-included sflx.net certificate
+int x509AuthTest4 () {
+	TCPSocketPtr tcpSocket (new TCPSocket());
+	ResultCallbackHelper helper;
+	tcpSocket->connectToHost("localhost", 443, 30000, helper.onResultFunc());
+	tcheck1 (helper.wait() == NoError);
+	TLSChannel tls (tcpSocket);
+	tls.clientHandshake (TLSChannel::X509, helper.onResultFunc());
+	tcheck1 (helper.wait() == NoError);
+
+	tcheck (tls.authenticate("bla") == error::AuthError, "Should detect wrong hostname");
+	tcheck (tls.authenticate("localhost") == error::NoError, "Should accept right certificagte");
+	return 0;
+}
+
 // create private key and a certificate request
 // Mostly copied from GnuTLS doc.
 int createCertificateRequestTest () {
@@ -268,6 +283,7 @@ int main (int argc, char * argv[]){
 	testcase (x509AuthTest());
 	testcase (x509AuthTest2());
 	testcase (x509AuthTest3());
+	testcase (x509AuthTest4());
 	testcase (createCertificateRequestTest());
 	testcase (signCertificateTest());
 	testcase_end();

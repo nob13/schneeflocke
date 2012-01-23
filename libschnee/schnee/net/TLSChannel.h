@@ -31,6 +31,9 @@ public:
 	/// Simple x509 authentication; validating the certificate
 	Error authenticate (const x509::Certificate * trusted, const String & hostName);
 
+	/// Simple x509 authentication; validating against certificates of TLSCertificates
+	Error authenticate (const String & hostName);
+
 	/// Returns the main peer certificate
 	x509::CertificatePtr peerCertificate () const;
 

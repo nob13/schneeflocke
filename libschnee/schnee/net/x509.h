@@ -9,6 +9,7 @@
  */
 
 namespace sf {
+class TLSCertificates;
 
 namespace x509 {
 struct PrivateKey {
@@ -245,9 +246,12 @@ struct Certificate {
 		return gnutls_x509_crt_check_hostname (data, hostname.c_str()) != 0;
 	}
 
-
 	/// true = success
 	bool verify (const Certificate * trusted) const;
+
+	/// verifies against given thrust list of certificates
+	bool verify (const TLSCertificates & certificates) const;
+
 
 	gnutls_x509_crt_t data;
 };

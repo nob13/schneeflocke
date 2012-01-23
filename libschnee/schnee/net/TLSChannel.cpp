@@ -1,4 +1,5 @@
 #include "TLSChannel.h"
+#include "TLSCertificates.h"
 #include <schnee/tools/Log.h>
 #include <gnutls/gnutls.h>
 #include <gcrypt.h>
@@ -204,6 +205,23 @@ Error TLSChannel::authenticate (const x509::Certificate*  trusted, const String 
 		return error::AuthError;
 	}
 	if (!peerCert->verify(trusted)){
+		return error::AuthError;
+	}
+	mAuthenticated = true;
+	return NoError;
+}
+
+Error TLSChannel::authenticate (const String & hostName) {
+	x509::CertificatePtr peerCert = peerCertificate();
+	if (!peerCert) return error::AuthError;
+	String dn;
+	if (!peerCert->dnTextExport(&dn)){
+		Log (LogInfo) << LOGID << "Peer DN: " << dn << std::endl;
+	}
+	if (!peerCert->checkHostname(hostName)){
+		return error::AuthError;
+	}
+	if (!peerCert->verify(TLSCertificates::instance())){
 		return error::AuthError;
 	}
 	mAuthenticated = true;

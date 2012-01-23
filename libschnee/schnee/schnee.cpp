@@ -1,6 +1,7 @@
 #include "net/impl/IOService.h"
 #include "tools/async/impl/DelegateRegister.h"
 #include "net/impl/UDTMainLoop.h"
+#include "net/TLSCertificates.h"
 #include "settings.h"
 
 #include <gcrypt.h>
@@ -86,6 +87,9 @@ static bool gInitialized = false;
 // Defined in settings.cpp
 void parseArguments (int argc, const char * argv[]);
 
+/// Defined in settings.cpp
+void setInitialCertificates ();
+
 
 bool init (int argc, const char * argv []) {
 	if (isInitialized()) return true;
@@ -94,6 +98,8 @@ bool init (int argc, const char * argv []) {
 	const Settings & settings = schnee::settings();
 	initLogging (settings.enableLog, settings.enableFileLog, settings.logFile);
 	global_InitGnuTls ();
+	TLSCertificates::initInstance();
+	schnee::setInitialCertificates ();
 	IOService::initInstance ();
 	IOService::instance().start();
 	Log (LogInfo) << LOGID << "Started IOService, thread " << IOService::threadId(IOService::service()) << std::endl;
@@ -111,6 +117,7 @@ void deinit () {
 	IOService::instance().stop();
 	DelegateRegister::destroyInstance();
 	IOService::destroyInstance ();
+	TLSCertificates::destroyInstance();
 	global_uninitGnuTls ();
 	gInitialized = false;
 	deInitLogging ();
