@@ -8,7 +8,6 @@ namespace sf {
 /// Stores:
 /// - Certificates for other peers (CT_PEER)
 /// - Own certificate and private key
-/// TODO: Not yet ready
 class Authentication {
 public:
 	enum CertType {
@@ -28,14 +27,6 @@ public:
 	/// Sets own identity name
 	/// And generates keys if necessary.
 	void setIdentity (const String & identity);
-
-//	/// Checks authentication enabled state
-//	bool isEnabled () const { return mEnabled; }
-
-//	/// Sets authentication to enabled
-//	/// If no key was assigned so far
-//	/// one will be generated here
-//	void enable (bool v = true);
 
 	/// Access to private key
 	const x509::PrivateKeyPtr & key () const { return mKey; }
@@ -58,7 +49,6 @@ private:
 	typedef std::map<std::string, CertInfo> CertMap;
 	CertMap mCerts; ///< Stores all certificates
 
-	bool mEnabled;
 	bool mKeySet;
 	String mIdentity;
 	String mCertFingerprint;

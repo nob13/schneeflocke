@@ -101,9 +101,6 @@ public:
 	/// Returns true if scenario uses a simulated network
 	bool isSimulated () const { return mSimulated; }
 
-//	/// Enable authentication on all peers
-//	void enableAuthentication (bool v  = true);
-
 	/// Gives access to one peer
 	virtual Peer * peer (int i) { assert (i < mNodeCount && i>=0); return mPeers[i]; };
 
