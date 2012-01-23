@@ -130,6 +130,7 @@ TLSChannel::TLSChannel (ChannelPtr next) {
 	mServer          = false;
 	mAuthenticated   = false;
 	mHandshakeError  = NoError;
+	mDisableAuthentication = false;
 
 	mSession = 0;
 }
@@ -145,7 +146,7 @@ void TLSChannel::setKey  (const x509::CertificatePtr & cert, const x509::Private
 	mKey  = key;
 }
 
-Error TLSChannel::clientHandshake (Mode mode, const ResultCallback & callback) {
+Error TLSChannel::clientHandshake (Mode mode, const String & hostname, const ResultCallback & callback) {
 	if (mSecured) return error::WrongState;
 	const char * prios = 0;
 	switch (mode) {
@@ -158,6 +159,7 @@ Error TLSChannel::clientHandshake (Mode mode, const ResultCallback & callback) {
 			if (mKey && mCert)
 				data->setKey (mCert,mKey);
 			mEncryptionData = EncryptionDataPtr (data);
+			mHostname = hostname;
 			prios = "PERFORMANCE";
 			break;
 		}
@@ -192,6 +194,10 @@ Error TLSChannel::serverHandshake (Mode mode, const ResultCallback & callback) {
 		break;
 	}
 	return startHandshake (mode, callback, true, prios);
+}
+
+void TLSChannel::disableAuthentication() {
+	mDisableAuthentication = true;
 }
 
 Error TLSChannel::authenticate (const x509::Certificate*  trusted, const String & hostName) {
@@ -401,7 +407,11 @@ void TLSChannel::continueHandshake () {
 	int r = gnutls_handshake (mSession);
 	if (!r) {
 		mSecured     = true;
-		result = NoError;
+		if (!mDisableAuthentication && mMode == X509 && !mServer) {
+			result = authenticate (mHostname);
+		} else {
+			result = NoError;
+		}
 	} else if (r == GNUTLS_E_AGAIN || r == GNUTLS_E_INTERRUPTED){
 		// Async, do something else
 		return;

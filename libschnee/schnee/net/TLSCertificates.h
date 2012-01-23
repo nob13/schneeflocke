@@ -26,6 +26,7 @@ public:
 	/// Returns GnuTLS certificate list (hacky)
 	/// For use with verify method
 	const gnutls_x509_crt_t * gnuTlsCertificates () const { return & (*mGnuTlsCerts.begin()); }
+
 private:
 
 	void updateGnuTlsCerts ();

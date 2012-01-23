@@ -25,13 +25,19 @@ public:
 	/// Returns certificate
 	const x509::CertificatePtr & cert () const { return mCert; }
 
-	Error clientHandshake (Mode mode, const ResultCallback & callback = ResultCallback());
+	/// Does client handshake
+	/// If not explicitely disabled, x509 authentication will be done using hostname
+	Error clientHandshake (Mode mode, const String & hostname, const ResultCallback & callback = ResultCallback());
+	/// Does server handshake
 	Error serverHandshake (Mode mode, const ResultCallback & callback = ResultCallback());
 
-	/// Simple x509 authentication; validating the certificate
+	/// Explicitely disable authentication on X509, used in clientHandshake.
+	void disableAuthentication();
+
+	/// Simple explicit x509 authentication; validating the certificate
 	Error authenticate (const x509::Certificate * trusted, const String & hostName);
 
-	/// Simple x509 authentication; validating against certificates of TLSCertificates
+	/// Simple explicit x509 authentication; validating against certificates of TLSCertificates
 	Error authenticate (const String & hostName);
 
 	/// Returns the main peer certificate
@@ -87,6 +93,8 @@ private:
 	ResultCallback  mHandshakeCallback;
 	ResultCallback  mCurrentWriteCallback;
 	Error           mHandshakeError;
+	bool            mDisableAuthentication;
+	String          mHostname; /// hostname we are connecting too, if not disabled. (x509 client)
 
 	// Adapters for GnuTLS
 	static ssize_t c_push     (gnutls_transport_ptr instance, const void * data, size_t size);

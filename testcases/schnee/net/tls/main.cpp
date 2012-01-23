@@ -80,7 +80,7 @@ int diffieHellmanTest () {
 	TLSChannel sa (a);
 	TLSChannel sb (b);
 
-	sa.clientHandshake(TLSChannel::DH);
+	sa.clientHandshake(TLSChannel::DH, "");
 	sb.serverHandshake(TLSChannel::DH);
 	test::millisleep_locked (100);
 	return comTest (sa, sb);
@@ -100,7 +100,8 @@ int x509Comtest () {
 	TLSChannel sb (b);
 
 	sb.setKey (cert, key);
-	sa.clientHandshake(TLSChannel::X509);
+	sa.disableAuthentication();
+	sa.clientHandshake(TLSChannel::X509, "");
 	sb.serverHandshake(TLSChannel::X509);
 
 	test::millisleep_locked (100);
@@ -127,7 +128,8 @@ int x509AuthTest () {
 	sb.setKey (serverCert, serverKey);
 	ResultCallbackHelper helperA;
 	ResultCallbackHelper helperB;
-	sa.clientHandshake(TLSChannel::X509, helperA.onResultFunc());
+	sa.disableAuthentication();
+	sa.clientHandshake(TLSChannel::X509, "", helperA.onResultFunc());
 	sb.serverHandshake(TLSChannel::X509, helperB.onResultFunc());
 
 	tcheck1 (helperA.wait() == NoError);
@@ -147,7 +149,8 @@ int x509AuthTest2 () {
 	tcpSocket->connectToHost("www.google.com", 443, 30000, helper.onResultFunc());
 	tcheck1 (helper.wait() == NoError);
 	TLSChannel tls (tcpSocket);
-	tls.clientHandshake (TLSChannel::X509, helper.onResultFunc());
+	tls.disableAuthentication();
+	tls.clientHandshake (TLSChannel::X509, "", helper.onResultFunc());
 	tcheck1 (helper.wait() == NoError);
 	x509::CertificatePtr cert = tls.peerCertificate();
 	String dn;
@@ -198,7 +201,8 @@ int x509AuthTest3 () {
 	tcpSocket->connectToHost("sflx.net", 443, 30000, helper.onResultFunc());
 	tcheck1 (helper.wait() == NoError);
 	TLSChannel tls (tcpSocket);
-	tls.clientHandshake (TLSChannel::X509, helper.onResultFunc());
+	tls.disableAuthentication();
+	tls.clientHandshake (TLSChannel::X509, "", helper.onResultFunc());
 	tcheck1 (helper.wait() == NoError);
 
 	tcheck (tls.authenticate(caCert.get(), "blaumi") == error::AuthError, "Should detect wrong hostname");
@@ -213,11 +217,9 @@ int x509AuthTest4 () {
 	tcpSocket->connectToHost("sflx.net", 443, 30000, helper.onResultFunc());
 	tcheck1 (helper.wait() == NoError);
 	TLSChannel tls (tcpSocket);
-	tls.clientHandshake (TLSChannel::X509, helper.onResultFunc());
+	tls.clientHandshake (TLSChannel::X509, "sflx.net", helper.onResultFunc());
 	tcheck1 (helper.wait() == NoError);
-
-	tcheck (tls.authenticate("bla") == error::AuthError, "Should detect wrong hostname");
-	tcheck (tls.authenticate("sflx.net") == error::NoError, "Should accept right certificagte");
+	tcheck1 (tls.info().authenticated);
 	return 0;
 }
 

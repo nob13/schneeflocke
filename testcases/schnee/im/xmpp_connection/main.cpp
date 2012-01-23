@@ -38,12 +38,10 @@ int manualConnect () {
 	stream.uncouple();
 	TLSChannelPtr tlsChannel = TLSChannelPtr (new TLSChannel (socket));
 	ResultCallbackHelper handshakeHandler;
-	e = tlsChannel->clientHandshake(TLSChannel::X509, handshakeHandler.onResultFunc());
+	e = tlsChannel->clientHandshake(TLSChannel::X509, "localhost", handshakeHandler.onResultFunc());
 	tcheck1 (!e);
 	tcheck1 (handshakeHandler.waitReadyAndNoError(100));
-
-	e = tlsChannel->authenticate("localhost");
-	tcheck1 (!e);
+	tcheck1  (tlsChannel->info().authenticated);
 
 	/// Reuse
 	e = stream.startInit(tlsChannel, initHandler.onResultFunc());

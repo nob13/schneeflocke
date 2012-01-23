@@ -132,8 +132,10 @@ void TCPChannelConnector::onConnect (CreateChannelOp * op, Error result) {
 		TLSChannel::Mode mode = authenticationEnabled () ? TLSChannel::X509 : TLSChannel::DH;
 		if (mode == TLSChannel::X509) {
 			op->tlsChannel->setKey(mAuthentication->certificate(), mAuthentication->key());
+			// we do that implicit.
+			op->tlsChannel->disableAuthentication();
 		}
-		Error e = op->tlsChannel->clientHandshake(mode, aOpMemFun (op, &TCPChannelConnector::onTlsHandshake));
+		Error e = op->tlsChannel->clientHandshake(mode, op->target, aOpMemFun (op, &TCPChannelConnector::onTlsHandshake));
 		if (e) {
 			xcall (abind (aOpMemFun (op, &TCPChannelConnector::onTlsHandshake), e));
 		}
@@ -209,6 +211,8 @@ void TCPChannelConnector::onNewConnection (){
 	TLSChannel::Mode mode = authenticationEnabled() ? TLSChannel::X509 : TLSChannel::DH;
 	if (mode == TLSChannel::X509) {
 		op->tlsChannel->setKey(mAuthentication->certificate(), mAuthentication->key());
+		// we do that implicit
+		op->tlsChannel->disableAuthentication();
 	}
 	Error e = op->tlsChannel->serverHandshake(mode, aOpMemFun (op, &TCPChannelConnector::onAcceptTlsHandshake));
 	if (e) {

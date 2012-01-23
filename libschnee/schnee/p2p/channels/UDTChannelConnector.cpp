@@ -261,10 +261,12 @@ void UDTChannelConnector::onUdtConnectResult (CreateChannelOp * op, Error result
 	TLSChannel::Mode mode = authenticationEnabled () ? TLSChannel::X509 : TLSChannel::DH;
 	if (mode == TLSChannel::X509) {
 		op->tlsChannel->setKey (mAuthentication->certificate(), mAuthentication->key());
+		// we do that implicit
+		op->tlsChannel->disableAuthentication();
 	}
 
 	if (op->connector) {
-		e = op->tlsChannel->clientHandshake(mode, aOpMemFun (op, &UDTChannelConnector::onTlsHandshake));
+		e = op->tlsChannel->clientHandshake(mode, op->target, aOpMemFun (op, &UDTChannelConnector::onTlsHandshake));
 	} else {
 		e = op->tlsChannel->serverHandshake(mode, aOpMemFun (op, &UDTChannelConnector::onTlsHandshake));
 	}

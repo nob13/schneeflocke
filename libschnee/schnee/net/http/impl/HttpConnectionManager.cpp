@@ -104,7 +104,7 @@ void HttpConnectionManager::onTcpConnect (Error result, AsyncOpId id) {
 		// Add another TLS layer onto it...
 		TLSChannelPtr tlsChannel = TLSChannelPtr (new TLSChannel (op->connection->channel));
 		op->connection->channel = tlsChannel;
-		tlsChannel->clientHandshake(TLSChannel::X509, abind (dMemFun(this, &HttpConnectionManager::onTlsHandshake), id));
+		tlsChannel->clientHandshake(TLSChannel::X509, op->connection->pureHost, abind (dMemFun(this, &HttpConnectionManager::onTlsHandshake), id));
 		op->setState (EstablishConnectionOp::WaitTls);
 		addAsyncOp (op);
 		return;
@@ -117,11 +117,6 @@ void HttpConnectionManager::onTlsHandshake (Error result, AsyncOpId id) {
 	EstablishConnectionOp * op;
 	getReadyAsyncOpInState (id, EstablishConnection, EstablishConnectionOp::WaitTls, &op);
 	if (!op) return;
-	if (!result) {
-		TLSChannel * tls = static_cast<TLSChannel*> (op->connection->channel.get());
-		Error e = tls->authenticate(op->connection->pureHost);
-		(void) e; // touch.
-	}
 	doFinish (result, op);
 }
 
