@@ -12,6 +12,7 @@ int main (int argc, char ** argv) {
 	QApplication::setOrganizationName("sflx.net team");
 	QApplication::setWindowIcon(QIcon (":/schneeflocke.png"));
 
+
 	Controller controller;
 	controller.init ();
 	return app.exec ();
