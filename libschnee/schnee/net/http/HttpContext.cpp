@@ -76,6 +76,7 @@ void HttpContext::onConnect (Error result, HttpConnectionPtr con, AsyncOpId id) 
 		op->setState(HttpGetOperation::HG_RECEIVE);
 
 		op->response = HttpResponsePtr (new HttpResponse);
+		op->response->authenticated = con->channel->info().authenticated;
 		op->parser.setDestination (op->response);
 		op->parser.inputBuffer().swap(op->con->inputBuffer);
 

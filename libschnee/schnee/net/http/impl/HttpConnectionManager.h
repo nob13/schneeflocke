@@ -8,9 +8,11 @@ namespace sf {
 
 /// Describes one http connection
 struct HttpConnection {
+	HttpConnection () {}
 	ChannelPtr channel;
 	ByteArray  inputBuffer;
 	String host; // host (including port if given)
+	String pureHost; // host (without port)
 	String protocol;
 };
 typedef shared_ptr<HttpConnection> HttpConnectionPtr;

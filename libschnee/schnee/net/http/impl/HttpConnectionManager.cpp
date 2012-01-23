@@ -48,6 +48,7 @@ void HttpConnectionManager::requestConnection (const Url & url, int timeOutMs, c
 	op->callback = callback;
 	op->connection = HttpConnectionPtr (new HttpConnection());
 	op->connection->host = url.host();
+	op->connection->pureHost = url.pureHost();
 	op->connection->protocol = url.protocol();
 	TCPSocketPtr sock = TCPSocketPtr (new TCPSocket ());
 	op->connection->channel = sock;
@@ -118,7 +119,7 @@ void HttpConnectionManager::onTlsHandshake (Error result, AsyncOpId id) {
 	if (!op) return;
 	if (!result) {
 		TLSChannel * tls = static_cast<TLSChannel*> (op->connection->channel.get());
-		Error e = tls->authenticate(op->connection->host);
+		Error e = tls->authenticate(op->connection->pureHost);
 		(void) e; // touch.
 	}
 	doFinish (result, op);

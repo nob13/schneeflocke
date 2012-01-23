@@ -82,6 +82,7 @@ private:
 	Error        mError;
 	String       mErrorMessage;
 	VoidDelegate mChanged;
+	bool         mAuthenticated; // valid as long as all requests are authenticated. If one comes in non-authenticated; connection will fail
 
 	// Error correction
 	int          mErrorCount;    //< HTTP errors (gets decreased on each successfull attempt)

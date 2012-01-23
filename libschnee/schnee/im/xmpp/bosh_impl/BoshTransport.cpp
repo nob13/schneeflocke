@@ -18,6 +18,7 @@ BoshTransport::BoshTransport () {
 	mSuccessCount  = 0;
 	mMaxErrorCount = 10;
 	mReconnectWaitMs = 10;
+	mAuthenticated = false;
 }
 
 BoshTransport::~BoshTransport(){
@@ -119,6 +120,7 @@ Channel::ChannelInfo BoshTransport::info () const {
 	if (mState == Connected){
 		info.raddress = mUrl.host();
 	}
+	info.authenticated = mAuthenticated;
 	return info;
 }
 
@@ -140,6 +142,7 @@ void BoshTransport::onConnectReply (Error result, const HttpResponsePtr & respon
 	}
 	if (!(response->resultCode == 200))
 		return failConnect (error::ConnectionError, callback, String ("bad http result=" + toString (response->resultCode)).c_str());
+	mAuthenticated = response->authenticated;
 
 	BoshNodeParser parser;
 	Error e = parser.parse(response->data->const_c_array(), response->data->size());
@@ -244,6 +247,10 @@ void BoshTransport::onRequestReply (Error result, const HttpResponsePtr & respon
 		if (mState != Unconnected)
 			Log (LogWarning) << LOGID << "Strange state" << std::endl;
 		return;
+	}
+	if (mAuthenticated && !response->authenticated){
+		Log (LogWarning) << LOGID << "Lost authentication status" << std::endl;
+		return failRequest (error::AuthError, rid, "Lost authentication", originalCallback);
 	}
 	if (result || response->resultCode != 200) {
 		// Recovering from errors
