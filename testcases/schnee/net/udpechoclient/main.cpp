@@ -1,4 +1,5 @@
 #include <schnee/schnee.h>
+#include <schnee/settings.h>
 #include <schnee/test/test.h>
 #include <schnee/test/initHelpers.h>
 #include <schnee/tools/async/MemFun.h>
@@ -74,13 +75,12 @@ int testSflxEchoServer () {
 
 	UDPEchoClient client(socket);
 	client.result() = memFun (&helper, &TestHelper::callback);
-	client.start ("62.48.92.13", 1234, 1000); // sflx.net
+	client.start (schnee::settings().echoServer, schnee::settings().echoServerPort, 1000);
 	bool hasResult = helper.waitForResult (2000);
 	tassert (hasResult, "Must callback");
 	if (helper.result() != NoError){
 		fprintf (stderr, "Shall give no error, but gave: %s\n", toString (helper.result()));
 		fprintf (stderr, "Maybe you don't have a udp access to the net?\n");
-		fprintf (stderr, "Do not count this as an error, as UDP is not reliable");
 		return 1;
 	}
 	printf ("Outside address: %s, outside port: %d\n", client.address().c_str(), client.port());
