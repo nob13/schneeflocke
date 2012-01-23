@@ -14,7 +14,7 @@ namespace sf {
 
 /*
  * HTTP Functionality playground.
- * Target: Enough HTTP to implement XMPP over BOSH.
+ * Goal: Enough HTTP to implement XMPP over BOSH.
  */
 class HttpContext : public AsyncOpBase {
 public:

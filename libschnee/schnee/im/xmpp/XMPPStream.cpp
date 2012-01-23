@@ -50,6 +50,10 @@ XMLChunk XMPPStream::features () const {
 	return mFeatures;
 }
 
+Channel::ChannelInfo XMPPStream::channelInfo() const {
+	return mChannel ? mChannel->info() : Channel::ChannelInfo();
+}
+
 Error XMPPStream::startInit (ChannelPtr channel, const ResultCallback& callback) {
 	mSkipInit = false;
 	Error e = init (channel, false);

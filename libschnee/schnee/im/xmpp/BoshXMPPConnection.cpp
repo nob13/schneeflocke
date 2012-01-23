@@ -57,7 +57,7 @@ Error BoshXMPPConnection::startConnect (bool withLogin, const XMPPStreamPtr & st
 	op->boss = this;
 
 	if (mDetails.port == 0)
-		mDetails.port = 5222;
+		mDetails.port = 443;
 
 	// Starting connect
 	Url url = Url (String ("https://") + mDetails.server + ":" + toString (mDetails.port) +  "/http-bind/");

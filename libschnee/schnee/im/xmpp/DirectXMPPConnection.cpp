@@ -92,7 +92,12 @@ void DirectXMPPConnection::onTlsRequestReply (Error result) {
 void DirectXMPPConnection::onTlsHandshakeResult(Error result){
 	if (result) return onConnectError (result);
 	if (!mConnecting) return;
-	Error e = mStream->startInit(mTlsChannel, dMemFun (this, &DirectXMPPConnection::onTlsStreamInit));
+	Error e = mTlsChannel->authenticate(mDetails.server);
+	if (e) {
+		Log (LogWarning) << LOGID << "Authentication of " << mDetails.server << " failed" << std::endl;
+		// ignore this: Client can see if connection was authenticated or not
+	}
+	e = mStream->startInit(mTlsChannel, dMemFun (this, &DirectXMPPConnection::onTlsStreamInit));
 	setPhase ("TLS Stream Reinit");
 	if (e) onConnectError (e);
 }

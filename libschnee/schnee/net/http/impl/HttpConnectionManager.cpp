@@ -116,6 +116,11 @@ void HttpConnectionManager::onTlsHandshake (Error result, AsyncOpId id) {
 	EstablishConnectionOp * op;
 	getReadyAsyncOpInState (id, EstablishConnection, EstablishConnectionOp::WaitTls, &op);
 	if (!op) return;
+	if (!result) {
+		TLSChannel * tls = static_cast<TLSChannel*> (op->connection->channel.get());
+		Error e = tls->authenticate(op->connection->host);
+		(void) e; // touch.
+	}
 	doFinish (result, op);
 }
 

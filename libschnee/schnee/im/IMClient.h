@@ -134,6 +134,9 @@ public:
 	/// Returns whether it is currently connected
 	virtual bool isConnected () const { return connectionState () == CS_CONNECTED; }
 	
+	/// Returns whether IM connection is authenticated
+	virtual bool isAuthenticated () const = 0;
+
 	/// returns current state of connection
 	virtual ConnectionState connectionState () const = 0;
 

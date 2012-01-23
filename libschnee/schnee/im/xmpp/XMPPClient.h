@@ -22,6 +22,9 @@ public:
 	virtual void disconnect ();
 	ContactInfo ownInfo ();
 	String ownId ();
+	virtual bool isAuthenticated () const {
+		return mStream ? mStream->channelInfo().authenticated : false;
+	}
 	virtual ConnectionState connectionState () const {
 		return mConnectionState;
 	}

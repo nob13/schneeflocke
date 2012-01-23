@@ -49,6 +49,9 @@ public:
 	/// Features of the stream
 	XMLChunk features () const;
 
+	/// Returns channel info
+	Channel::ChannelInfo channelInfo() const;
+
 	///@name Connecting Sequence
 	///@{
 

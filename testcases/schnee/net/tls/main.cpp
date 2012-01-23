@@ -195,14 +195,14 @@ int x509AuthTest3 () {
 
 	TCPSocketPtr tcpSocket (new TCPSocket());
 	ResultCallbackHelper helper;
-	tcpSocket->connectToHost("localhost", 443, 30000, helper.onResultFunc());
+	tcpSocket->connectToHost("sflx.net", 443, 30000, helper.onResultFunc());
 	tcheck1 (helper.wait() == NoError);
 	TLSChannel tls (tcpSocket);
 	tls.clientHandshake (TLSChannel::X509, helper.onResultFunc());
 	tcheck1 (helper.wait() == NoError);
 
-	tcheck (tls.authenticate(caCert.get(), "localhostbla") == error::AuthError, "Should detect wrong hostname");
-	tcheck (tls.authenticate(caCert.get(), "localhost") == NoError, "Should accept right certificate");
+	tcheck (tls.authenticate(caCert.get(), "blaumi") == error::AuthError, "Should detect wrong hostname");
+	tcheck (tls.authenticate(caCert.get(), "sflx.net") == NoError, "Should accept right certificate");
 	return 0;
 }
 
@@ -210,14 +210,14 @@ int x509AuthTest3 () {
 int x509AuthTest4 () {
 	TCPSocketPtr tcpSocket (new TCPSocket());
 	ResultCallbackHelper helper;
-	tcpSocket->connectToHost("localhost", 443, 30000, helper.onResultFunc());
+	tcpSocket->connectToHost("sflx.net", 443, 30000, helper.onResultFunc());
 	tcheck1 (helper.wait() == NoError);
 	TLSChannel tls (tcpSocket);
 	tls.clientHandshake (TLSChannel::X509, helper.onResultFunc());
 	tcheck1 (helper.wait() == NoError);
 
 	tcheck (tls.authenticate("bla") == error::AuthError, "Should detect wrong hostname");
-	tcheck (tls.authenticate("localhost") == error::NoError, "Should accept right certificagte");
+	tcheck (tls.authenticate("sflx.net") == error::NoError, "Should accept right certificagte");
 	return 0;
 }
 

@@ -102,7 +102,7 @@ int testAutoConnect () {
 	ResultCallbackHelper conResultHandler;
 	Error e = con.connect(stream, 2500, conResultHandler.onResultFunc());
 	tcheck1 (!e && conResultHandler.waitReadyAndNoError(5000));
-
+	tcheck1 (stream->channelInfo().authenticated);
 	tcheck1 (stream->ownFullJid() == "autotest1@localhost/autoConnect");
 
 	e = stream->close();

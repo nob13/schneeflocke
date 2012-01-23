@@ -42,6 +42,9 @@ int manualConnect () {
 	tcheck1 (!e);
 	tcheck1 (handshakeHandler.waitReadyAndNoError(100));
 
+	e = tlsChannel->authenticate("localhost");
+	tcheck1 (!e);
+
 	/// Reuse
 	e = stream.startInit(tlsChannel, initHandler.onResultFunc());
 	tcheck1 (!e);
@@ -95,6 +98,7 @@ int autoConnect () {
 	tcheck1 (!e && conResultHandler.waitReadyAndNoError(5000));
 
 	tcheck1 (stream->ownFullJid() == "autotest1@localhost/autoConnect");
+	tcheck1 (stream->channelInfo().authenticated);
 
 	e = stream->close();
 	tcheck1 (!e);
