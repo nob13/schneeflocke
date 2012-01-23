@@ -1,0 +1,38 @@
+Authentication in Schneeflocke
+------------------------------
+
+Authentication is tightly coupled with lifting algorithms.
+
+Each client randomly chooses an X509 Key. The sflx.net Server is assumed to be trustworthy.
+It's certificate is stored inside the Schneeflocke Source code and will be burned into the final executables.
+
+Before connecting each other, clients do exchange their certificates using IM Messages with the server.
+
+On direct connection they will check each other validity via TLS client/server handshake.
+
+This clients can trust each other as long
+- they trust the server
+- they received each others certificate via a secured/authenticated connection.
+
+Problematic is the use of Schneeflocke clients on other servers. Schneeflocke itself won't connect
+to other servers.
+
+Important Components
+--------------------
+- TLSCertificates.h --> stores system wide accepted CA certificates
+- TLSChannel.h      --> does encryption via GnuTLS.
+- Authenticationh.h --> stores Peer certificates and switch on/off authentication
+- AuthProtocol.h    --> does key exchange
+
+
+Diagram
+-------
+
+A ---------- sflx.net -------------- B
+       indirect via sflx.net   
+     exchange of Certifactes
+         sflx.net itself
+     is checked against CA cert. 
+     
+  --------directly with TCP/UDT----- 
+       only with certificates                                        
