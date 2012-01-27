@@ -158,11 +158,6 @@ struct Certificate {
 	}
 
 	/// 0 = success
-	int setName (const char * name){
-		return setDN (GNUTLS_OID_X520_NAME, name);
-	}
-
-	/// 0 = success
 	int setCaStatus (bool status) {
 		return gnutls_x509_crt_set_ca_status (data, status ? 1 : 0);
 	}

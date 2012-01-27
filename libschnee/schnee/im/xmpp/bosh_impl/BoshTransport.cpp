@@ -33,6 +33,17 @@ void setIfNotSet (BoshTransport::StringMap * dst, const String& key, const Strin
 }
 
 static int64_t randomRid () {
+#ifdef WIN32
+	assert (RAND_MAX >= 256);
+	// 36 bit random
+	int64_t result = 0;
+	result = result + (rand () % 255) << 32;
+	result += (rand () % 255) << 24;
+	result += (rand () % 255) << 16;
+	result += (rand () % 255) << 8;
+	result += rand() % 255;
+	return result;
+#else
 	assert (RAND_MAX >= 2147483647);
 	int64_t a = rand();
 	int64_t b = rand();
@@ -41,6 +52,7 @@ static int64_t randomRid () {
 	int64_t r = (a << 4) + b;
 	assert (r>=0);
 	return r;
+#endif
 }
 
 void BoshTransport::connect(const sf::Url & url, const StringMap & additionalArgs, int timeOutMs, const ResultCallback & callback){
