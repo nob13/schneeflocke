@@ -48,6 +48,7 @@ public:
 	void registerAccount ();
 
 	bool isConnectedTo (const sf::HostId & hostId);
+	bool isConnectedTo_locked (const sf::HostId & hostId);
 	sf::Error trackHostShared (const sf::HostId & hostId);
 	void listDirectory (const sf::Uri & uri);
 	void requestFile (const sf::Uri & uri);

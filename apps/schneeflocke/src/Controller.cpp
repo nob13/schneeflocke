@@ -174,12 +174,17 @@ void Controller::registerAccount () {
 
 bool Controller::isConnectedTo (const sf::HostId & hostId) {
 	SF_SCHNEE_LOCK;
+	return isConnectedTo_locked (hostId);
+}
+
+bool Controller::isConnectedTo_locked (const sf::HostId & hostId) {
 	return mModel->beacon()->connections().channelLevel(hostId) >= 10;
 }
 
+
 sf::Error Controller::trackHostShared (const sf::HostId & hostId) {
 	SF_SCHNEE_LOCK;
-	if (!isConnectedTo (hostId)){
+	if (!isConnectedTo_locked (hostId)){
 		return mModel->beacon()->connections().liftToAtLeast (10, hostId, sf::abind (sf::dMemFun (this, &Controller::onConnectHostForTrackingResult), hostId));
 	}
 	// forward as if we woudl have it connected
