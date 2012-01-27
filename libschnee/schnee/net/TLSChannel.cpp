@@ -68,6 +68,7 @@ struct X509EncryptionData : public TLSChannel::EncryptionData {
 		st->type = gnutls_certificate_type_get (session);
 		st->ncerts = 0;
 		if (st->type == GNUTLS_CRT_X509){
+#if GNUTLS_VERSION_NUMBER >= 0x020a00 // gnutls_sign_algorithm_get_requested is available on >= 2.10
 			{
 				// Check if server accepts signature algorithm
 				int ret = gnutls_x509_crt_get_signature_algorithm (instance->cert()->data);
@@ -89,6 +90,7 @@ struct X509EncryptionData : public TLSChannel::EncryptionData {
 					return -1;
 				}
 			}
+#endif
 
 			// Putting in our key / cert.
 			st->cert.x509   = &(instance->cert()->data);
