@@ -162,6 +162,19 @@ struct Certificate {
 		return setDN (GNUTLS_OID_X520_NAME, name);
 	}
 
+	/// 0 = success
+	int setCaStatus (bool status) {
+		return gnutls_x509_crt_set_ca_status (data, status ? 1 : 0);
+	}
+
+	/// 0 = success
+	int getCaStatus (bool * v) const {
+		unsigned int status = 0;
+		int result = gnutls_x509_crt_get_ca_status (data, &status);
+		*v = status != 0;
+		return result;
+	}
+
 	// necessary?
 	/// 0 = success
 	int setUid (const char * name) {
