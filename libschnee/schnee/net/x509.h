@@ -157,11 +157,6 @@ struct Certificate {
 		return getDN (GNUTLS_OID_X520_COMMON_NAME, name);
 	}
 
-	/// 0 = success
-	int setName (const char * name){
-		return setDN (GNUTLS_OID_X520_NAME, name);
-	}
-
 	// necessary?
 	/// 0 = success
 	int setUid (const char * name) {
