@@ -74,7 +74,7 @@ private:
 	XMPPClient & operator= (const XMPPClient&);
 	
 	// Callback for XMPPConnection::connect
-	void onConnect (Error result, const XMPPConnectionPtr& connector, const ResultCallback & originalCallback);
+	void onConnect (Error result, XMPPConnectionPtr& connector, const ResultCallback & originalCallback);
 	void onConnectionStateChanged (ConnectionState state);
 
 	void onIncomingRosterIq (const xmpp::RosterIq & result);

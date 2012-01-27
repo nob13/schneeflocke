@@ -303,16 +303,15 @@ bool XMPPClient::isFullJid (const String & jid) {
 	return jid.find ('/') != jid.npos;
 }
 
-void XMPPClient::onConnect (Error result, const XMPPConnectionPtr& connector, const ResultCallback & originalCallback) {
+void XMPPClient::onConnect (Error result, XMPPConnectionPtr& connector, const ResultCallback & originalCallback) {
 	if (!result) {
 		mConnectionState = CS_CONNECTED;
 		notifyAsync (mConnectionStateChangedDelegate, mConnectionState);
 	} else {
 		mErrorText = connector->errorText();
 	}
-	if (originalCallback) {
-		originalCallback (result);
-	}
+	notify (originalCallback, result);
+	sf::safeRemove (connector);
 }
 
 void XMPPClient::onConnectionStateChanged (ConnectionState state) {
