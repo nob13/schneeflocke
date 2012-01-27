@@ -88,8 +88,15 @@ template <class T> static void holdIt (const shared_ptr<T> & x) {
 /// Instead of just 0'ing that pointer, call safeRemofe it will rescue the possible
 /// deletion to the next cycle.
 template <class T> void safeRemove (shared_ptr<T> & x){
+#ifdef WIN32
+	// Otherwise WIN32 doesn't get it compiled.
+	// Because of Error C2436
+	boost::function<void (const shared_ptr<T> & )> fn = &holdIt<T>;
+	xcall (abind (fn, x));
+#else
 	// the xcall mechanism will hold it
 	xcall (abind (&holdIt<T>, x));
+#endif
 	x.reset();
 }
 
