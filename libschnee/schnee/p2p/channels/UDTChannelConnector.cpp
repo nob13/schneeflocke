@@ -216,26 +216,28 @@ void UDTChannelConnector::onUdpRecvPunchReply (const NetEndpoint & from, CreateC
 	ack.local     = mHostId;
 	ack.remote   = op->target;
 	ack.num     = reply.num;
-	op->udpSocket.sendTo (from.address, from.port, createByteArrayPtr (toJSONCmd (ack)));
+	NetEndpoint endpoint;
+	if (reply.num > 0 && reply.num < op->otherEndpointCount()){
+		endpoint = op->otherEndpoint(reply.num);
+	} else {
+		endpoint.address = from.address;
+		endpoint.port    = from.port;
+	}
+	op->udpSocket.sendTo (endpoint.address, endpoint.port, createByteArrayPtr (toJSONCmd (ack)));
 	Log (LogInfo) << LOGID << "Sent " << toJSONCmd (ack) << " to " << toJSON (from) << std::endl;
 	op->sentAck = true;
+
+	// let's create UDT Channels
+	op->setState (CreateChannelOp::ConnectingUDT);
+	op->udtSocket = UDTSocketPtr (new UDTSocket());
+	op->udtSocket->rebind(&op->udpSocket);
+	op->udtSocket->connectRendezvousAsync(endpoint.address, endpoint.port, aOpMemFun (op, &UDTChannelConnector::onUdtConnectResult));
 }
 
 void UDTChannelConnector::onUdpRecvAck (const NetEndpoint & from, CreateChannelOp * op, const AckUDP & ack) {
 	if (ack.remote != mHostId || ack.local != op->target) {
 		Log (LogInfo) << LOGID << "Discarding noise from other clients " << toJSONCmd (ack) << std::endl;
 		addAsyncOp (op);
-	}
-	if (!op->sentAck) {
-		AckUDP ack;
-		ack.id      = op->id();
-		ack.remoteId = op->remoteId;
-		ack.local     = mHostId;
-		ack.remote   = op->target;
-		ack.num     = 0; // unknown
-		op->udpSocket.sendTo (from.address, from.port, createByteArrayPtr (toJSONCmd (ack)));
-		Log (LogInfo) << LOGID << "Sent " << toJSONCmd (ack) << " to " << toJSON (from) << std::endl;
-		op->sentAck = true;
 	}
 	op->recvAck = true;
 	// lets create UDT Channels...
