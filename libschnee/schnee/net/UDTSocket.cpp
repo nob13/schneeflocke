@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include "impl/UDTMainLoop.h"
 #include <schnee/tools/Log.h>
+#include <schnee/tools/MicroTime.h>
 #ifndef WIN32
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -290,7 +291,11 @@ void UDTSocket::connectInOtherThread (const String & address, int port, bool ren
 		bool yes = true;
 		UDT::setsockopt (mSocket, 0, UDT_RENDEZVOUS, &yes, sizeof(yes));
 	}
+	Log (LogInfo) << LOGID << "Will connect " << address << ":" << port << " rendezvous: " << rendezvous << std::endl;
+	double t0 = sf::microtime();
 	Error result = connect_locked (address, port);
+	double t1 = sf::microtime();
+	Log (LogProfile) << LOGID << "Connect " << address << ":" << port << " rendezvous: " << rendezvous << " result: " << toString (result) << " in " << (t1 - t0) * 1000.0 << "ms" << std::endl;
 	if (rendezvous) {
 		bool no = false;
 		UDT::setsockopt (mSocket, 0, UDT_RENDEZVOUS, &no, sizeof(no));
