@@ -288,6 +288,7 @@ void UDTChannelConnector::onTlsHandshake (CreateChannelOp * op, Error result) {
 		if (op->callback) {
 			xcall (abind (op->callback, result));
 		}
+		sf::safeRemove(op->tlsChannel);
 		delete op;
 		return;
 	}
