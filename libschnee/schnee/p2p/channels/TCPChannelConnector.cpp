@@ -147,6 +147,7 @@ void TCPChannelConnector::onTlsHandshake (CreateChannelOp * op, Error result) {
 	if (result) {
 		op->hasFailedEncryption = true;
 		Log (LogProfile) << LOGID << "TLS Handshake failed: " << toString (result) << std::endl;
+		sf::safeRemove(op->tlsChannel);
 		connectNext (op);
 		return;
 	}
@@ -227,6 +228,7 @@ void TCPChannelConnector::onNewConnection (){
 void TCPChannelConnector::onAcceptTlsHandshake (AcceptConnectionOp * op, Error result) {
 	if (result) {
 		Log (LogInfo) << LOGID << "Encrypting failed (" << toString (result) <<") for incoming connection" << std::endl;
+		sf::safeRemove(op->tlsChannel);
 		delete op;
 		return;
 	}
