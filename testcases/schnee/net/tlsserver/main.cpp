@@ -28,7 +28,8 @@ struct Credentials {
 		key->generate(1024);
 		cert->setKey(key.get());
 		cert->setVersion (1);
-		cert->setActivationTime();
+		time_t t = time (NULL) - 7200;
+		cert->setActivationTime(t);
 		cert->setExpirationDays (10 * 365); // todo: reduce in future and check it
 		cert->setSerial (1);
 		cert->setCommonName(name.c_str());
@@ -42,11 +43,11 @@ ByteArrayPtr syncRead (Channel & c, int bytes, int timeOutMs) {
 	Time  t (sf::futureInMs(timeOutMs));
 	ByteArray buffer;
 	while (true) {
-		if (c.error()){
-			return ByteArrayPtr();
-		}
 		ByteArrayPtr data = c.read(bytes);
 		if (!data || data->size() == 0) {
+			if (c.error()){
+				return ByteArrayPtr();
+			}
 			ResultCallbackHelper helper;
 			c.changed() = helper.onReadyFunc();
 			int restMs = (t - sf::currentTime()).total_milliseconds();
