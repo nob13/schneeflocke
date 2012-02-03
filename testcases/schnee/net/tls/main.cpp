@@ -8,7 +8,6 @@
 
 #include <schnee/test/test.h>
 #include <gnutls/gnutls.h>
-#include <gcrypt.h>
 
 using namespace sf;
 typedef test::LocalChannelPtr LocalChannelPtr;
