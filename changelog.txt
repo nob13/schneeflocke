@@ -1,3 +1,8 @@
+0.6.0
+- Peer-2-Peer-Authentication #127
+- Server Authentication
+- Minor improvements of Hole Punching
+- Simplified Asynchronicity #181
 0.5.4
 - If BOSH XMPP users go offline, they are not marked as being offline
 - Schneeflocke should reply to regular clients, #165
