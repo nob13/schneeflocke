@@ -132,11 +132,7 @@ template <class Signature, class X0, class X1, class X2, class X3> struct ABind4
 		mSig (arg0, mX0, mX1, mX2, mX3);
 	}
 
-	template <typename Arg0, typename Arg1> void operator () (const Arg0 & arg0) {
-		mSig (arg0, mX0, mX1, mX2, mX3);
-	}
-
-	template <typename Arg0, typename Arg1, typename Arg2> void operator () (const Arg0 & arg0, const Arg1 & arg1) {
+	template <typename Arg0, typename Arg1> void operator () (const Arg0 & arg0, const Arg1 & arg1) {
 		mSig (arg0, arg1 , mX0, mX1, mX2, mX3);
 	}
 
