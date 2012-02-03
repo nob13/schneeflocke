@@ -14,6 +14,7 @@ public:
 	QtThreadGateway (QObject * parent = 0);
 
 	/// Executes a function in the Qt-Thread bound to Object
+	/// Will never do this immediately
 	void call (const VoidFunction & func);
 
 signals:

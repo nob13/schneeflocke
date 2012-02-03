@@ -3,7 +3,7 @@
 
 QtThreadGateway::QtThreadGateway (QObject * parent) : QObject (parent) {
 	qRegisterMetaType<VoidFunction> ("VoidFunction");
-	QObject::connect (this, SIGNAL (forwardLoadToQt(const VoidFunction&)), this, SLOT (onNewLoad (const VoidFunction &)));
+	QObject::connect (this, SIGNAL (forwardLoadToQt(const VoidFunction&)), this, SLOT (onNewLoad (const VoidFunction &)), Qt::QueuedConnection);
 	mAboutToQuit = false;
 }
 

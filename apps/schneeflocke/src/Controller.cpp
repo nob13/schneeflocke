@@ -124,44 +124,40 @@ void Controller::updateSettings(const Model::Settings & s) {
 }
 
 void Controller::share (const QString & shareName, const QString & fileName, bool forAll, const sf::UserSet & whom){
-	sf::Error e;
 	{
 		SF_SCHNEE_LOCK;
 		sf::FileSharing * sharing = mModel->fileSharing ();
-		e = sharing->share (sfString (shareName), sfString (fileName), forAll, whom);
-	}
-	if (e) {
-		mGUI->onError (err::CouldNotAddShare, QObject::tr ("Could not add share"), QObject::tr ("Could not add share: %1").arg (toString (e)));
+		sf::Error e = sharing->share (sfString (shareName), sfString (fileName), forAll, whom);
+		if (e) {
+			onError (err::CouldNotAddShare, QObject::tr ("Could not add share"), QObject::tr ("Could not add share: %1").arg (toString (e)));
+		}
 	}
 	mShareList->update();
 	saveShares();
 }
 
 void Controller::editShare (const QString & shareName, const QString & fileName, bool forAll, const sf::UserSet & whom) {
-	sf::Error e;
 	{
 		SF_SCHNEE_LOCK;
 		sf::FileSharing * sharing = mModel->fileSharing ();
-		e = sharing->editShare (sfString (shareName), sfString (fileName), forAll, whom);
-	}
-	if (e) {
-		mGUI->onError (err::CouldNotEditShare, QObject::tr ("Could not add share"), QObject::tr ("Could not edit share %1, reason: %2")
-		.arg (shareName).arg(toString(e)));
+		sf::Error e = sharing->editShare (sfString (shareName), sfString (fileName), forAll, whom);
+		if (e) {
+			onError (err::CouldNotEditShare, QObject::tr ("Could not add share"), QObject::tr ("Could not edit share %1, reason: %2").arg (shareName).arg(toString(e)));
+		}
 	}
 	mShareList->update();
 	saveShares();
 }
 
 void Controller::unshare (const QString & shareName) {
-	sf::Error e;
 	{
 		SF_SCHNEE_LOCK;
 		sf::FileSharing * sharing = mModel->fileSharing();
-		e = sharing->unshare(sfString(shareName));
-	}
-	if (e) {
-		mGUI->onError(err::CouldNotRemoveShare, QObject::tr ("Could not remove share"),
-				QObject::tr ("Could not remove share %1, reason:%2").arg(shareName).arg(toString (e)));
+		sf::Error e = sharing->unshare(sfString(shareName));
+		if (e) {
+			onError (err::CouldNotRemoveShare, QObject::tr ("Could not remove share"),
+					QObject::tr ("Could not remove share %1, reason:%2").arg(shareName).arg(toString (e)));
+		}
 	}
 	mShareList->update();
 	saveShares();
@@ -197,7 +193,7 @@ void Controller::listDirectory (const sf::Uri & uri) {
 	sf::FileGetting * getting = mModel->fileGetting();
 	sf::Error e = getting->listDirectory(uri);
 	if (e) {
-		mGUI->onError (err::CouldNotListDirectory, QObject::tr ("Could not list directory"), QObject::tr ("Could not list directory %1 of %2, reason: %3")
+		onError (err::CouldNotListDirectory, QObject::tr ("Could not list directory"), QObject::tr ("Could not list directory %1 of %2, reason: %3")
 		.arg(qtString (uri.host())).arg(qtString (uri.path().toString())).arg (toString (e)));
 	}
 }
@@ -227,8 +223,8 @@ void Controller::requestFile (const sf::Uri & uri) {
 	sf::FileGetting * getting = mModel->fileGetting();
 	sf::Error e = getting->request(uri);
 	if (e) {
-		mGUI->onError(err::CouldNotRequestFile, QObject::tr ("Could not request file"), QObject::tr ("Could not request file %1 of %2, reason: %3")
-		.arg (qtString(uri.path().toString())).arg(qtString (uri.host())).arg(toString(e)));
+		onError(err::CouldNotRequestFile, QObject::tr ("Could not request file"), QObject::tr ("Could not request file %1 of %2, reason: %3")
+			.arg (qtString(uri.path().toString())).arg(qtString (uri.host())).arg(toString(e)));
 	}
 }
 
@@ -237,8 +233,8 @@ void Controller::requestDirectory (const sf::Uri & uri) {
 	sf::FileGetting * getting = mModel->fileGetting();
 	sf::Error e = getting->requestDirectory(uri);
 	if (e) {
-		mGUI->onError (err::CouldNotRequestDirectory, QObject::tr ("Could not request directory"), QObject::tr ("Could not request director %1 of %2, reason: %3")
-		.arg (qtString(uri.host())).arg (qtString(uri.path().toString())).arg(toString(e)));
+		onError (err::CouldNotRequestDirectory, QObject::tr ("Could not request directory"), QObject::tr ("Could not request director %1 of %2, reason: %3")
+			.arg (qtString(uri.host())).arg (qtString(uri.path().toString())).arg(toString(e)));
 	}
 }
 
@@ -246,7 +242,7 @@ void Controller::addUser (const sf::UserId & userId) {
 	SF_SCHNEE_LOCK;
 	sf::Error e = mModel->beacon()->presences().subscribeContact (userId);
 	if (e) {
-		mGUI->onError(err::CouldNotAddUser, QObject::tr ("Could not add user"), QObject::tr ("Could not add user %1, reason: %2").
+		onError(err::CouldNotAddUser, QObject::tr ("Could not add user"), QObject::tr ("Could not add user %1, reason: %2").
 				arg (qtString (userId)).arg (toString (e)));
 	}
 }
@@ -255,8 +251,8 @@ void Controller::subscriptionRequestReply (const sf::UserId & userId, bool allow
 	SF_SCHNEE_LOCK;
 	sf::Error e = mModel->beacon()->presences().subscriptionRequestReply(userId,allow,alsoAdd);
 	if (e) {
-		mGUI->onError(err::CouldNotSubscribeReplyUser, QObject::tr ("Subscription error"), QObject::tr("Could not allow other user %1 to subscribe, reason: %2")
-		.arg(qtString(userId)).arg (toString(e)));
+		onError(err::CouldNotSubscribeReplyUser, QObject::tr ("Subscription error"), QObject::tr("Could not allow other user %1 to subscribe, reason: %2")
+			.arg(qtString(userId)).arg (toString(e)));
 	}
 }
 
@@ -264,7 +260,7 @@ void Controller::removeUser (const sf::UserId & userId) {
 	SF_SCHNEE_LOCK;
 	sf::Error e = mModel->beacon()->presences().removeContact (userId);
 	if (e) {
-		mGUI->onError(err::CouldNotRemoveUser, QObject::tr("User Removal"), QObject::tr ("Could not remove use %1, reason: %2").arg(qtString(userId)).arg(toString(e)));
+		onError(err::CouldNotRemoveUser, QObject::tr("User Removal"), QObject::tr ("Could not remove use %1, reason: %2").arg(qtString(userId)).arg(toString(e)));
 	}
 }
 
@@ -300,8 +296,9 @@ void Controller::onChangeConnection (DesiredState state) {
 			return; // already connected
 		sf::Error e = mModel->connect(dMemFun (this, &Controller::onConnect));
 		mState = CONNECTING;
-		if (e) mGUI->onError (err::CouldNotConnectService, QObject::tr ("Could not connect to Service"),
-				QObject::tr ("Could not connect to service, reason %1. Please check your connection settings.").arg(toString(e)));
+		if (e) {
+			onError (err::CouldNotConnectService, QObject::tr ("Could not connect to Service"), QObject::tr ("Could not connect to service, reason %1. Please check your connection settings.").arg(toString(e)));
+		}
 	}
 	if (state == DS_DISCONNECT) {
 		/*sf::Error err =*/ mModel->disconnect();
