@@ -10,15 +10,16 @@
 
 # Author: Simon Josefsson
 
-prefix=/home/jas/gnutls4win/inst
+prefix=/usr/local
 exec_prefix=${prefix}
-libdir=${exec_prefix}/lib
-includedir=${prefix}/include
+libdir=/home/nmav/cvs/gnutls/win32/win32/lib
+includedir=/home/nmav/cvs/gnutls/win32/win32/lib/include
 
 Name: GnuTLS
 Description: Transport Security Layer implementation for the GNU system
 URL: http://www.gnu.org/software/gnutls/
-Version: 2.10.1
+Version: 3.0.11
 Libs: -L${libdir} -lgnutls
-Libs.private: -L${exec_prefix}/lib -lgnutls  -L/home/jas/gnutls4win/inst/lib -ltasn1 -R/home/jas/gnutls4win/inst/lib
+Libs.private: -L/home/nmav/cvs/gnutls/win32/win32/lib -lnettle -L/home/nmav/cvs/gnutls/win32/win32/lib -lhogweed -L/home/nmav/cvs/gnutls/win32/win32/lib -lgmp -R/home/nmav/cvs/gnutls/win32/win32/lib
+Requires.private: p11-kit-1, zlib
 Cflags: -I${includedir}

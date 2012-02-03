@@ -176,7 +176,7 @@ message (STATUS "*** Dependencies ***")
 	else ()
 		set (tlsdir "${CMAKE_SOURCE_DIR}/external/gnutls_win/")
 		set (GNUTLS_INCLUDE_DIR "${tlsdir}/include")
-		set (GNUTLS_LIBRARIES   "${tlsdir}/bin/libgnutls-26.lib" "${tlsdir}/bin/libgcrypt-11.lib")
+		set (GNUTLS_LIBRARIES   "${tlsdir}/bin/libgnutls-28.lib")
 		file (GLOB GNUTLS_SHARED_LIBRARIES ${tlsdir}/bin/*.dll)
 		message (STATUS "GnuTLS DLL Files: ${blub}")
 		add_definitions ("-Dssize_t=long") # hack

@@ -1,0 +1,21 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=/home/nmav/cvs/gnutls/win32/win32/lib
+includedir=/home/nmav/cvs/gnutls/win32/win32/lib/include
+datarootdir=${prefix}/share
+datadir=${datarootdir}
+sysconfdir=${prefix}/etc
+p11_system_config=${prefix}/etc/pkcs11
+p11_system_config_file=${prefix}/etc/pkcs11/pkcs11.conf
+p11_system_config_modules=${prefix}/etc/pkcs11/modules
+p11_user_config=~/.pkcs11
+p11_user_config_file=~/.pkcs11/pkcs11.conf
+p11_user_config_modules=~/.pkcs11/modules
+p11_module_path=/home/nmav/cvs/gnutls/win32/win32/lib/pkcs11
+proxy_module=/home/nmav/cvs/gnutls/win32/win32/lib/p11-kit-proxy.so
+
+Name: p11-kit
+Description: Library and proxy module for properly loading and sharing PKCS#11 modules.
+Version: 0.10
+Libs: -L${libdir} -lp11-kit
+Cflags: -I${includedir}/p11-kit-1

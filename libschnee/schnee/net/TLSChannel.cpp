@@ -2,7 +2,9 @@
 #include "TLSCertificates.h"
 #include <schnee/tools/Log.h>
 #include <gnutls/gnutls.h>
+#ifndef WIN32
 #include <gcrypt.h>
+#endif
 
 #ifdef WIN32
 #include "errno.h"
@@ -320,11 +322,7 @@ Error TLSChannel::write (const ByteArrayPtr& data, const ResultCallback & callba
 sf::ByteArrayPtr TLSChannel::read (long maxSize) {
 	const size_t bufSize = 65536;
 	char buffer [bufSize];
-#ifdef WIN32
-	size_t len = maxSize < 0 ? bufSize : min (bufSize, (size_t)maxSize);
-#else
 	size_t len = maxSize < 0 ? bufSize : std::min (bufSize, (size_t)maxSize);
-#endif
 
 	ByteArrayPtr result = createByteArrayPtr();
 	while (len > 0) {

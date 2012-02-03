@@ -23,18 +23,36 @@ struct Credentials {
 	}
 	void generate (const String & name) {
 		key  = x509::PrivateKeyPtr (new x509::PrivateKey());
+		/*
+		x509::CertificateRequest req;
+		req.setCommonName (name.c_str());
+		req.setVersion(1);
+		req.setKey (key.get());
+		
+		cert = x509::CertificatePtr (new x509::Certificate());
+		cert->setRequest (&req);
+		cert->setActivationTime();
+		cert->setExpirationDays (10 * 365);
+		cert->setSerial (1);
+		cert->setCommonName (name.c_str());
+		cert->sign (cert.get(), key.get()); // self sign
+		*/
+		
 		cert = x509::CertificatePtr (new x509::Certificate());
 		double t0 = sf::microtime();
 		key->generate(1024);
 		cert->setKey(key.get());
 		cert->setVersion (1);
-		cert->setActivationTime();
+		time_t t = time(NULL) - 7200;
+		cert->setActivationTime(t);
 		cert->setExpirationDays (10 * 365); // todo: reduce in future and check it
 		cert->setSerial (1);
+		cert->setCaStatus (true);
 		cert->setCommonName(name.c_str());
 		cert->sign(cert.get(), key.get()); // self sign
 		double t1 = sf::microtime ();
 		Log (LogProfile) << LOGID << "Key generation took " << (t1 - t0) * 1000.0 << "ms" << std::endl;
+		
 	}
 };
 

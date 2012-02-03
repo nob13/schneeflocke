@@ -4,67 +4,31 @@
 #include "net/TLSCertificates.h"
 #include "settings.h"
 
+#ifndef WIN32
 #include <gcrypt.h>
+#endif
 #include <gnutls/gnutls.h>
 
 #ifndef WIN32
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
-#else
-// Source: https://build.opensuse.org/package/view_file?file=libsoup-2.28.1-gcrypt.patch&package=mingw64-libsoup&project=windows%3Amingw%3Awin64&srcmd5=2a77d044b5e1e3e626a675c89008d772
-static int gcry_win32_mutex_init (void **priv)
-{
-   int err = 0;
-   CRITICAL_SECTION *lock = (CRITICAL_SECTION*)malloc (sizeof (CRITICAL_SECTION));
-
-   if (!lock)
-       err = ENOMEM;
-   if (!err) {
-       InitializeCriticalSection (lock);
-       *priv = lock;
-   }
-   return err;
-}
-
-static int gcry_win32_mutex_destroy (void **lock)
-{
-   DeleteCriticalSection ((CRITICAL_SECTION*)*lock);
-   free (*lock);
-   return 0;
-}
-
-static int gcry_win32_mutex_lock (void **lock)
-{
-   EnterCriticalSection ((CRITICAL_SECTION*)*lock);
-   return 0;
-}
-
-static int gcry_win32_mutex_unlock (void **lock)
-{
-   LeaveCriticalSection ((CRITICAL_SECTION*)*lock);
-   return 0;
-}
-
-
-static struct gcry_thread_cbs gcry_threads_win32 = {       \
-   (GCRY_THREAD_OPTION_USER | (GCRY_THREAD_OPTION_VERSION << 8)),     \
-   NULL, gcry_win32_mutex_init, gcry_win32_mutex_destroy, \
-   gcry_win32_mutex_lock, gcry_win32_mutex_unlock,    \
-   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
-
-
 #endif
 
 void global_InitGnuTls () {
 #ifndef WIN32
+	// Technically we don't need multithreading support anymore
+	// Because all TLS Operations are working inside one mutex now.
+	// Win32 doesn't have it anymore because it's new GnuTLS library
+	// is not based on libcrypt anymore.
+
 	// multithreading
 	gcry_control (GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
-#else
-	gcry_control (GCRYCTL_SET_THREAD_CBS, &gcry_threads_win32);
 #endif
 	// debug level
 	gnutls_global_set_log_level (1);
+#ifndef WIN32
 	// non-blocking random
 	gcry_control (GCRYCTL_ENABLE_QUICK_RANDOM, 0);
+#endif
 	gnutls_global_init ();
 }
 
