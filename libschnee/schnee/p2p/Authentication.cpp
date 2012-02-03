@@ -28,7 +28,8 @@ void Authentication::setIdentity (const String & identity) {
 		mKey->generate(1024);
 		mCertificate->setKey(mKey.get());
 		mCertificate->setVersion (1);
-		mCertificate->setActivationTime();
+		time_t activationTime = time (NULL) - 7200; // 2 hours ago
+		mCertificate->setActivationTime(activationTime);
 		mCertificate->setExpirationDays (10 * 365); // todo: reduce in future and check it
 		mCertificate->setSerial (1);
 		mCertificate->setCommonName(mIdentity.c_str());
