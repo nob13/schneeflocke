@@ -52,3 +52,4 @@ add_automatic_test (flocke/filesharing/filesharing)
 
 # Interactive Tests
 add_interactive_test (schnee/im/xmpp_bosh)
+add_interactive_test (schnee/net/tlsserver)

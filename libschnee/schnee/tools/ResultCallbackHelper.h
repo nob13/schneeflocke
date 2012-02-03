@@ -46,7 +46,7 @@ public:
 	}
 
 	bool waitUntilReady (int timeOutMs) {
-		Time t (futureInMs (timeOutMs));
+		Time t (regTimeOutMs (timeOutMs));
 		while (!mReady){
 			if (!mCondition.timed_wait(schnee::mutex(), t))
 				return false;
