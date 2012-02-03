@@ -23,21 +23,6 @@ struct Credentials {
 	}
 	void generate (const String & name) {
 		key  = x509::PrivateKeyPtr (new x509::PrivateKey());
-		/*
-		x509::CertificateRequest req;
-		req.setCommonName (name.c_str());
-		req.setVersion(1);
-		req.setKey (key.get());
-		
-		cert = x509::CertificatePtr (new x509::Certificate());
-		cert->setRequest (&req);
-		cert->setActivationTime();
-		cert->setExpirationDays (10 * 365);
-		cert->setSerial (1);
-		cert->setCommonName (name.c_str());
-		cert->sign (cert.get(), key.get()); // self sign
-		*/
-		
 		cert = x509::CertificatePtr (new x509::Certificate());
 		double t0 = sf::microtime();
 		key->generate(1024);
@@ -60,11 +45,11 @@ ByteArrayPtr syncRead (Channel & c, int bytes, int timeOutMs) {
 	Time  t (sf::futureInMs(timeOutMs));
 	ByteArray buffer;
 	while (true) {
-		if (c.error()){
-			return ByteArrayPtr();
-		}
 		ByteArrayPtr data = c.read(bytes);
 		if (!data || data->size() == 0) {
+			if (c.error()){
+				return ByteArrayPtr();
+			}
 			ResultCallbackHelper helper;
 			c.changed() = helper.onReadyFunc();
 			int restMs = (t - sf::currentTime()).total_milliseconds();
