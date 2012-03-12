@@ -10,6 +10,8 @@ RemoveUserDialog::RemoveUserDialog (const sf::UserId & userId, QWidget * parent)
 	setDefaultButton (QMessageBox::No);
 	setWindowModality (Qt::NonModal);
 	setAttribute (Qt::WA_DeleteOnClose);
+	setAttribute (Qt::WA_QuitOnClose, false);
+
 	mUserId = userId;
 }
 
