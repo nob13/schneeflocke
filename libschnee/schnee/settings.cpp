@@ -15,6 +15,7 @@ Settings::Settings () {
 	echoServerPort = 1234;
 	disableTcp = false;
 	disableUdt = false;
+	overrideTlsAuth = false;
 
 	forceBoshXmpp = false;
 }
@@ -55,6 +56,7 @@ void parseArguments (int argc, const char * argv[]) {
 			CHECK_BOOL_ARGUMENT (noLineNoise);
 			CHECK_BOOL_ARGUMENT (disableTcp);
 			CHECK_BOOL_ARGUMENT (disableUdt);
+			CHECK_BOOL_ARGUMENT (overrideTlsAuth);
 			CHECK_BOOL_ARGUMENT (forceBoshXmpp);
 		}
 	}

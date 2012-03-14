@@ -1,5 +1,6 @@
 #include "TLSChannel.h"
 #include "TLSCertificates.h"
+#include <schnee/settings.h>
 #include <schnee/tools/Log.h>
 #include <gnutls/gnutls.h>
 #ifndef WIN32
@@ -222,6 +223,11 @@ Error TLSChannel::authenticate (const x509::Certificate*  trusted, const String 
 }
 
 Error TLSChannel::authenticate (const String & hostName) {
+	if (schnee::settings().overrideTlsAuth){
+		Log (LogWarning) << LOGID << "Overriding TLS Authentication!" << std::endl;
+		mAuthenticated = true;
+		return NoError;
+	}
 	x509::CertificatePtr peerCert = peerCertificate();
 	if (!peerCert) return error::AuthError;
 	String dn;

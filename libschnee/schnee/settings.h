@@ -24,6 +24,7 @@ struct Settings {
 	int    echoServerPort;	///< Echo Server port
 	bool   disableTcp; 		///< Disable TCP connections (--disableTcp)
 	bool   disableUdt;		///< Disalbe UDT connections (--disableUdt)
+	bool   overrideTlsAuth; ///< Completely overrides TLS authentication, for debugging purposes. Channels will tell you that they are authenticated! (--overrideTlsAuth)
 
 	bool   forceBoshXmpp;	///< Force BOSH connection when connecting via XMPP (--forceBoshXmpp)
 };
