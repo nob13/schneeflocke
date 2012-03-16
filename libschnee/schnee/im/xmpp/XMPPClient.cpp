@@ -385,7 +385,8 @@ void XMPPClient::onIncomingPresence(const xmpp::PresenceInfo & elem, const XMLCh
 			mContactAddRequestDelegate (elem.from);
 			return;
 		} else {
-			Log (LogWarning) << LOGID << "No contact add request handler, denying " << elem.from << std::endl;
+			if (!mContactAddRequestDelegate)
+				Log (LogWarning) << LOGID << "No contact add request handler, denying " << elem.from << std::endl;
 		}
 		subscriptionRequestReply (elem.from, toAuthorize, false);
 		return;
