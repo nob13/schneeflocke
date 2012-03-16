@@ -338,6 +338,12 @@ void XMPPClient::onIncomingRosterIq(const xmpp::RosterIq & rosterIq) {
 		if (item.remove) {
 			Log (LogInfo) << LOGID << "Removing " << bareJid << std::endl;
 			mContacts.erase(bareJid);
+		} else if (item.subscription == SS_NONE && !item.waitForSubscription){
+			// Kill that subscription, we are probably removed while being offline
+			RemoveContactIq iq;
+			iq.whom = bareJid;
+			mStream->requestIq(&iq);
+			Log (LogInfo) << LOGID << "Removing " << bareJid << " because auf SS_NONE subscription status" << std::endl;
 		} else {
 			ContactInfo & info = mContacts[bareJid];
 			info.id    = item.jid;
