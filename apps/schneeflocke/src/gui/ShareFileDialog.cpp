@@ -27,6 +27,8 @@ void ShareFileDialog::init () {
 	connect (mShareFileDialogUi.removeShareButton, SIGNAL (clicked()), this, SLOT (onShareRemove()));
 	connect (mShareFileDialogUi.newShareButton, SIGNAL (clicked()), this, SLOT (onNewShare()));
 	connect (mShareFileDialogUi.shareListView, SIGNAL  (clicked (const QModelIndex &)), this, SLOT (onUserSelectedShare (const QModelIndex&)));
+	connect (mController->shareToUserList(), SIGNAL (dataChanged (const QModelIndex & topLeft, const QModelIndex & bottomRight)), this, SLOT (onUserSelectedDataChanged()));
+	connect (mShareFileDialogUi.specificUserListView, SIGNAL (clicked (const QModelIndex &)), this, SLOT (onUserSelectedDataChanged()));
 	mShareFileDialogUi.specificUserListView->setModel (mController->shareToUserList());
 	mShareFileDialogUi.shareListView->setModel (mController->shareList());
 }
@@ -146,3 +148,11 @@ bool ShareFileDialog::isModified () const {
 	if (info.whom != mController->shareToUserList()->checked()) return true;
 	return false;
 }
+
+void ShareFileDialog::onUserSelectedDataChanged() {
+	if (mController->shareToUserList()->hasChecked()){
+		// convenience
+		mShareFileDialogUi.specificUserRadioButton->setChecked(true);
+	}
+}
+

@@ -17,6 +17,8 @@ public:
 	void setUserSet (const sf::UserSet & users);
 	/// clears the user set
 	void clearUserSet ();
+	/// Returns true if there are users added
+	bool hasChecked () const { return !mChecked.empty(); }
 
 	/// Returns current checked users
 	const sf::UserSet & checked () const { return mChecked; }

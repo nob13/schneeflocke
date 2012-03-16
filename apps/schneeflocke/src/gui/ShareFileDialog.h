@@ -26,7 +26,8 @@ private slots:
 	void onNewShare ();
 	/// USer entered a share
 	void onUserSelectedShare (const QModelIndex & index);
-
+	/// User selected for user specific sharing..
+	void onUserSelectedDataChanged();
 private:
 	void saveShare();
 	void clear ();
