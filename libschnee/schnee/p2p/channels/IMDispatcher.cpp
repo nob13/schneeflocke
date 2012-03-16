@@ -260,7 +260,7 @@ void IMDispatcher::onSubscribeRequest (const sf::UserId & from) {
 void IMDispatcher::onConnectionStateChanged (sf::IMClient::ConnectionState state) {
 	Log (LogProfile) << LOGID << "IMDispatcher::onConnectionStateChanged " << toString (state) << std::endl;
 	if (state == sf::IMClient::CS_CONNECTED) {
-		mClient->setPresence (IMClient::PS_CHAT, "Schneeflocke (http://sflx.net)", -10);
+		mClient->setPresence (IMClient::PS_CHAT, "Schneeflocke (http://sflx.net)");
 		mClient->updateContactRoster();
 	} else {
 		// If we are not online, all channels go offline
