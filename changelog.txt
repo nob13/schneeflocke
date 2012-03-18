@@ -1,3 +1,5 @@
+0.6.1.
+- Fixed Subscription pending problems #183, #186
 0.6.0
 - Peer-2-Peer-Authentication #127
 - Server Authentication
