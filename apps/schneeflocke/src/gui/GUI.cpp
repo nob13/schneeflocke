@@ -310,7 +310,7 @@ void GUI::onOpenWebsite() {
 }
 
 void GUI::onShowAbout () {
-	QMessageBox::about(&mMainWindow, tr ("About Schneeflocke"), tr("This is Schneeflocke %1.\nCopyright 2010-2011 the sflx.net Team.").arg (sf::schnee::version()));
+	QMessageBox::about(&mMainWindow, tr ("About Schneeflocke"), tr("This is Schneeflocke %1.\nCopyright 2010-2012 the sflx.net Team.").arg (sf::schnee::version()));
 }
 
 void GUI::onQuit() {
