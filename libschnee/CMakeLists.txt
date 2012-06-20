@@ -23,6 +23,8 @@ add_library (schnee ${LIBRARY_FLAGS} ${all_files})
 if (${LIBRARY_FLAGS} STREQUAL "SHARED")
 	install (TARGETS schnee LIBRARY DESTINATION lib)
 endif()
+target_link_libraries (schnee ${LIBS})
+
 
 # Documentation
 

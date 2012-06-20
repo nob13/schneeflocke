@@ -3,6 +3,7 @@
 #include <schnee/sftypes.h>
 #include <schnee/Error.h>
 #include <schnee/net/Channel.h>
+#include <schnee/tools/Serialization.h>
 
 namespace sf {
 

@@ -3,8 +3,12 @@
 #include <schnee/settings.h>
 #include <schnee/tools/Log.h>
 #include <gnutls/gnutls.h>
-#ifndef WIN32
+#ifdef LINUX
 #include <gcrypt.h>
+#endif
+#include <errno.h>
+#ifdef MAC_OSX
+#define EBADFD EBADF
 #endif
 
 #ifdef WIN32

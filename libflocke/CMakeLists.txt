@@ -23,6 +23,7 @@ add_library (flocke ${LIBRARY_FLAGS} ${all_files})
 if (${LIBRARY_FLAGS} STREQUAL "SHARED")
 	install (TARGETS flocke LIBRARY DESTINATION lib)
 endif()
+target_link_libraries (flocke ${LIBS}) 
 
 # Documentation
 

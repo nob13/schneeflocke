@@ -4,17 +4,17 @@
 #include "net/TLSCertificates.h"
 #include "settings.h"
 
-#ifndef WIN32
+#ifdef LINUX
 #include <gcrypt.h>
 #endif
 #include <gnutls/gnutls.h>
 
-#ifndef WIN32
+#ifdef LINUX
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif
 
 void global_InitGnuTls () {
-#ifndef WIN32
+#ifdef LINUX
 	// Technically we don't need multithreading support anymore
 	// Because all TLS Operations are working inside one mutex now.
 	// Win32 doesn't have it anymore because it's new GnuTLS library
@@ -25,7 +25,7 @@ void global_InitGnuTls () {
 #endif
 	// debug level
 	gnutls_global_set_log_level (1);
-#ifndef WIN32
+#ifdef LINUX
 	// non-blocking random
 	gcry_control (GCRYCTL_ENABLE_QUICK_RANDOM, 0);
 #endif

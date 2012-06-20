@@ -1,3 +1,4 @@
+
 message (STATUS "Qt 4")
 	find_package (Qt4 COMPONENTS QtMain QtCore QtGui QtXml)
 
@@ -18,7 +19,9 @@ if (QT4_FOUND)
 	QT4_WRAP_UI (ui_headers ${ui_files})
 	# message (STATUS "Ui Headers: ${ui_headers}")
 
-	QT4_WRAP_CPP (moc_files ${qobj_files})
+	set (QTMOC_BUG_WORKAROUND OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED) # Bug 22829
+
+	QT4_WRAP_CPP (moc_files ${qobj_files} ${QTMOC_BUG_WORKAROUND})
 	# message (STATUS "MOC Files: ${moc_files}")
 	
 	QT4_ADD_RESOURCES (icon_srcs icons/icons.qrc)
