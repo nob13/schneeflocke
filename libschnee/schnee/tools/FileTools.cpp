@@ -12,34 +12,34 @@ const char gDirectoryDelimiter = '/';
 #endif
 
 bool fileExists  (const String & path) {
-	return fs::exists(path);
+	return fs::exists(fs::path(path));
 }
 
 bool isDirectory (const String & path) {
-	return fs::is_directory(path);
+	return fs::is_directory(fs::path(path));
 }
 
 bool isSymlink (const String & path) {
-	return fs::is_symlink (path);
+	return fs::is_symlink (fs::path(path));
 }
 
 bool isRegularFile (const String & path) {
-	return fs::is_regular_file (path);
+	return fs::is_regular_file (fs::path(path));
 }
 
 String fileStem (const String & path) {
 	fs::path p (path);
 	String parentPath (p.parent_path().string());
-	if (!parentPath.empty()) return parentPath + gDirectoryDelimiter + p.stem();
-	return p.stem();
+	if (!parentPath.empty()) return parentPath + gDirectoryDelimiter + p.stem().string();
+	return p.stem().string();
 }
 
 String fileExtension (const String & path){
-	return fs::path (path).extension();
+	return fs::path (path).extension().string();
 }
 
 String pathFilename (const String & path) {
-	return fs::path(path).filename();
+	return fs::path(path).filename().string();
 }
 
 String parentPath (const String & path) {
@@ -69,7 +69,7 @@ bool checkDangerousPath (const String & path) {
 Error createDirectory (const String & directory) {
 	try {
 		fs::create_directory (fs::path(directory));
-	} catch (fs::basic_filesystem_error<fs::path> & e){
+	} catch (fs::filesystem_error & e){
 		return error::WriteError;
 	}
 	return NoError;
@@ -81,7 +81,7 @@ Error createDirectoriesForFilePath (const String & path) {
 	if (parent.empty()) return NoError;
 	try {
 		fs::create_directories (parent);
-	} catch (fs::basic_filesystem_error<fs::path> & e){
+	} catch (fs::filesystem_error & e){
 		return error::WriteError;
 	}
 	return NoError;

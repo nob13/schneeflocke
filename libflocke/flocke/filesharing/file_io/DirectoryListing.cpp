@@ -23,7 +23,7 @@ Error listDirectory (const String & directory, DirectoryListing * out) {
 	for (; i != end; i++){
 		DirectoryListing::Entry e;
 		try {
-			e.name = i->path().filename();
+			e.name = i->path().filename().string();
 			if (fs::is_regular_file (i->status())){
 				e.type = DirectoryListing::File;
 				e.size = fs::file_size (*i);

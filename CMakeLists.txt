@@ -148,7 +148,7 @@ message (STATUS "*** Dependencies ***")
 		set (Boost_USE_STATIC_LIBS TRUE)
 		
 		if (NOT Boost_FOUND) # maybe faked
-			find_package (Boost 1.40.0 COMPONENTS thread system date_time filesystem)
+			find_package (Boost 1.50.0 COMPONENTS thread system date_time filesystem)
 		endif()
 		if (Boost_FOUND)
 			message (STATUS "Boost Dir: ${Boost_INCLUDE_DIRS}")
@@ -158,9 +158,6 @@ message (STATUS "*** Dependencies ***")
 			message (STATUS "Boost Ver:          ${Boost_VERSION}")
 			include_directories (${Boost_INCLUDE_DIRS})
 			link_directories (${Boost_LIBRARY_DIRS})
-			
-			# TODO: Port to version 3
-			add_definitions (-DBOOST_FILESYSTEM_VERSION=2)
 		else()
 			message (FATAL_ERROR "Boost not found")
 		endif()
